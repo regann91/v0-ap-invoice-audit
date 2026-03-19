@@ -524,8 +524,24 @@ export function GoldenCaseManagement({
       {/* Step Tabs */}
       <div style={{ display: "flex", gap: 0, marginBottom: 16 }}>
         {STEPS.map((step) => {
-          const s = STEP_CONFIG[step]
+          const stepCfg = STEP_CONFIG[step]
+          const stepCount = goldenCases[step].length
           const isActive = step === activeStep
+          const pillStyle: React.CSSProperties = {
+            padding: "8px 20px",
+            boxShadow: isActive ? "0 0 0 1px #1890ff" : "0 0 0 1px #d9d9d9",
+            marginLeft: step !== "INVOICE_REVIEW" ? -1 : 0,
+            background: isActive ? "#1890ff" : "#fff",
+            color: isActive ? "#fff" : "#595959",
+            fontWeight: isActive ? 600 : 400,
+            fontSize: 13,
+            cursor: "pointer",
+            position: "relative",
+            zIndex: isActive ? 1 : 0,
+            borderRadius: step === "INVOICE_REVIEW" ? "4px 0 0 4px" : step === "AP_VOUCHER" ? "0 4px 4px 0" : "0",
+            userSelect: "none",
+            transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
+          }
           return (
             <div
               key={step}
@@ -533,25 +549,11 @@ export function GoldenCaseManagement({
               tabIndex={0}
               onClick={() => { setActiveStep(step); setSearch(""); setPatternFilter([]); setGtFilter("All") }}
               onKeyDown={(e) => e.key === "Enter" && setActiveStep(step)}
-              style={{
-                padding: "8px 20px",
-                boxShadow: isActive ? "0 0 0 1px #1890ff" : "0 0 0 1px #d9d9d9",
-                marginLeft: step !== "INVOICE_REVIEW" ? -1 : 0,
-                background: isActive ? "#1890ff" : "#fff",
-                color: isActive ? "#fff" : "#595959",
-                fontWeight: isActive ? 600 : 400,
-                fontSize: 13,
-                cursor: "pointer",
-                position: "relative" as const,
-                zIndex: isActive ? 1 : 0,
-                borderRadius: step === "INVOICE_REVIEW" ? "4px 0 0 4px" : step === "AP_VOUCHER" ? "0 4px 4px 0" : "0",
-                userSelect: "none",
-                transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
-              }}
+              style={pillStyle}
             >
               {step}{" "}
               <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.85 }}>
-                ({s.total} / {s.limit})
+                ({stepCount} / {stepCfg.limit})
               </span>
             </div>
           )

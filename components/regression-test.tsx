@@ -239,14 +239,14 @@ function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; sim
   return (
     <div style={{ marginBottom: 8 }}>
       <div
-        style={{
+        style={Object.assign({}, {
           background: bg,
           borderRadius: 6,
           borderTopWidth: 1,
           borderRightWidth: 1,
           borderBottomWidth: 1,
           borderLeftWidth: 4,
-          borderStyle: "solid",
+          borderStyle: "solid" as const,
           borderTopColor: `${borderColor}33`,
           borderRightColor: `${borderColor}33`,
           borderBottomColor: `${borderColor}33`,
@@ -256,7 +256,7 @@ function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; sim
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 24,
-        }}
+        })}
       >
         {/* Left: verdict */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -556,11 +556,13 @@ export function RegressionTest({
   agents,
   goldenCases,
   onPublish,
+  onPassedRun,
 }: {
   preselectedAgentId?: string
   agents?: Agent[]
   goldenCases?: GoldenCasesState
   onPublish?: (agentId: string) => void
+  onPassedRun?: (agentId: string) => void
 }) {
   const allAgents = agents ?? agentListData
   const sharedGoldenCases = goldenCases ?? INITIAL_GOLDEN_CASES
@@ -620,6 +622,8 @@ export function RegressionTest({
         setSuites(results)
         setProgress(100)
         setRunStatus("done")
+        const allPassed = results.every((s) => s.goldenPassRate >= 85)
+        if (allPassed && selectedId) onPassedRun?.(selectedId)
       }
     }, 60)
   }

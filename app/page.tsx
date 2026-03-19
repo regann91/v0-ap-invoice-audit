@@ -53,6 +53,7 @@ function AppShell() {
   const [selectedCase, setSelectedCase] = useState<AuditCase | null>(null)
   const [agents, setAgents] = useState<Agent[]>(agentListData)
   const [goldenCases, setGoldenCases] = useState<GoldenCasesState>(INITIAL_GOLDEN_CASES)
+  const [passedAgentIds, setPassedAgentIds] = useState<string[]>([])
   const { region, setRegion } = useRegion()
 
   function handlePublish(agentId: string) {
@@ -61,6 +62,10 @@ function AppShell() {
         ? { ...a, status: "ACTIVE", currentVersion: a.currentVersion.replace(/-beta$/, "") }
         : a
     ))
+  }
+
+  function handlePassedRun(agentId: string) {
+    setPassedAgentIds((prev) => prev.includes(agentId) ? prev : [...prev, agentId])
   }
 
   function navigate(key: string) {
@@ -223,10 +228,10 @@ function AppShell() {
           {page === "case-management"         && <CaseManagement onViewDetail={goToCaseDetail} />}
           {page === "golden-case-management"  && <GoldenCaseManagement goldenCases={goldenCases} setGoldenCases={setGoldenCases} />}
           {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
-          {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} />}
+          {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} onPassedRun={handlePassedRun} />}
           {page === "agent-list"         && <AgentList agents={agents} setAgents={setAgents} onView={goToAgentDetail} onTriggerTest={goToRegressionTest} />}
           {page === "pattern-library"    && <PatternLibrary />}
-          {page === "agent-detail"       && <AgentDetail onBack={goToAgentList} />}
+          {page === "agent-detail"       && <AgentDetail agentId="AGT-002" passedAgentIds={passedAgentIds} onBack={goToAgentList} onPublish={handlePublish} onGoToRegressionTest={goToRegressionTest} />}
         </Content>
       </Layout>
     </Layout>

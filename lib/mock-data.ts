@@ -99,13 +99,74 @@ export const auditCaseData: AuditCase[] = [
 
 // ── Agent Management ─────────────────────────────────────────────
 
-export type AgentStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER'
+// Flow is the top-level concept; each Flow contains one or more Steps.
+export interface AgentFlow {
+  id: string
+  name: string
+  description: string
+  steps: AgentStepDef[]
+}
+
+export interface AgentStepDef {
+  id: string        // e.g. 'INVOICE_REVIEW'
+  name: string      // human-readable
+  flowId: string
+}
+
+export const flowData: AgentFlow[] = [
+  {
+    id: 'FLOW-001',
+    name: 'Invoice Processing',
+    description: 'End-to-end flow that covers invoice review, PO matching, and AP voucher creation.',
+    steps: [
+      { id: 'INVOICE_REVIEW', name: 'Invoice Review',  flowId: 'FLOW-001' },
+      { id: 'MATCH',          name: 'PO Matching',     flowId: 'FLOW-001' },
+      { id: 'AP_VOUCHER',     name: 'AP Voucher',      flowId: 'FLOW-001' },
+    ],
+  },
+  {
+    id: 'FLOW-002',
+    name: 'Supplier Onboarding',
+    description: 'Validates new supplier data, bank accounts, and tax compliance before activation.',
+    steps: [
+      { id: 'SUPPLIER_VERIFY', name: 'Supplier Verification', flowId: 'FLOW-002' },
+      { id: 'BANK_CHECK',      name: 'Bank Account Check',    flowId: 'FLOW-002' },
+    ],
+  },
+  {
+    id: 'FLOW-003',
+    name: 'Payment Reconciliation',
+    description: 'Reconciles bank statements against AP ledger and flags unmatched transactions.',
+    steps: [
+      { id: 'BANK_RECON',   name: 'Bank Reconciliation', flowId: 'FLOW-003' },
+      { id: 'EXCEPTION_MGT', name: 'Exception Management', flowId: 'FLOW-003' },
+    ],
+  },
+]
+
+// Flat step id type (union of all step ids across all flows)
+export type AgentStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER' | 'SUPPLIER_VERIFY' | 'BANK_CHECK' | 'BANK_RECON' | 'EXCEPTION_MGT'
 export type AgentStatus = 'ACTIVE' | 'TESTING' | 'DEPRECATED'
+
+// Helper: get step def by id
+export function getStepDef(stepId: string): AgentStepDef | undefined {
+  for (const flow of flowData) {
+    const found = flow.steps.find((s) => s.id === stepId)
+    if (found) return found
+  }
+  return undefined
+}
+
+// Helper: get flow by stepId
+export function getFlowByStep(stepId: string): AgentFlow | undefined {
+  return flowData.find((f) => f.steps.some((s) => s.id === stepId))
+}
 
 export interface Agent {
   key: string
   id: string
   agentName: string
+  flowId: string
   step: AgentStep
   currentVersion: string
   status: AgentStatus
@@ -117,56 +178,82 @@ export const agentListData: Agent[] = [
   {
     key: '1', id: 'AGT-001',
     agentName: 'Invoice Header Extractor',
-    step: 'INVOICE_REVIEW',
-    currentVersion: 'v1.3.0',
-    status: 'ACTIVE',
+    flowId: 'FLOW-001', step: 'INVOICE_REVIEW',
+    currentVersion: 'v1.3.0', status: 'ACTIVE',
     lastUpdated: '2025-03-15 10:22',
     description: 'Extracts header fields (vendor, date, amount) from raw invoice PDFs using vision model.',
   },
   {
     key: '2', id: 'AGT-002',
     agentName: 'Line Item Validator',
-    step: 'INVOICE_REVIEW',
-    currentVersion: 'v1.4.0-beta',
-    status: 'TESTING',
+    flowId: 'FLOW-001', step: 'INVOICE_REVIEW',
+    currentVersion: 'v1.4.0-beta', status: 'TESTING',
     lastUpdated: '2025-03-18 14:05',
     description: 'Validates each invoice line item against PO data and flags discrepancies.',
   },
   {
     key: '3', id: 'AGT-003',
     agentName: 'PO Matching Agent',
-    step: 'MATCH',
-    currentVersion: 'v2.1.0',
-    status: 'ACTIVE',
+    flowId: 'FLOW-001', step: 'MATCH',
+    currentVersion: 'v2.1.0', status: 'ACTIVE',
     lastUpdated: '2025-03-10 09:30',
     description: 'Matches invoices to purchase orders using fuzzy logic and embedding similarity.',
   },
   {
     key: '4', id: 'AGT-004',
     agentName: 'Three-Way Match Auditor',
-    step: 'MATCH',
-    currentVersion: 'v1.0.2',
-    status: 'DEPRECATED',
+    flowId: 'FLOW-001', step: 'MATCH',
+    currentVersion: 'v1.0.2', status: 'DEPRECATED',
     lastUpdated: '2025-02-28 16:45',
     description: 'Legacy three-way match logic. Superseded by PO Matching Agent v2.x.',
   },
   {
     key: '5', id: 'AGT-005',
     agentName: 'AP Voucher Generator',
-    step: 'AP_VOUCHER',
-    currentVersion: 'v1.2.0',
-    status: 'ACTIVE',
+    flowId: 'FLOW-001', step: 'AP_VOUCHER',
+    currentVersion: 'v1.2.0', status: 'ACTIVE',
     lastUpdated: '2025-03-12 11:00',
     description: 'Generates AP voucher entries in SAP format from matched invoice data.',
   },
   {
     key: '6', id: 'AGT-006',
     agentName: 'Voucher Approval Router',
-    step: 'AP_VOUCHER',
-    currentVersion: 'v0.9.1-beta',
-    status: 'TESTING',
+    flowId: 'FLOW-001', step: 'AP_VOUCHER',
+    currentVersion: 'v0.9.1-beta', status: 'TESTING',
     lastUpdated: '2025-03-19 08:15',
     description: 'Routes generated vouchers to the correct approval workflow based on amount and cost center.',
+  },
+  {
+    key: '7', id: 'AGT-007',
+    agentName: 'Supplier Data Validator',
+    flowId: 'FLOW-002', step: 'SUPPLIER_VERIFY',
+    currentVersion: 'v1.0.0', status: 'ACTIVE',
+    lastUpdated: '2025-03-01 09:00',
+    description: 'Validates supplier registration data against government registries and internal blacklists.',
+  },
+  {
+    key: '8', id: 'AGT-008',
+    agentName: 'Bank Account Verifier',
+    flowId: 'FLOW-002', step: 'BANK_CHECK',
+    currentVersion: 'v1.1.0-beta', status: 'TESTING',
+    lastUpdated: '2025-03-17 13:40',
+    description: 'Cross-checks supplier bank account details against known fraud patterns and SWIFT directory.',
+  },
+  {
+    key: '9', id: 'AGT-009',
+    agentName: 'Bank Statement Reconciler',
+    flowId: 'FLOW-003', step: 'BANK_RECON',
+    currentVersion: 'v2.0.1', status: 'ACTIVE',
+    lastUpdated: '2025-03-08 10:15',
+    description: 'Reconciles bank statements against AP ledger entries using transaction ID matching.',
+  },
+  {
+    key: '10', id: 'AGT-010',
+    agentName: 'Exception Classifier',
+    flowId: 'FLOW-003', step: 'EXCEPTION_MGT',
+    currentVersion: 'v1.0.0', status: 'ACTIVE',
+    lastUpdated: '2025-03-05 15:30',
+    description: 'Classifies unmatched transactions into exception categories and routes for manual review.',
   },
 ]
 
@@ -184,6 +271,7 @@ export interface AgentDetailData {
   id: string
   agentName: string
   description: string
+  flowId: string
   step: AgentStep
   model: string
   temperature: number
@@ -205,6 +293,7 @@ export const agentDetailData: AgentDetailData = {
   id: 'AGT-002',
   agentName: 'Line Item Validator',
   description: 'Validates each invoice line item against PO data and flags discrepancies. Supports multi-currency comparison and tolerance thresholds.',
+  flowId: 'FLOW-001',
   step: 'INVOICE_REVIEW',
   model: 'claude-sonnet-4-20250514',
   temperature: 0.1,

@@ -372,7 +372,7 @@ export function RegressionTest({
       {runStatus === "idle" && (
         <Empty
           image={<ExperimentOutlined style={{ fontSize: 48, color: "#d9d9d9" }} />}
-          imageStyle={{ height: 56 }}
+          styles={{ image: { height: 56 } }}
           description={
             <Text type="secondary">Select an agent and click Run Regression to start.</Text>
           }

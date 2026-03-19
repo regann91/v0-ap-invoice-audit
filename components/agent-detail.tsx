@@ -10,7 +10,7 @@ import {
   PlusOutlined, DeleteOutlined, InfoCircleOutlined, HistoryOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
-import { agentDetailData } from "@/lib/mock-data"
+import { agentDetailData, flowData, getFlowByStep } from "@/lib/mock-data"
 import { useRole } from "@/lib/role-context"
 
 const { Text, Title, Paragraph } = Typography
@@ -47,7 +47,18 @@ function SnapshotModal({
         <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginBottom: 16 }}>
           <tbody>
             <tr><td style={{ padding: "4px 0", color: "#8c8c8c", width: 180 }}>Agent Name</td><td>{d.agentName}</td></tr>
-            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Step</td><td><Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag></td></tr>
+            <tr>
+              <td style={{ padding: "4px 0", color: "#8c8c8c" }}>Flow › Step</td>
+              <td>
+                <Space size={4}>
+                  <Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>
+                    {flowData.find((f) => f.id === d.flowId)?.name ?? d.flowId}
+                  </Tag>
+                  <span style={{ color: "#bfbfbf" }}>›</span>
+                  <Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag>
+                </Space>
+              </td>
+            </tr>
             <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Description</td><td style={{ color: "#595959" }}>{d.description}</td></tr>
           </tbody>
         </table>
@@ -264,11 +275,29 @@ export function AgentDetail({ onBack }: { onBack: () => void }) {
     <div>
       {contextHolder}
       {/* Back nav */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 12 }}>
         <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ padding: 0, color: "#1890ff" }}>
           Back to Agent List
         </Button>
       </div>
+
+      {/* Flow > Step breadcrumb */}
+      {(() => {
+        const flow = getFlowByStep(d.step)
+        const stepDef = flow?.steps.find((s) => s.id === d.step)
+        return flow ? (
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
+            <Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontWeight: 500, fontSize: 12 }}>
+              {flow.name}
+            </Tag>
+            <span style={{ color: "#bfbfbf", fontSize: 12 }}>{"›"}</span>
+            <Tag style={{ background: "#f0f0f0", border: "none", color: "#595959", fontFamily: "monospace", fontSize: 11 }}>
+              {stepDef ? stepDef.name : d.step}
+            </Tag>
+            <Text type="secondary" style={{ fontSize: 12 }}>{flow.id}</Text>
+          </div>
+        ) : null
+      })()}
 
       <div className="flex gap-4 items-start">
         {/* ── Left column: Config Form ─────────────────────────── */}
@@ -285,18 +314,35 @@ export function AgentDetail({ onBack }: { onBack: () => void }) {
               <label style={labelStyle}>Description</label>
               <TextArea defaultValue={d.description} rows={2} disabled={readonlyInput} />
             </div>
-            <div>
-              <label style={labelStyle}>Belongs to Step</label>
-              <Select
-                defaultValue={d.step}
-                disabled={readonlyInput}
-                style={{ width: "100%" }}
-                options={[
-                  { value: "INVOICE_REVIEW", label: "INVOICE_REVIEW" },
-                  { value: "MATCH", label: "MATCH" },
-                  { value: "AP_VOUCHER", label: "AP_VOUCHER" },
-                ]}
-              />
+            <div style={{ display: "flex", gap: 12, marginBottom: 0 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Belongs to Flow</label>
+                <Select
+                  defaultValue={d.flowId}
+                  disabled={readonlyInput}
+                  style={{ width: "100%" }}
+                  options={flowData.map((f) => ({ value: f.id, label: f.name }))}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Belongs to Step</label>
+                <Select
+                  defaultValue={d.step}
+                  disabled={readonlyInput}
+                  style={{ width: "100%" }}
+                  options={
+                    (flowData.find((f) => f.id === d.flowId)?.steps ?? []).map((s) => ({
+                      value: s.id,
+                      label: (
+                        <Space size={4}>
+                          <span>{s.name}</span>
+                          <span style={{ color: "#8c8c8c", fontSize: 11, fontFamily: "monospace" }}>{s.id}</span>
+                        </Space>
+                      ),
+                    }))
+                  }
+                />
+              </div>
             </div>
           </div>
 

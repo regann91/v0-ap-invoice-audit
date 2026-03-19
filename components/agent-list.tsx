@@ -7,7 +7,7 @@ import {
 } from "antd"
 import { SearchOutlined, PlusOutlined, ExperimentOutlined, DeleteOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
-import { agentListData, type Agent, type AgentStatus, type AgentStep } from "@/lib/mock-data"
+import { agentListData, flowData, type Agent, type AgentStatus, type AgentStep } from "@/lib/mock-data"
 
 const { Text, Link } = Typography
 const { TextArea } = Input
@@ -46,6 +46,7 @@ function StatusTag({ status }: { status: AgentStatus }) {
 interface NewAgentFormValues {
   agentName: string
   description: string
+  flowId: string
   step: AgentStep
   model: string
   temperature: number
@@ -69,7 +70,12 @@ function NewAgentDrawer({
   const [form] = Form.useForm<NewAgentFormValues>()
   const [extraParams, setExtraParams] = useState<Array<{ key: string; value: string }>>([])
   const [submitting, setSubmitting] = useState(false)
+  const [selectedFlowId, setSelectedFlowId] = useState<string | undefined>(undefined)
   const [msgApi, contextHolder] = message.useMessage()
+
+  const availableSteps = selectedFlowId
+    ? (flowData.find((f) => f.id === selectedFlowId)?.steps ?? [])
+    : []
 
   function addParam() {
     setExtraParams((prev) => [...prev, { key: "", value: "" }])
@@ -93,6 +99,7 @@ function NewAgentDrawer({
         key: String(Date.now()),
         id: `AGT-${String(Math.floor(Math.random() * 900) + 100)}`,
         agentName: values.agentName,
+        flowId: values.flowId,
         step: values.step,
         currentVersion: "v0.1.0-draft",
         status: "TESTING",
@@ -113,6 +120,7 @@ function NewAgentDrawer({
   function handleCancel() {
     form.resetFields()
     setExtraParams([])
+    setSelectedFlowId(undefined)
     onClose()
   }
 
@@ -176,17 +184,44 @@ function NewAgentDrawer({
             <TextArea rows={2} placeholder="Briefly describe what this agent does" />
           </Form.Item>
           <Form.Item
+            label={<span style={labelStyle}>Belongs to Flow</span>}
+            name="flowId"
+            rules={[{ required: true, message: "Flow is required" }]}
+          >
+            <Select
+              placeholder="Select a flow"
+              onChange={(val) => {
+                setSelectedFlowId(val)
+                form.setFieldValue("step", undefined)
+              }}
+              options={flowData.map((f) => ({
+                value: f.id,
+                label: (
+                  <Space size={6}>
+                    <span style={{ fontWeight: 500 }}>{f.name}</span>
+                    <span style={{ color: "#8c8c8c", fontSize: 12 }}>{f.id}</span>
+                  </Space>
+                ),
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
             label={<span style={labelStyle}>Belongs to Step</span>}
             name="step"
             rules={[{ required: true, message: "Step is required" }]}
           >
             <Select
-              placeholder="Select a step"
-              options={[
-                { value: "INVOICE_REVIEW", label: "INVOICE_REVIEW" },
-                { value: "MATCH",          label: "MATCH" },
-                { value: "AP_VOUCHER",     label: "AP_VOUCHER" },
-              ]}
+              placeholder={selectedFlowId ? "Select a step" : "Select a flow first"}
+              disabled={!selectedFlowId}
+              options={availableSteps.map((s) => ({
+                value: s.id,
+                label: (
+                  <Space size={6}>
+                    <span>{s.name}</span>
+                    <span style={{ color: "#8c8c8c", fontSize: 12, fontFamily: "monospace" }}>{s.id}</span>
+                  </Space>
+                ),
+              }))}
             />
           </Form.Item>
 
@@ -358,13 +393,29 @@ export function AgentList({ onView, onTriggerTest }: { onView: (id: string) => v
       render: (name: string) => <Text strong>{name}</Text>,
     },
     {
+      title: "Flow",
+      dataIndex: "flowId",
+      key: "flowId",
+      width: 200,
+      render: (flowId: string) => {
+        const flow = flowData.find((f) => f.id === flowId)
+        return flow ? (
+          <Space size={4}>
+            <Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11, fontWeight: 500 }}>
+              {flow.name}
+            </Tag>
+          </Space>
+        ) : <Text type="secondary">—</Text>
+      },
+    },
+    {
       title: "Step",
       dataIndex: "step",
       key: "step",
       width: 180,
       render: (step: AgentStep) => (
         <Tag style={{ fontFamily: "monospace", fontSize: 11, background: "#f0f0f0", border: "none", color: "#595959" }}>
-          {STEP_LABELS[step]}
+          {step}
         </Tag>
       ),
     },

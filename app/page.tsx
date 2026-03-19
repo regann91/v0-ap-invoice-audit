@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { Layout, Menu, Typography, Space, Select, Breadcrumb, Tag } from "antd"
 import { DatabaseOutlined, RobotOutlined, UserOutlined, FolderOpenOutlined, ExperimentOutlined } from "@ant-design/icons"
-import { RoleProvider, useRole, type UserRole } from "@/lib/role-context"
+import { RoleProvider, useRole } from "@/lib/role-context"
+import { RegionProvider, useRegion, REGIONS, type RegionCode } from "@/lib/region-context"
 import { KnowledgeBase } from "@/components/knowledge-base"
 import { CaseManagement } from "@/components/case-management"
 import { AgentList } from "@/components/agent-list"
@@ -15,16 +16,12 @@ const { Text } = Typography
 
 type Page = "knowledge-base" | "case-management" | "agent-list" | "agent-detail" | "regression-test"
 
-const ROLE_COLORS: Record<UserRole, string> = {
-  AP_MANAGER: "#722ed1",
-  AI_OPS: "#1890ff",
-}
-
 function AppShell() {
   const [page, setPage] = useState<Page>("knowledge-base")
   const [selectedKey, setSelectedKey] = useState("knowledge-base")
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
-  const { role, setRole } = useRole()
+  const { role } = useRole()
+  const { region, setRegion } = useRegion()
 
   function goToAgentDetail() {
     setPage("agent-detail")
@@ -134,29 +131,36 @@ function AppShell() {
             separator={<Text type="secondary" style={{ fontSize: 13 }}>/</Text>}
           />
 
-          <Space size={12}>
+          <Space size={10}>
             <UserOutlined style={{ color: "#8c8c8c", fontSize: 14 }} />
             <Tag
               style={{
-                color: ROLE_COLORS[role],
-                background: ROLE_COLORS[role] + "14",
-                border: `1px solid ${ROLE_COLORS[role]}44`,
+                color: "#1890ff",
+                background: "#1890ff14",
+                border: "1px solid #1890ff44",
                 fontWeight: 600,
                 fontSize: 11,
                 letterSpacing: 0.3,
+                margin: 0,
               }}
             >
               {role}
             </Tag>
             <Select
-              value={role}
+              value={region}
               size="small"
-              style={{ width: 130 }}
-              onChange={(v) => setRole(v as UserRole)}
-              options={[
-                { value: "AI_OPS", label: "AI_OPS" },
-                { value: "AP_MANAGER", label: "AP_MANAGER" },
-              ]}
+              style={{ width: 180 }}
+              onChange={(v) => setRegion(v as RegionCode)}
+              optionLabelProp="label"
+              options={REGIONS.map((r) => ({
+                value: r.code,
+                label: (
+                  <Space size={6}>
+                    <Text strong style={{ fontSize: 13 }}>{r.code}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{r.name}</Text>
+                  </Space>
+                ),
+              }))}
             />
           </Space>
         </Header>
@@ -183,7 +187,9 @@ function AppShell() {
 export default function Home() {
   return (
     <RoleProvider>
-      <AppShell />
+      <RegionProvider>
+        <AppShell />
+      </RegionProvider>
     </RoleProvider>
   )
 }

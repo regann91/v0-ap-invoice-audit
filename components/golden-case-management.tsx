@@ -516,12 +516,14 @@ export function GoldenCaseManagement() {
           const s = STEP_CONFIG[step]
           const isActive = step === activeStep
           return (
-            <button
+            <div
               key={step}
+              role="button"
+              tabIndex={0}
               onClick={() => { setActiveStep(step); setSearch(""); setPatternFilter([]); setGtFilter("All") }}
+              onKeyDown={(e) => e.key === "Enter" && setActiveStep(step)}
               style={{
                 padding: "8px 20px",
-                border: 0,
                 boxShadow: isActive ? "0 0 0 1px #1890ff" : "0 0 0 1px #d9d9d9",
                 marginLeft: step !== "INVOICE_REVIEW" ? -1 : 0,
                 background: isActive ? "#1890ff" : "#fff",
@@ -532,6 +534,7 @@ export function GoldenCaseManagement() {
                 position: "relative" as const,
                 zIndex: isActive ? 1 : 0,
                 borderRadius: step === "INVOICE_REVIEW" ? "4px 0 0 4px" : step === "AP_VOUCHER" ? "0 4px 4px 0" : "0",
+                userSelect: "none",
                 transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
               }}
             >
@@ -539,7 +542,7 @@ export function GoldenCaseManagement() {
               <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.85 }}>
                 ({s.total} / {s.limit})
               </span>
-            </button>
+            </div>
           )
         })}
       </div>
@@ -606,7 +609,6 @@ export function GoldenCaseManagement() {
           rowKey="key"
           pagination={{
             pageSize: 10,
-            total: filtered.length,
             showTotal: (t) => `Total ${t} records`,
             showSizeChanger: false,
           }}

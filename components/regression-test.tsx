@@ -131,12 +131,14 @@ const SUITE_METRICS_FAILURE: Record<SuiteType, { accuracy: number; precision: nu
 // ── Case result builder ──────────────────────────────────────────
 
 function buildSuiteCases(agentId: string, suiteType: SuiteType, _passRate: number): CaseResult[] {
-  const pool = suiteType === "golden"
+  const pool = (suiteType === "golden"
     ? auditCaseData.filter((c) => c.isGolden === "Golden")
     : auditCaseData
+  ).filter((c) => c.groundTruth !== "Pending")
+
   return pool.map((c) => {
     const mock = CASE_MOCK_DATA[c.caseId]
-    const gt: "Pass" | "Fail" = mock?.gt ?? (c.groundTruth === "Pending" ? "Pass" : (c.groundTruth as "Pass" | "Fail"))
+    const gt: "Pass" | "Fail" = mock?.gt ?? (c.groundTruth as "Pass" | "Fail")
     const pred: "Pass" | "Fail" = mock?.pred ?? gt
     const correct = mock ? mock.correct : gt === pred
     return {

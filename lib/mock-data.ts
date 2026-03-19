@@ -218,6 +218,8 @@ export interface Agent {
   status: AgentStatus
   lastUpdated: string
   description: string
+  /** Region codes this agent is configured for. Empty = all regions. */
+  regions: string[]
 }
 
 export const agentListData: Agent[] = [
@@ -228,6 +230,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.3.0', status: 'ACTIVE',
     lastUpdated: '2025-03-15 10:22',
     description: 'Extracts header fields (vendor, date, amount) from raw invoice PDFs using vision model.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '2', id: 'AGT-002',
@@ -236,6 +239,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.4.0-beta', status: 'TESTING',
     lastUpdated: '2025-03-18 14:05',
     description: 'Validates each invoice line item against PO data and flags discrepancies.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '3', id: 'AGT-003',
@@ -244,6 +248,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v2.1.0', status: 'ACTIVE',
     lastUpdated: '2025-03-10 09:30',
     description: 'Matches invoices to purchase orders using fuzzy logic and embedding similarity.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '4', id: 'AGT-004',
@@ -252,6 +257,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.0.2', status: 'DEPRECATED',
     lastUpdated: '2025-02-28 16:45',
     description: 'Legacy three-way match logic. Superseded by PO Matching Agent v2.x.',
+    regions: ['SG'],
   },
   {
     key: '5', id: 'AGT-005',
@@ -260,6 +266,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.2.0', status: 'ACTIVE',
     lastUpdated: '2025-03-12 11:00',
     description: 'Generates AP voucher entries in SAP format from matched invoice data.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '6', id: 'AGT-006',
@@ -268,6 +275,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v0.9.1-beta', status: 'TESTING',
     lastUpdated: '2025-03-19 08:15',
     description: 'Routes generated vouchers to the correct approval workflow based on amount and cost center.',
+    regions: ['SG', 'TH', 'MY'],
   },
   {
     key: '7', id: 'AGT-007',
@@ -276,6 +284,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.0.0', status: 'ACTIVE',
     lastUpdated: '2025-03-01 09:00',
     description: 'Validates supplier registration data against government registries and internal blacklists.',
+    regions: ['SG', 'MY', 'VN', 'PH', 'ID'],
   },
   {
     key: '8', id: 'AGT-008',
@@ -284,6 +293,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.1.0-beta', status: 'TESTING',
     lastUpdated: '2025-03-17 13:40',
     description: 'Cross-checks supplier bank account details against known fraud patterns and SWIFT directory.',
+    regions: ['SG', 'TW', 'BR'],
   },
   {
     key: '9', id: 'AGT-009',
@@ -292,6 +302,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v2.0.1', status: 'ACTIVE',
     lastUpdated: '2025-03-08 10:15',
     description: 'Reconciles bank statements against AP ledger entries using transaction ID matching.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '10', id: 'AGT-010',
@@ -300,6 +311,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.0.0', status: 'ACTIVE',
     lastUpdated: '2025-03-05 15:30',
     description: 'Classifies unmatched transactions into exception categories and routes for manual review.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
 ]
 

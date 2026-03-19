@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo } from "react"
 import { type GoldenCasesState } from "@/lib/mock-data"
+import { useRegion } from "@/lib/region-context"
 import {
   Table, Button, Tag, Typography, Input, Select, Modal, Alert,
-  Popconfirm, Progress, Tooltip,
+  Popconfirm, Progress, Tooltip, Empty,
 } from "antd"
 import {
   PlusOutlined, SearchOutlined, WarningOutlined,
@@ -416,6 +417,7 @@ export function GoldenCaseManagement({
   goldenCases: GoldenCasesState
   setGoldenCases: React.Dispatch<React.SetStateAction<GoldenCasesState>>
 }) {
+  const { region } = useRegion()
   const [activeStep, setActiveStep] = useState<StepType>("INVOICE_REVIEW")
   const [search, setSearch] = useState("")
   const [patternFilter, setPatternFilter] = useState<string[]>([])
@@ -441,7 +443,10 @@ export function GoldenCaseManagement({
     }))
   }
 
-  const allCases = goldenCases[activeStep]
+  const allCases = useMemo(
+    () => goldenCases[activeStep].filter((c) => c.region === region),
+    [goldenCases, activeStep, region]
+  )
   const dynamicTotal = allCases.length
   const cfg = { ...STEP_CONFIG[activeStep], total: dynamicTotal }
   const capColor = capacityColor(cfg.total, cfg.limit)
@@ -523,33 +528,35 @@ export function GoldenCaseManagement({
     <div>
       {/* Step Tabs */}
       <div style={{ display: "flex", gap: 0, marginBottom: 16 }}>
-        {STEPS.map((step) => {
+        {STEPS.map((step, idx) => {
           const stepCfg = STEP_CONFIG[step]
           const stepCount = goldenCases[step].length
           const isActive = step === activeStep
-          const pillStyle: React.CSSProperties = {
-            padding: "8px 20px",
-            boxShadow: isActive ? "0 0 0 1px #1890ff" : "0 0 0 1px #d9d9d9",
-            marginLeft: step !== "INVOICE_REVIEW" ? -1 : 0,
-            background: isActive ? "#1890ff" : "#fff",
-            color: isActive ? "#fff" : "#595959",
-            fontWeight: isActive ? 600 : 400,
-            fontSize: 13,
-            cursor: "pointer",
-            position: "relative",
-            zIndex: isActive ? 1 : 0,
-            borderRadius: step === "INVOICE_REVIEW" ? "4px 0 0 4px" : step === "AP_VOUCHER" ? "0 4px 4px 0" : "0",
-            userSelect: "none",
-            transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
-          }
+          const isFirst = idx === 0
+          const isLast = idx === STEPS.length - 1
           return (
             <div
               key={step}
               role="button"
               tabIndex={0}
               onClick={() => { setActiveStep(step); setSearch(""); setPatternFilter([]); setGtFilter("All") }}
-              onKeyDown={(e) => e.key === "Enter" && setActiveStep(step)}
-              style={pillStyle}
+              onKeyDown={(e) => { if (e.key === "Enter") setActiveStep(step) }}
+              style={{
+                padding: "8px 20px",
+                boxShadow: isActive ? "0 0 0 1px #1890ff" : "0 0 0 1px #d9d9d9",
+                marginLeft: isFirst ? 0 : -1,
+                background: isActive ? "#1890ff" : "#fff",
+                color: isActive ? "#fff" : "#595959",
+                fontWeight: isActive ? 600 : 400,
+                fontSize: 13,
+                lineHeight: "22px",
+                cursor: "pointer",
+                position: "relative" as const,
+                zIndex: isActive ? 1 : 0,
+                borderRadius: isFirst ? "4px 0 0 4px" : isLast ? "0 4px 4px 0" : "0",
+                userSelect: "none" as const,
+                transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
+              }}
             >
               {step}{" "}
               <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.85 }}>
@@ -596,6 +603,10 @@ export function GoldenCaseManagement({
 
         <div style={{ flex: 1 }} />
 
+        <Tag style={{ background: "#e6f4ff", borderColor: "#91caff", color: "#0958d9", fontSize: 11, fontWeight: 500, margin: 0 }}>
+          Showing: {region}
+        </Tag>
+
         <Tooltip title={cfg.total >= cfg.limit ? `At capacity (${cfg.limit} / ${cfg.limit})` : ""}>
           <Button
             type="primary"
@@ -615,18 +626,22 @@ export function GoldenCaseManagement({
 
       {/* Table */}
       <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 6 }}>
-        <Table
-          key={`${activeStep}-${filtered.length}`}
-          columns={columns}
-          dataSource={filtered}
-          size="small"
-          rowKey="key"
-          pagination={{
-            pageSize: 10,
-            showTotal: (_t, range) => `${range[0]}-${range[1]} of ${filtered.length} records`,
-            showSizeChanger: false,
-          }}
-        />
+        {allCases.length === 0 ? (
+          <Empty description="No data configured for this region yet" style={{ padding: "48px 0" }} />
+        ) : (
+          <Table
+            key={`${activeStep}-${region}-${filtered.length}`}
+            columns={columns}
+            dataSource={filtered}
+            size="small"
+            rowKey="key"
+            pagination={{
+              pageSize: 10,
+              showTotal: (_t, range) => `${range[0]}-${range[1]} of ${filtered.length} records`,
+              showSizeChanger: false,
+            }}
+          />
+        )}
       </div>
 
       {/* Add Case Modal */}

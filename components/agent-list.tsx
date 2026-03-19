@@ -3,11 +3,12 @@
 import React, { useState } from "react"
 import {
   Table, Input, Button, Tag, Typography, Space, Drawer,
-  Form, Select, InputNumber, Divider, message,
+  Form, Select, InputNumber, Divider, message, Empty,
 } from "antd"
 import { SearchOutlined, PlusOutlined, ExperimentOutlined, DeleteOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentListData, flowData, type Agent, type AgentStatus, type AgentStep } from "@/lib/mock-data"
+import { useRegion } from "@/lib/region-context"
 
 const { Text, Link } = Typography
 const { TextArea } = Input
@@ -381,13 +382,17 @@ export function AgentList({
   onView: (id: string) => void
   onTriggerTest?: (id: string) => void
 }) {
+  const { region } = useRegion()
   const [search, setSearch] = useState("")
   const [localAgents, setLocalAgents] = useState<Agent[]>(agentListData)
   const agents = agentsProp ?? localAgents
   const setAgents = setAgentsProp ?? setLocalAgents
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const filtered = agents.filter(
+  // Filter by region first, then by search
+  const regionAgents = agents.filter((r) => r.regions.length === 0 || r.regions.includes(region))
+
+  const filtered = regionAgents.filter(
     (r) =>
       r.agentName.toLowerCase().includes(search.toLowerCase()) ||
       r.step.toLowerCase().includes(search.toLowerCase()),
@@ -484,23 +489,32 @@ export function AgentList({
             style={{ width: 300 }}
             allowClear
           />
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            style={{ background: "#1890ff" }}
-            onClick={() => setDrawerOpen(true)}
-          >
-            New Agent
-          </Button>
+          <Space size={8}>
+            <Tag style={{ background: "#e6f4ff", borderColor: "#91caff", color: "#0958d9", fontSize: 11, fontWeight: 500, margin: 0 }}>
+              Showing: {region}
+            </Tag>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ background: "#1890ff" }}
+              onClick={() => setDrawerOpen(true)}
+            >
+              New Agent
+            </Button>
+          </Space>
         </div>
-        <Table
-          columns={columns}
-          dataSource={filtered}
-          size="small"
-          rowKey="key"
-          pagination={{ pageSize: 20, showTotal: (total) => `Total ${total} agents`, showSizeChanger: false }}
-          bordered={false}
-        />
+        {regionAgents.length === 0 ? (
+          <Empty description="No data configured for this region yet" style={{ padding: "48px 0" }} />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={filtered}
+            size="small"
+            rowKey="key"
+            pagination={{ pageSize: 20, showTotal: (total) => `Total ${total} agents`, showSizeChanger: false }}
+            bordered={false}
+          />
+        )}
       </div>
 
       <NewAgentDrawer

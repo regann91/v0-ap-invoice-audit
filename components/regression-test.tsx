@@ -236,27 +236,29 @@ function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; sim
   const borderColor = allPass ? "#52C41A" : "#FF4D4F"
   const iconColor = allPass ? "#52C41A" : "#FF4D4F"
 
+  const bannerStyle: React.CSSProperties = {
+    background: bg,
+    borderRadius: 6,
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderLeftWidth: 4,
+    borderStyle: "solid",
+    borderTopColor: `${borderColor}33`,
+    borderRightColor: `${borderColor}33`,
+    borderBottomColor: `${borderColor}33`,
+    borderLeftColor: borderColor,
+    padding: "16px 20px",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 24,
+  }
+
   return (
     <div style={{ marginBottom: 8 }}>
       <div
-        style={Object.assign({}, {
-          background: bg,
-          borderRadius: 6,
-          borderTopWidth: 1,
-          borderRightWidth: 1,
-          borderBottomWidth: 1,
-          borderLeftWidth: 4,
-          borderStyle: "solid" as const,
-          borderTopColor: `${borderColor}33`,
-          borderRightColor: `${borderColor}33`,
-          borderBottomColor: `${borderColor}33`,
-          borderLeftColor: borderColor,
-          padding: "16px 20px",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 24,
-        })}
+        style={bannerStyle}
       >
         {/* Left: verdict */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>

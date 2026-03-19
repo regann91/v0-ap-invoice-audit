@@ -153,32 +153,80 @@ function capacityColor(used: number, limit: number): string {
 function PatternDistribution({ step }: { step: StepType }) {
   const counts = PATTERN_COUNTS[step]
   const total = STEP_CONFIG[step].total
-  const patterns = Object.entries(counts)
+  const [hoveredPattern, setHoveredPattern] = useState<string | null>(null)
+
+  const rows = Object.entries(counts)
+    .map(([pattern, count]) => ({ pattern, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 }))
+    .sort((a, b) => b.count - a.count)
+
+  const patternCount = rows.length
 
   return (
     <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 6, padding: "16px 20px", marginBottom: 16 }}>
-      <Text strong style={{ fontSize: 13, color: "#434343", display: "block", marginBottom: 12 }}>
+      <Text strong style={{ fontSize: 13, color: "#434343", display: "block", marginBottom: 2 }}>
         Pattern Distribution — {step}
       </Text>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-        {patterns.map(([pattern, count]) => (
-          <div key={pattern} style={{ background: "#fafafa", border: "1px solid #f0f0f0", borderRadius: 4, padding: "10px 12px" }}>
-            <Text strong style={{ fontSize: 12, display: "block", marginBottom: 4, color: "#1d1d1d" }}>
-              {pattern}
-            </Text>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>{count} cases</Text>
-              <Text type="secondary" style={{ fontSize: 11 }}>{total > 0 ? Math.round((count / total) * 100) : 0}%</Text>
+      <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 16 }}>
+        {total} Golden Cases across {patternCount} patterns
+      </Text>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {rows.map(({ pattern, count, pct }, idx) => {
+          const isHovered = hoveredPattern === pattern
+          return (
+            <div key={pattern}>
+              <div
+                style={{ display: "flex", alignItems: "center", height: 40, gap: 12, cursor: "default" }}
+                onMouseEnter={() => setHoveredPattern(pattern)}
+                onMouseLeave={() => setHoveredPattern(null)}
+                title={`${pattern}: ${count} cases (${pct}% of Golden Set)`}
+              >
+                {/* Label */}
+                <div style={{ width: 180, flexShrink: 0 }}>
+                  <span style={{
+                    fontFamily: "monospace",
+                    fontSize: 12,
+                    color: "#595959",
+                    background: "#f5f5f5",
+                    border: "1px solid #e8e8e8",
+                    borderRadius: 3,
+                    padding: "2px 6px",
+                    display: "inline-block",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {pattern}
+                  </span>
+                </div>
+
+                {/* Bar track */}
+                <div style={{ flex: 1, height: 20, background: "#F0F0F0", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${pct}%`,
+                    background: isHovered ? "#096DD9" : "#1890ff",
+                    borderRadius: 4,
+                    transition: "background 0.15s, width 0.3s",
+                  }} />
+                </div>
+
+                {/* Right label */}
+                <div style={{ width: 90, flexShrink: 0, textAlign: "right" }}>
+                  <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                    {count} cases · {pct}%
+                  </Text>
+                </div>
+              </div>
+
+              {/* Divider between rows (not after last) */}
+              {idx < rows.length - 1 && (
+                <div style={{ height: 1, background: "#F5F5F5", marginTop: 0 }} />
+              )}
             </div>
-            <Progress
-              percent={total > 0 ? Math.round((count / total) * 100) : 0}
-              showInfo={false}
-              strokeColor="#1890ff"
-              size="small"
-              style={{ margin: 0 }}
-            />
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -290,7 +338,7 @@ function AddCaseModal({
   )
 }
 
-// ── Main Component ─────���──────────────────────────────────────────
+// ── Main Component ─────�����──────────────────────────────────────────
 
 const STEPS: StepType[] = ["INVOICE_REVIEW", "MATCH", "AP_VOUCHER"]
 
@@ -385,19 +433,17 @@ export function GoldenCaseManagement() {
               onClick={() => { setActiveStep(step); setSearch(""); setPatternFilter([]); setGtFilter("All") }}
               style={{
                 padding: "8px 20px",
-                borderStyle: "solid",
-                borderWidth: "1px",
-                borderTopColor:    isActive ? "#1890ff" : "#d9d9d9",
-                borderBottomColor: isActive ? "#1890ff" : "#d9d9d9",
-                borderRightColor:  isActive ? "#1890ff" : "#d9d9d9",
-                borderLeftColor:   step !== "INVOICE_REVIEW" ? "transparent" : (isActive ? "#1890ff" : "#d9d9d9"),
+                border: `1px solid ${isActive ? "#1890ff" : "#d9d9d9"}`,
+                marginLeft: step !== "INVOICE_REVIEW" ? "-1px" : 0,
                 background: isActive ? "#1890ff" : "#fff",
                 color: isActive ? "#fff" : "#595959",
                 fontWeight: isActive ? 600 : 400,
                 fontSize: 13,
                 cursor: "pointer",
+                position: "relative",
+                zIndex: isActive ? 1 : 0,
                 borderRadius: step === "INVOICE_REVIEW" ? "4px 0 0 4px" : step === "AP_VOUCHER" ? "0 4px 4px 0" : "0",
-                transition: "all 0.2s",
+                transition: "background 0.2s, color 0.2s, border-color 0.2s",
               }}
             >
               {step}{" "}

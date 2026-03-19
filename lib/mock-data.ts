@@ -148,6 +148,52 @@ export const flowData: AgentFlow[] = [
 export type AgentStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER' | 'SUPPLIER_VERIFY' | 'BANK_CHECK' | 'BANK_RECON' | 'EXCEPTION_MGT'
 export type AgentStatus = 'ACTIVE' | 'TESTING' | 'DEPRECATED'
 
+// ── Golden Case (shared between GoldenCaseManagement and RegressionTest) ──
+
+export interface GoldenCase {
+  key: string
+  caseId: string
+  invoiceNo: string
+  supplier: string
+  region: string
+  groundTruth: 'Pass' | 'Fail'
+  patterns: string[]
+  addedBy: string
+  addedDate: string
+}
+
+export type GoldenCasesState = Record<'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER', GoldenCase[]>
+
+export const INITIAL_GOLDEN_CASES: GoldenCasesState = {
+  INVOICE_REVIEW: [
+    { key: "1",  caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",      region: "SG", groundTruth: "Pass", patterns: ["amount-mismatch", "header-check"],        addedBy: "ai_ops_01", addedDate: "2025-01-10" },
+    { key: "2",  caseId: "CASE-002", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd",  region: "SG", groundTruth: "Fail", patterns: ["supplier-name-mismatch"],                  addedBy: "ai_ops_01", addedDate: "2025-01-10" },
+    { key: "3",  caseId: "CASE-004", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",     region: "TH", groundTruth: "Pass", patterns: ["gst-calculation-error"],                   addedBy: "ai_ops_02", addedDate: "2025-01-15" },
+    { key: "4",  caseId: "CASE-006", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",       region: "TW", groundTruth: "Pass", patterns: ["header-check"],                            addedBy: "ai_ops_01", addedDate: "2025-02-01" },
+    { key: "5",  caseId: "CASE-008", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",    region: "BR", groundTruth: "Pass", patterns: ["amount-mismatch"],                         addedBy: "ai_ops_02", addedDate: "2025-02-05" },
+    { key: "6",  caseId: "CASE-010", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",       region: "ID", groundTruth: "Fail", patterns: ["duplicate-invoice"],                       addedBy: "ai_ops_01", addedDate: "2025-02-10" },
+    { key: "7",  caseId: "CASE-012", invoiceNo: "INV-2025-0012", supplier: "Accenture Pte Ltd",      region: "SG", groundTruth: "Pass", patterns: ["date-out-of-range"],                       addedBy: "ai_ops_02", addedDate: "2025-02-12" },
+    { key: "8",  caseId: "CASE-014", invoiceNo: "INV-2025-0014", supplier: "Google Asia Pacific",    region: "SG", groundTruth: "Pass", patterns: ["gst-calculation-error", "header-check"],   addedBy: "ai_ops_01", addedDate: "2025-02-15" },
+    { key: "9",  caseId: "CASE-016", invoiceNo: "INV-2025-0016", supplier: "Tencent Cloud Intl",     region: "TW", groundTruth: "Fail", patterns: ["amount-mismatch", "duplicate-invoice"],    addedBy: "ai_ops_02", addedDate: "2025-02-18" },
+    { key: "10", caseId: "CASE-018", invoiceNo: "INV-2025-0018", supplier: "Deloitte Advisory SEA",  region: "VN", groundTruth: "Pass", patterns: ["supplier-name-mismatch"],                  addedBy: "ai_ops_01", addedDate: "2025-02-20" },
+    { key: "11", caseId: "CASE-020", invoiceNo: "INV-2025-0020", supplier: "Shopee Philippines",     region: "PH", groundTruth: "Pass", patterns: ["date-out-of-range", "header-check"],       addedBy: "ai_ops_02", addedDate: "2025-02-22" },
+    { key: "12", caseId: "CASE-022", invoiceNo: "INV-2025-0022", supplier: "Microsoft Thailand",     region: "TH", groundTruth: "Fail", patterns: ["gst-calculation-error"],                   addedBy: "ai_ops_01", addedDate: "2025-02-25" },
+  ],
+  MATCH: [
+    { key: "1", caseId: "CASE-003", invoiceNo: "INV-2025-0003", supplier: "Google Asia Pacific",   region: "SG", groundTruth: "Fail", patterns: ["three-way-match-fail"],                         addedBy: "ai_ops_01", addedDate: "2025-01-12" },
+    { key: "2", caseId: "CASE-005", invoiceNo: "INV-2025-0005", supplier: "Deloitte Advisory SEA", region: "VN", groundTruth: "Pass", patterns: ["line-item-qty-mismatch"],                       addedBy: "ai_ops_02", addedDate: "2025-01-20" },
+    { key: "3", caseId: "CASE-007", invoiceNo: "INV-2025-0007", supplier: "Tencent Cloud Intl",    region: "TW", groundTruth: "Fail", patterns: ["unit-price-discrepancy"],                       addedBy: "ai_ops_01", addedDate: "2025-02-05" },
+    { key: "4", caseId: "CASE-009", invoiceNo: "INV-2025-0009", supplier: "Shopee Philippines",    region: "PH", groundTruth: "Pass", patterns: ["line-item-qty-mismatch", "three-way-match-fail"], addedBy: "ai_ops_02", addedDate: "2025-02-14" },
+    { key: "5", caseId: "CASE-011", invoiceNo: "INV-2025-0011", supplier: "AWS Singapore Pte Ltd", region: "SG", groundTruth: "Pass", patterns: ["unit-price-discrepancy"],                       addedBy: "ai_ops_01", addedDate: "2025-02-18" },
+    { key: "6", caseId: "CASE-013", invoiceNo: "INV-2025-0013", supplier: "Alibaba Cloud HK",      region: "TW", groundTruth: "Fail", patterns: ["three-way-match-fail"],                         addedBy: "ai_ops_02", addedDate: "2025-02-20" },
+  ],
+  AP_VOUCHER: [
+    { key: "1", caseId: "CASE-015", invoiceNo: "INV-2025-0015", supplier: "Mercado Pago Brasil", region: "BR", groundTruth: "Fail", patterns: ["gl-account-wrong"],                        addedBy: "ai_ops_01", addedDate: "2025-02-10" },
+    { key: "2", caseId: "CASE-017", invoiceNo: "INV-2025-0017", supplier: "Shopee Indonesia",    region: "ID", groundTruth: "Pass", patterns: ["cost-center-mismatch"],                    addedBy: "ai_ops_02", addedDate: "2025-02-15" },
+    { key: "3", caseId: "CASE-019", invoiceNo: "INV-2025-0019", supplier: "Accenture Pte Ltd",   region: "SG", groundTruth: "Fail", patterns: ["gl-account-wrong", "cost-center-mismatch"], addedBy: "ai_ops_01", addedDate: "2025-02-20" },
+  ],
+}
+
 // Helper: get step def by id
 export function getStepDef(stepId: string): AgentStepDef | undefined {
   for (const flow of flowData) {
@@ -172,6 +218,8 @@ export interface Agent {
   status: AgentStatus
   lastUpdated: string
   description: string
+  /** Region codes this agent is configured for. Empty = all regions. */
+  regions: string[]
 }
 
 export const agentListData: Agent[] = [
@@ -182,6 +230,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.3.0', status: 'ACTIVE',
     lastUpdated: '2025-03-15 10:22',
     description: 'Extracts header fields (vendor, date, amount) from raw invoice PDFs using vision model.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '2', id: 'AGT-002',
@@ -190,6 +239,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.4.0-beta', status: 'TESTING',
     lastUpdated: '2025-03-18 14:05',
     description: 'Validates each invoice line item against PO data and flags discrepancies.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '3', id: 'AGT-003',
@@ -198,6 +248,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v2.1.0', status: 'ACTIVE',
     lastUpdated: '2025-03-10 09:30',
     description: 'Matches invoices to purchase orders using fuzzy logic and embedding similarity.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '4', id: 'AGT-004',
@@ -206,6 +257,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.0.2', status: 'DEPRECATED',
     lastUpdated: '2025-02-28 16:45',
     description: 'Legacy three-way match logic. Superseded by PO Matching Agent v2.x.',
+    regions: ['SG'],
   },
   {
     key: '5', id: 'AGT-005',
@@ -214,6 +266,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.2.0', status: 'ACTIVE',
     lastUpdated: '2025-03-12 11:00',
     description: 'Generates AP voucher entries in SAP format from matched invoice data.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '6', id: 'AGT-006',
@@ -222,6 +275,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v0.9.1-beta', status: 'TESTING',
     lastUpdated: '2025-03-19 08:15',
     description: 'Routes generated vouchers to the correct approval workflow based on amount and cost center.',
+    regions: ['SG', 'TH', 'MY'],
   },
   {
     key: '7', id: 'AGT-007',
@@ -230,6 +284,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.0.0', status: 'ACTIVE',
     lastUpdated: '2025-03-01 09:00',
     description: 'Validates supplier registration data against government registries and internal blacklists.',
+    regions: ['SG', 'MY', 'VN', 'PH', 'ID'],
   },
   {
     key: '8', id: 'AGT-008',
@@ -238,6 +293,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.1.0-beta', status: 'TESTING',
     lastUpdated: '2025-03-17 13:40',
     description: 'Cross-checks supplier bank account details against known fraud patterns and SWIFT directory.',
+    regions: ['SG', 'TW', 'BR'],
   },
   {
     key: '9', id: 'AGT-009',
@@ -246,6 +302,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v2.0.1', status: 'ACTIVE',
     lastUpdated: '2025-03-08 10:15',
     description: 'Reconciles bank statements against AP ledger entries using transaction ID matching.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
   {
     key: '10', id: 'AGT-010',
@@ -254,6 +311,7 @@ export const agentListData: Agent[] = [
     currentVersion: 'v1.0.0', status: 'ACTIVE',
     lastUpdated: '2025-03-05 15:30',
     description: 'Classifies unmatched transactions into exception categories and routes for manual review.',
+    regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
   },
 ]
 

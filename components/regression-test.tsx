@@ -1,6 +1,7 @@
 "use client"
+// [Cache-Buster: 2025-03-19-v2] VerdictBanner uses longhand border properties only
 
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import {
   Select, Button, Table, Tag, Typography, Space, Progress,
   Statistic, Card, Divider, Empty, Switch, Tooltip,
@@ -11,7 +12,7 @@ import {
   ExperimentOutlined, TrophyOutlined, WarningOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
-import { agentListData, auditCaseData, type AgentStatus } from "@/lib/mock-data"
+import { agentListData, auditCaseData, INITIAL_GOLDEN_CASES, type Agent, type AgentStatus, type GoldenCasesState } from "@/lib/mock-data"
 
 const { Text, Title } = Typography
 
@@ -130,13 +131,48 @@ const SUITE_METRICS_FAILURE: Record<SuiteType, { accuracy: number; precision: nu
 
 // ── Case result builder ──────────────────────────────────────────
 
-function buildSuiteCases(agentId: string, suiteType: SuiteType, _passRate: number): CaseResult[] {
-  const pool = suiteType === "golden"
-    ? auditCaseData.filter((c) => c.isGolden === "Golden")
-    : auditCaseData
+function buildSuiteCases(
+  agentId: string,
+  suiteType: SuiteType,
+  _passRate: number,
+  goldenCases: GoldenCasesState,
+  agentStep: AgentStep,
+): CaseResult[] {
+  if (suiteType === "golden") {
+    // Use the shared golden cases for the agent's step
+    const stepCases = goldenCases[agentStep] ?? []
+    return stepCases.map((c, idx) => {
+      const mock = CASE_MOCK_DATA[c.caseId]
+      const gt: "Pass" | "Fail" = c.groundTruth
+      const pred: "Pass" | "Fail" = mock?.pred ?? gt
+      const correct = mock ? mock.correct : gt === pred
+      return {
+        key: c.key,
+        caseId: c.caseId,
+        invoiceNo: c.invoiceNo,
+        prNo: mock?.prNo ?? `PR-2025-${String(idx + 1).padStart(4, "0")}`,
+        poNo: mock?.poNo ?? `PO-2024-${String(idx + 1).padStart(4, "0")}`,
+        supplierName: c.supplier,
+        isGolden: true,
+        groundTruth: gt,
+        groundTruthReason: mock?.gtReason ?? "Golden case review completed",
+        agentPrediction: pred,
+        agentPredictionReason: mock?.predReason ?? "Prediction generated",
+        correct,
+        latencyMs: 200 + ((c.key.charCodeAt(0) * 37 + agentId.charCodeAt(3 % agentId.length)) % 600),
+        reviewer: mock?.reviewer ?? "system",
+        reviewDate: mock?.reviewDate ?? "2025-03-10",
+        confidence: mock?.confidence ?? 0.85,
+        modelVersion: mock?.modelVersion ?? "gpt-4o-2024-05",
+      }
+    })
+  }
+
+  // benchmark / current: use auditCaseData, exclude Pending
+  const pool = auditCaseData.filter((c) => c.groundTruth !== "Pending")
   return pool.map((c) => {
     const mock = CASE_MOCK_DATA[c.caseId]
-    const gt: "Pass" | "Fail" = mock?.gt ?? (c.groundTruth === "Pending" ? "Pass" : (c.groundTruth as "Pass" | "Fail"))
+    const gt: "Pass" | "Fail" = mock?.gt ?? (c.groundTruth as "Pass" | "Fail")
     const pred: "Pass" | "Fail" = mock?.pred ?? gt
     const correct = mock ? mock.correct : gt === pred
     return {
@@ -201,21 +237,23 @@ function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; sim
   const borderColor = allPass ? "#52C41A" : "#FF4D4F"
   const iconColor = allPass ? "#52C41A" : "#FF4D4F"
 
+  // Use box-shadow to simulate left-accent + thin border to avoid
+  // React shorthand/longhand conflict warnings on border properties.
+  const bannerStyle: React.CSSProperties = {
+    background: bg,
+    borderRadius: 6,
+    boxShadow: `inset 4px 0 0 ${borderColor}, 0 0 0 1px ${borderColor}33`,
+    padding: "16px 20px",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 24,
+  }
+
   return (
     <div style={{ marginBottom: 8 }}>
       <div
-        style={{
-          background: bg,
-          borderRadius: 6,
-          borderLeft: `4px solid ${borderColor}`,
-          border: `1px solid ${borderColor}33`,
-          borderLeftWidth: 4,
-          padding: "16px 20px",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 24,
-        }}
+        style={bannerStyle}
       >
         {/* Left: verdict */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -278,7 +316,7 @@ function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; sim
 
       {/* Threshold footnote */}
       <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 6, paddingLeft: 2 }}>
-        Publish threshold: [PLACEHOLDER — thresholds to be confirmed by product]
+        Publish threshold: Golden Pass Rate ≥ 85% (subject to change)
       </Text>
     </div>
   )
@@ -510,8 +548,22 @@ function CaseResultTable({ cases }: { cases: CaseResult[] }) {
 
 // ── Main component ───────────────────────────────────────────────
 
-export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: string }) {
-  const testingAgents = agentListData.filter((a) => a.status === "TESTING")
+export function RegressionTest({
+  preselectedAgentId,
+  agents,
+  goldenCases,
+  onPublish,
+  onPassedRun,
+}: {
+  preselectedAgentId?: string
+  agents?: Agent[]
+  goldenCases?: GoldenCasesState
+  onPublish?: (agentId: string) => void
+  onPassedRun?: (agentId: string) => void
+}) {
+  const allAgents = agents ?? agentListData
+  const sharedGoldenCases = goldenCases ?? INITIAL_GOLDEN_CASES
+  const testingAgents = allAgents.filter((a) => a.status === "TESTING")
 
   const [selectedId, setSelectedId] = useState<string>(
     preselectedAgentId ?? testingAgents[0]?.id ?? "",
@@ -521,11 +573,14 @@ export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: st
   const [suites, setSuites] = useState<SuiteResult[]>([])
   const [activeSuite, setActiveSuite] = useState<SuiteType>("golden")
   const [simulateFailure, setSimulateFailure] = useState(false)
+  const [published, setPublished] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (preselectedAgentId) setSelectedId(preselectedAgentId)
   }, [preselectedAgentId])
+
+  const selectedAgentStep = (allAgents.find((a) => a.id === selectedId)?.step ?? "INVOICE_REVIEW") as AgentStep
 
   // Rebuild suites when simulateFailure toggles (only when results are shown)
   useEffect(() => {
@@ -535,16 +590,17 @@ export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: st
         label: type === "golden" ? "Golden Suite" : type === "benchmark" ? "Benchmark Suite" : "Full Suite",
         type,
         ...metrics[type],
-        cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate),
+        cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep),
       }))
       setSuites(rebuilt)
     }
-  }, [simulateFailure, runStatus, selectedId])
+  }, [simulateFailure, runStatus, selectedId, sharedGoldenCases, selectedAgentStep])
 
   function handleRun() {
     if (!selectedId) return
     setSuites([])
     setProgress(0)
+    setPublished(false)
     setRunStatus("running")
 
     let pct = 0
@@ -558,11 +614,13 @@ export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: st
           label: type === "golden" ? "Golden Suite" : type === "benchmark" ? "Benchmark Suite" : "Full Suite",
           type,
           ...metrics[type],
-          cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate),
+          cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep),
         }))
         setSuites(results)
         setProgress(100)
         setRunStatus("done")
+        const allPassed = results.every((s) => s.goldenPassRate >= 85)
+        if (allPassed && selectedId) onPassedRun?.(selectedId)
       }
     }, 60)
   }
@@ -623,14 +681,25 @@ export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: st
 
           {runStatus === "done" && (
             <div style={{ paddingTop: 20 }}>
-              <Tooltip title={!canPublish ? "Publishing thresholds not met" : ""}>
+              <Tooltip title={!canPublish ? "Publishing thresholds not met" : published ? "Already published" : ""}>
                 <Button
                   type="primary"
                   icon={<CheckCircleOutlined />}
-                  disabled={!canPublish}
-                  style={canPublish ? { background: "#52c41a", borderColor: "#52c41a" } : {}}
+                  disabled={!canPublish || published}
+                  style={
+                    published
+                      ? { background: "#8c8c8c", borderColor: "#8c8c8c", cursor: "default" }
+                      : canPublish
+                        ? { background: "#52c41a", borderColor: "#52c41a" }
+                        : {}
+                  }
+                  onClick={() => {
+                    if (!selectedId || published) return
+                    setPublished(true)
+                    onPublish?.(selectedId)
+                  }}
                 >
-                  Publish Version
+                  {published ? "Published" : "Publish Version"}
                 </Button>
               </Tooltip>
             </div>

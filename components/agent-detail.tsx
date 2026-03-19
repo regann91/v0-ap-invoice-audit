@@ -3,7 +3,7 @@
 import { useState } from "react"
 import {
   Input, Select, InputNumber, Button, Typography,
-  Space, Tag, Modal, Table, message, Popconfirm,
+  Space, Tag, Modal, Table, message, Popconfirm, Tooltip,
 } from "antd"
 import {
   ArrowLeftOutlined, EyeOutlined, EyeInvisibleOutlined,
@@ -120,7 +120,19 @@ function SnapshotModal({ version, open, onClose }: { version: string; open: bool
 }
 
 // ── Version Management Panel ─────────────────────────────────────
-function VersionManagement({ onPublish }: { onPublish: () => void }) {
+function VersionManagement({
+  agentId,
+  passedAgentIds,
+  published,
+  onPublish,
+  onGoToRegressionTest,
+}: {
+  agentId: string
+  passedAgentIds: string[]
+  published: boolean
+  onPublish: () => void
+  onGoToRegressionTest: (agentId: string) => void
+}) {
   const { role } = useRole()
   const isOps = role === "AI_OPS"
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -178,26 +190,64 @@ function VersionManagement({ onPublish }: { onPublish: () => void }) {
             <Typography.Link style={{ fontSize: 12 }} onClick={() => setSnapshotVersion(d.testing!.version)}>
               View Snapshot
             </Typography.Link>
-            {isOps && (
-              <Popconfirm
-                title={`Publish ${d.testing.version}?`}
-                description={`This will replace ${d.current.version} as the current version.`}
-                okText="Yes, Publish"
-                cancelText="Cancel"
-                okButtonProps={{ style: { background: "#1890ff" } }}
-                onConfirm={onPublish}
-              >
-                <Button type="primary" size="small" style={{ background: "#1890ff", fontSize: 12 }}>
-                  Publish to Current
-                </Button>
-              </Popconfirm>
-            )}
+            {isOps && (() => {
+              const hasPassed = passedAgentIds.includes(agentId)
+              if (published) {
+                return (
+                  <Button size="small" disabled style={{ fontSize: 12, cursor: "default" }}>
+                    Published
+                  </Button>
+                )
+              }
+              if (!hasPassed) {
+                return (
+                  <Tooltip title="Regression Test must be run and passed before publishing">
+                    <Button type="primary" size="small" disabled style={{ fontSize: 12 }}>
+                      Publish to Current
+                    </Button>
+                  </Tooltip>
+                )
+              }
+              return (
+                <Popconfirm
+                  title={`Publish ${d.testing.version}?`}
+                  description={`This will replace ${d.current.version} as the current version.`}
+                  okText="Yes, Publish"
+                  cancelText="Cancel"
+                  okButtonProps={{ style: { background: "#1890ff" } }}
+                  onConfirm={onPublish}
+                >
+                  <Button type="primary" size="small" style={{ background: "#1890ff", fontSize: 12 }}>
+                    Publish to Current
+                  </Button>
+                </Popconfirm>
+              )
+            })()}
           </div>
-          {isOps && (
-            <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 6 }}>
-              Publishing will replace the current version.
-            </Text>
-          )}
+          {isOps && (() => {
+            const hasPassed = passedAgentIds.includes(agentId)
+            if (published) return null
+            if (!hasPassed) {
+              return (
+                <div style={{ marginTop: 6 }}>
+                  <Text style={{ fontSize: 11, color: "#faad14", display: "block" }}>
+                    No passing test run found for this version
+                  </Text>
+                  <Typography.Link
+                    style={{ fontSize: 11 }}
+                    onClick={() => onGoToRegressionTest(agentId)}
+                  >
+                    Run Regression Test →
+                  </Typography.Link>
+                </div>
+              )
+            }
+            return (
+              <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 6 }}>
+                Publishing will replace the current version.
+              </Text>
+            )
+          })()}
         </div>
       )}
 
@@ -233,17 +283,34 @@ function VersionManagement({ onPublish }: { onPublish: () => void }) {
 }
 
 // ── Agent Detail Root ────────────────────────────────────────────
-export function AgentDetail({ onBack }: { onBack: () => void }) {
+export function AgentDetail({
+  agentId,
+  passedAgentIds,
+  onBack,
+  onPublish: onPublishProp,
+  onGoToRegressionTest,
+}: {
+  agentId: string
+  passedAgentIds: string[]
+  onBack: () => void
+  onPublish?: (agentId: string) => void
+  onGoToRegressionTest?: (agentId: string) => void
+}) {
   const { role } = useRole()
   const isOps = role === "AI_OPS"
   const [msgApi, contextHolder] = message.useMessage()
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
   const [params, setParams] = useState(agentDetailData.additionalParams)
+  const [published, setPublished] = useState(false)
 
   const d = agentDetailData
 
   function handleSave() { msgApi.success("New version v1.4.0-beta saved successfully") }
-  function handlePublish() { msgApi.success("v1.4.0-beta published as current version") }
+  function handlePublish() {
+    setPublished(true)
+    onPublishProp?.(agentId)
+    msgApi.success("v1.4.0-beta published as current version")
+  }
   function addParam() { setParams((prev) => [...prev, { key: "", value: "" }]) }
   function removeParam(idx: number) { setParams((prev) => prev.filter((_, i) => i !== idx)) }
   function updateParam(idx: number, field: "key" | "value", val: string) {
@@ -470,7 +537,13 @@ export function AgentDetail({ onBack }: { onBack: () => void }) {
         {/* Right column: Version Management */}
         <div style={{ flex: "0 0 38%", minWidth: 0 }}>
           <div style={{ ...sectionStyle, position: "sticky", top: 16 }}>
-            <VersionManagement onPublish={handlePublish} />
+            <VersionManagement
+          agentId={agentId}
+          passedAgentIds={passedAgentIds}
+          published={published}
+          onPublish={handlePublish}
+          onGoToRegressionTest={onGoToRegressionTest ?? (() => {})}
+        />
           </div>
         </div>
       </div>

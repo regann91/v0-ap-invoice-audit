@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import {
   Table, Input, Select, Space, Tag, Typography, Button,
   Tooltip, Drawer, Descriptions, Badge, Card, Switch, Modal,
-  Form, message,
+  Form, message, Empty,
 } from "antd"
 import {
   SearchOutlined, FilterOutlined, EyeOutlined,
@@ -15,6 +15,7 @@ import {
   auditCaseData,
   type AuditCase, type CaseGolden,
 } from "@/lib/mock-data"
+import { useRegion } from "@/lib/region-context"
 
 const { Text } = Typography
 
@@ -281,6 +282,7 @@ function CaseDrawer({ record, onClose }: { record: AuditCase | null; onClose: ()
 // ── Main Component ────────────────────────────────────────────────
 
 export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: AuditCase) => void }) {
+  const { region } = useRegion()
   const [search, setSearch]               = useState("")
   const [regionFilter, setRegionFilter]   = useState<string | null>(null)
   const [entityFilter, setEntityFilter]   = useState<string | null>(null)
@@ -291,11 +293,14 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
   const [expandedData, setExpandedData]   = useState<Record<string, CaseExpanded>>({})
   const [msgApi, contextHolder]           = message.useMessage()
 
-  const regionOptions = useMemo(() => uniqueOptions(auditCaseData.map((r) => r.region)), [])
-  const entityOptions = useMemo(() => uniqueOptions(auditCaseData.map((r) => r.entity)), [])
+  // Region-filtered base pool (entity = 2-letter code matching region selector)
+  const regionPool = useMemo(() => auditCaseData.filter((r) => r.entity === region), [region])
+
+  const regionOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.region)), [regionPool])
+  const entityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
 
   const filtered = useMemo(() => {
-    return auditCaseData.filter((r) => {
+    return regionPool.filter((r) => {
       const q = search.toLowerCase()
       const matchSearch =
         !q ||
@@ -307,7 +312,7 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
       const matchGolden = !goldenFilter || r.isGolden === goldenFilter
         return matchSearch && matchRegion && matchEntity && matchGolden
     })
-  }, [search, regionFilter, entityFilter, goldenFilter])
+  }, [regionPool, search, regionFilter, entityFilter, goldenFilter])
 
   function getExpanded(caseId: string): CaseExpanded {
     return expandedData[caseId] ?? getDefaultExpanded(caseId)
@@ -448,13 +453,19 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
             Clear all
           </Button>
         )}
-        <span style={{ marginLeft: "auto" }}>
+        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <Tag style={{ background: "#e6f4ff", borderColor: "#91caff", color: "#0958d9", fontSize: 11, fontWeight: 500, margin: 0 }}>
+            Showing: {region}
+          </Tag>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {filtered.length} / {auditCaseData.length} cases
+            {filtered.length} / {regionPool.length} cases
           </Text>
         </span>
       </div>
 
+      {regionPool.length === 0 ? (
+        <Empty description="No data configured for this region yet" style={{ padding: "48px 0" }} />
+      ) : (
       <Table
         columns={columns}
         dataSource={filtered}
@@ -493,6 +504,8 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
           style: { cursor: "pointer" },
         })}
       />
+
+      )}
 
       <CaseDrawer record={detail} onClose={() => setDetail(null)} />
     </div>

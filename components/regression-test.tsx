@@ -483,8 +483,11 @@ export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: st
       {runStatus === "done" && suites.length > 0 && (
         <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px" }}>
 
+          {/* Verdict Banner */}
+          <VerdictBanner suites={suites} simulateFailure={simulateFailure} />
+
           {/* Suite tabs */}
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4" style={{ marginTop: 16 }}>
             {suites.map((s) => (
               <Button
                 key={s.type}
@@ -497,9 +500,6 @@ export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: st
               </Button>
             ))}
           </div>
-
-          {/* Verdict Banner — above metric cards */}
-          <VerdictBanner suites={suites} simulateFailure={simulateFailure} />
 
           {activeSuiteData && (
             <>

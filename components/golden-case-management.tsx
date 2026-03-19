@@ -277,11 +277,12 @@ function PatternDistribution({ step }: { step: StepType }) {
 // ── Add Case Modal ────────────────────────────────────────────────
 
 function AddCaseModal({
-  step, open, onClose, currentCount, limit,
+  step, open, onClose, onConfirm, currentCount, limit,
 }: {
   step: StepType
   open: boolean
   onClose: () => void
+  onConfirm: (cases: AddableCase[]) => void
   currentCount: number
   limit: number
 }) {
@@ -337,7 +338,18 @@ function AddCaseModal({
           </Text>
           <div style={{ display: "flex", gap: 8 }}>
             <Button onClick={() => { onClose(); setSelectedKeys([]); setSearch("") }}>Cancel</Button>
-            <Button type="primary" disabled={!canAdd} style={canAdd ? { background: "#1890ff" } : {}}>
+            <Button
+              type="primary"
+              disabled={!canAdd}
+              style={canAdd ? { background: "#1890ff" } : {}}
+              onClick={() => {
+                const selected = addable.filter((c) => selectedKeys.includes(c.key))
+                onConfirm(selected)
+                onClose()
+                setSelectedKeys([])
+                setSearch("")
+              }}
+            >
               Add to Golden Set
             </Button>
           </div>
@@ -402,8 +414,31 @@ export function GoldenCaseManagement() {
   const [gtFilter, setGtFilter] = useState<GroundTruth | "All">("All")
   const [addModalOpen, setAddModalOpen] = useState(false)
 
-  const cfg = STEP_CONFIG[activeStep]
-  const allCases = GOLDEN_CASES[activeStep]
+  // Dynamic golden cases per step — starts from mock data, grows on Add
+  const [dynamicCases, setDynamicCases] = useState<Record<StepType, GoldenCase[]>>(GOLDEN_CASES)
+
+  function handleConfirmAdd(added: AddableCase[]) {
+    const today = new Date().toISOString().slice(0, 10)
+    const newRows: GoldenCase[] = added.map((c, i) => ({
+      key: `added-${Date.now()}-${i}`,
+      caseId: c.caseId,
+      invoiceNo: c.invoiceNo,
+      supplier: c.supplier,
+      region: c.region,
+      groundTruth: (c.gtVerdict === "Pass" ? "Pass" : "Fail") as GroundTruth,
+      patterns: c.patterns,
+      addedBy: "ai_ops_current",
+      addedDate: today,
+    }))
+    setDynamicCases((prev) => ({
+      ...prev,
+      [activeStep]: [...prev[activeStep], ...newRows],
+    }))
+  }
+
+  const allCases = dynamicCases[activeStep]
+  const dynamicTotal = allCases.length
+  const cfg = { ...STEP_CONFIG[activeStep], total: dynamicTotal }
   const capColor = capacityColor(cfg.total, cfg.limit)
 
   const filtered = useMemo(() => {
@@ -486,8 +521,9 @@ export function GoldenCaseManagement() {
               onClick={() => { setActiveStep(step); setSearch(""); setPatternFilter([]); setGtFilter("All") }}
               style={{
                 padding: "8px 20px",
-                outline: `1px solid ${isActive ? "#1890ff" : "#d9d9d9"}`,
-                outlineOffset: "-1px",
+                boxShadow: isActive
+                  ? "0 0 0 1px #1890ff"
+                  : "0 0 0 1px #d9d9d9",
                 marginLeft: step !== "INVOICE_REVIEW" ? -1 : 0,
                 background: isActive ? "#1890ff" : "#fff",
                 color: isActive ? "#fff" : "#595959",
@@ -500,8 +536,7 @@ export function GoldenCaseManagement() {
                 borderBottomLeftRadius:  step === "INVOICE_REVIEW" ? 4 : 0,
                 borderTopRightRadius:    step === "AP_VOUCHER" ? 4 : 0,
                 borderBottomRightRadius: step === "AP_VOUCHER" ? 4 : 0,
-                border: "none",
-                transition: "background 0.2s, color 0.2s, outline-color 0.2s",
+                transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
               }}
             >
               {step}{" "}
@@ -574,7 +609,6 @@ export function GoldenCaseManagement() {
           size="small"
           rowKey="key"
           pagination={{
-            total: cfg.total,
             pageSize: 10,
             showTotal: (t) => `Total ${t} records`,
             showSizeChanger: false,
@@ -587,7 +621,8 @@ export function GoldenCaseManagement() {
         step={activeStep}
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        currentCount={cfg.total}
+        onConfirm={handleConfirmAdd}
+        currentCount={dynamicTotal}
         limit={cfg.limit}
       />
     </div>

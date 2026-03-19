@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from "react"
 import {
   Select, Button, Table, Tag, Typography, Space, Progress,
-  Statistic, Card, Divider, Alert, Empty, type EmptyProps,
+  Statistic, Card, Divider, Empty, Switch, Tooltip,
+  type EmptyProps,
 } from "antd"
 import {
   PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  ExperimentOutlined, TrophyOutlined,
+  ExperimentOutlined, TrophyOutlined, WarningOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentListData, auditCaseData, type AgentStatus } from "@/lib/mock-data"
@@ -17,6 +18,7 @@ const { Text, Title } = Typography
 // ── Types ────────────────────────────────────────────────────────
 
 type RunStatus = "idle" | "running" | "done"
+type SuiteType = "golden" | "benchmark" | "current"
 
 interface CaseResult {
   key: string
@@ -32,7 +34,7 @@ interface CaseResult {
 
 interface SuiteResult {
   label: string
-  type: "golden" | "benchmark" | "current"
+  type: SuiteType
   accuracy: number
   precision: number
   recall: number
@@ -40,52 +42,43 @@ interface SuiteResult {
   cases: CaseResult[]
 }
 
-// ── Helpers ──────────────────────────────────────────────────────
+// ── Fixed mock metrics (per spec) ────────────────────────────────
 
-function deterministicResult(caseId: string, agentId: string, suiteType: string): boolean {
-  const hash = (caseId + agentId + suiteType).split("").reduce((a, c) => a + c.charCodeAt(0), 0)
-  // bias toward correct: ~80% correct in benchmark, ~100% in golden for demo
-  if (suiteType === "golden") return hash % 10 >= 0  // all pass for golden suite demo
-  if (suiteType === "current") return hash % 10 >= 2  // 80%
-  return hash % 10 >= 3  // 70% baseline
+const SUITE_METRICS_NORMAL: Record<SuiteType, { accuracy: number; precision: number; recall: number; goldenPassRate: number }> = {
+  golden:    { accuracy: 91.2, precision: 100,  recall: 85.0, goldenPassRate: 92.0 },
+  benchmark: { accuracy: 87.5, precision: 95.0, recall: 81.2, goldenPassRate: 88.3 },
+  current:   { accuracy: 83.3, precision: 100,  recall: 77.8, goldenPassRate: 85.7 },
 }
 
-function buildSuiteResults(agentId: string, suiteType: "golden" | "benchmark" | "current"): CaseResult[] {
-  const cases = suiteType === "golden"
+// Simulate failure: Full Suite (current) drops goldenPassRate to 78.2
+const SUITE_METRICS_FAILURE: Record<SuiteType, { accuracy: number; precision: number; recall: number; goldenPassRate: number }> = {
+  golden:    { accuracy: 91.2, precision: 100,  recall: 85.0, goldenPassRate: 92.0 },
+  benchmark: { accuracy: 87.5, precision: 95.0, recall: 81.2, goldenPassRate: 88.3 },
+  current:   { accuracy: 83.3, precision: 100,  recall: 77.8, goldenPassRate: 78.2 },
+}
+
+// ── Case result builder (uses fixed correctness ratio per suite) ──
+
+function buildSuiteCases(agentId: string, suiteType: SuiteType, passRate: number): CaseResult[] {
+  const pool = suiteType === "golden"
     ? auditCaseData.filter((c) => c.isGolden === "Golden")
     : auditCaseData
-
-  return cases.map((c) => {
-    const correct = deterministicResult(c.caseId, agentId, suiteType)
-    const gt = c.groundTruth === "Pending" ? "Pass" : c.groundTruth
+  const totalToPass = Math.round((passRate / 100) * pool.length)
+  return pool.map((c, idx) => {
+    const correct = idx < totalToPass
+    const gt: "Pass" | "Fail" = c.groundTruth === "Pending" ? "Pass" : (c.groundTruth as "Pass" | "Fail")
     return {
       key: c.key,
       caseId: c.caseId,
       invoiceNo: c.invoiceNo,
       supplierName: c.supplierName,
       isGolden: c.isGolden === "Golden",
-      groundTruth: gt as "Pass" | "Fail",
-      agentPrediction: correct ? gt as "Pass" | "Fail" : (gt === "Pass" ? "Fail" : "Pass"),
+      groundTruth: gt,
+      agentPrediction: correct ? gt : (gt === "Pass" ? "Fail" : "Pass"),
       correct,
-      latencyMs: 200 + ((c.key.charCodeAt(0) * 37 + agentId.charCodeAt(3)) % 600),
+      latencyMs: 200 + ((c.key.charCodeAt(0) * 37 + agentId.charCodeAt(3 % agentId.length)) % 600),
     }
   })
-}
-
-function calcMetrics(cases: CaseResult[]) {
-  const total = cases.length
-  const correct = cases.filter((c) => c.correct).length
-  const tp = cases.filter((c) => c.agentPrediction === "Pass" && c.groundTruth === "Pass").length
-  const fp = cases.filter((c) => c.agentPrediction === "Pass" && c.groundTruth === "Fail").length
-  const fn = cases.filter((c) => c.agentPrediction === "Fail" && c.groundTruth === "Pass").length
-  const goldenCases = cases.filter((c) => c.isGolden)
-  const goldenCorrect = goldenCases.filter((c) => c.correct).length
-  return {
-    accuracy: total > 0 ? Math.round((correct / total) * 1000) / 10 : 0,
-    precision: (tp + fp) > 0 ? Math.round((tp / (tp + fp)) * 1000) / 10 : 0,
-    recall: (tp + fn) > 0 ? Math.round((tp / (tp + fn)) * 1000) / 10 : 0,
-    goldenPassRate: goldenCases.length > 0 ? Math.round((goldenCorrect / goldenCases.length) * 1000) / 10 : 0,
-  }
 }
 
 // ── Sub-components ───────────────────────────────────────────────
@@ -104,13 +97,123 @@ function PredictionTag({ value }: { value: "Pass" | "Fail" }) {
   )
 }
 
+// ── Verdict Banner ───────────────────────────────────────────────
+
+interface SuiteSummary {
+  label: string
+  accuracy: number
+  goldenPassRate: number
+  pass: boolean
+}
+
+function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; simulateFailure: boolean }) {
+  const summaries: SuiteSummary[] = suites.map((s) => ({
+    label: s.label,
+    accuracy: s.accuracy,
+    goldenPassRate: s.goldenPassRate,
+    pass: s.goldenPassRate >= 85,
+  }))
+
+  const allPass = summaries.every((s) => s.pass)
+  const failedSuites = summaries.filter((s) => !s.pass)
+
+  const bg = allPass ? "#F6FFED" : "#FFF2F0"
+  const borderColor = allPass ? "#52C41A" : "#FF4D4F"
+  const iconColor = allPass ? "#52C41A" : "#FF4D4F"
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div
+        style={{
+          background: bg,
+          borderRadius: 6,
+          borderLeft: `4px solid ${borderColor}`,
+          border: `1px solid ${borderColor}33`,
+          borderLeftWidth: 4,
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 24,
+        }}
+      >
+        {/* Left: verdict */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ marginTop: 2, fontSize: 22, color: iconColor, lineHeight: 1 }}>
+            {allPass
+              ? <CheckCircleOutlined />
+              : <WarningOutlined />
+            }
+          </div>
+          <div>
+            <Text strong style={{ fontSize: 15, color: allPass ? "#237804" : "#a8071a", display: "block" }}>
+              {allPass ? "Recommended to Publish" : "Not Recommended to Publish"}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              {allPass
+                ? "All suites meet the publishing threshold."
+                : failedSuites.map((s) =>
+                    `${s.label}: Golden Pass Rate ${s.goldenPassRate}% is below threshold.`
+                  ).join(" ")}
+            </Text>
+          </div>
+        </div>
+
+        {/* Right: 3-suite compact summary */}
+        <div style={{ display: "flex", gap: 20, flexShrink: 0, alignItems: "flex-start", paddingTop: 2 }}>
+          {summaries.map((s) => (
+            <div key={s.label} style={{ textAlign: "right" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end", marginBottom: 2 }}>
+                <span
+                  style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: s.pass ? "#52c41a" : "#ff4d4f",
+                    display: "inline-block", flexShrink: 0,
+                  }}
+                />
+                <Text style={{ fontSize: 12, fontWeight: 600, color: "#434343" }}>{s.label}</Text>
+                <Tag
+                  style={{
+                    fontSize: 10, fontWeight: 700, padding: "0 5px", lineHeight: "18px",
+                    color: s.pass ? "#389e0d" : "#cf1322",
+                    background: s.pass ? "#f6ffed" : "#fff1f0",
+                    borderColor: s.pass ? "#b7eb8f" : "#ffa39e",
+                  }}
+                >
+                  {s.pass ? "PASS" : "FAIL"}
+                </Tag>
+              </div>
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                Accuracy{" "}
+                <span style={{ color: "#434343", fontWeight: 500 }}>{s.accuracy}%</span>
+                {" / "}Golden PR{" "}
+                <span style={{ color: s.pass ? "#389e0d" : "#cf1322", fontWeight: 600 }}>
+                  {s.goldenPassRate}%
+                </span>
+              </Text>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Threshold footnote */}
+      <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 6, paddingLeft: 2 }}>
+        Publish threshold: [PLACEHOLDER — thresholds to be confirmed by product]
+      </Text>
+    </div>
+  )
+}
+
+// ── Metric Cards ─────────────────────────────────────────────────
+
 function MetricCards({ suite }: { suite: SuiteResult }) {
   const metrics = [
-    { label: "Accuracy", value: suite.accuracy, suffix: "%" },
-    { label: "Precision", value: suite.precision, suffix: "%" },
-    { label: "Recall", value: suite.recall, suffix: "%" },
-    { label: "Golden Pass Rate", value: suite.goldenPassRate, suffix: "%", highlight: true },
+    { label: "Accuracy",        value: suite.accuracy,       suffix: "%" },
+    { label: "Precision",       value: suite.precision,      suffix: "%" },
+    { label: "Recall",          value: suite.recall,         suffix: "%" },
+    { label: "Golden Pass Rate",value: suite.goldenPassRate, suffix: "%", highlight: true },
   ]
+  const gprPass = suite.goldenPassRate >= 85
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
       {metrics.map((m) => (
@@ -119,10 +222,10 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
           size="small"
           style={{
             border: m.highlight
-              ? suite.goldenPassRate === 100 ? "1px solid #b7eb8f" : "1px solid #ffa39e"
+              ? gprPass ? "1px solid #b7eb8f" : "1px solid #ffa39e"
               : "1px solid #f0f0f0",
             background: m.highlight
-              ? suite.goldenPassRate === 100 ? "#f6ffed" : "#fff1f0"
+              ? gprPass ? "#f6ffed" : "#fff1f0"
               : "#fafafa",
           }}
         >
@@ -134,7 +237,7 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
               fontSize: 22,
               fontWeight: 700,
               color: m.highlight
-                ? suite.goldenPassRate === 100 ? "#389e0d" : "#cf1322"
+                ? gprPass ? "#389e0d" : "#cf1322"
                 : "#1d1d1d",
             }}
           />
@@ -143,6 +246,8 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
     </div>
   )
 }
+
+// ── Case Result Table ─────────────────────────────────────────────
 
 function CaseResultTable({ cases }: { cases: CaseResult[] }) {
   const columns: ColumnsType<CaseResult> = [
@@ -222,17 +327,7 @@ function CaseResultTable({ cases }: { cases: CaseResult[] }) {
 
 // ── Main component ───────────────────────────────────────────────
 
-const STATUS_LABEL: Record<AgentStatus, string> = {
-  ACTIVE: "ACTIVE",
-  TESTING: "TESTING",
-  DEPRECATED: "DEPRECATED",
-}
-
-export function RegressionTest({
-  preselectedAgentId,
-}: {
-  preselectedAgentId?: string
-}) {
+export function RegressionTest({ preselectedAgentId }: { preselectedAgentId?: string }) {
   const testingAgents = agentListData.filter((a) => a.status === "TESTING")
 
   const [selectedId, setSelectedId] = useState<string>(
@@ -241,12 +336,27 @@ export function RegressionTest({
   const [runStatus, setRunStatus] = useState<RunStatus>("idle")
   const [progress, setProgress] = useState(0)
   const [suites, setSuites] = useState<SuiteResult[]>([])
-  const [activeSuite, setActiveSuite] = useState<"golden" | "benchmark" | "current">("golden")
+  const [activeSuite, setActiveSuite] = useState<SuiteType>("golden")
+  const [simulateFailure, setSimulateFailure] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (preselectedAgentId) setSelectedId(preselectedAgentId)
   }, [preselectedAgentId])
+
+  // Rebuild suites when simulateFailure toggles (only when results are shown)
+  useEffect(() => {
+    if (runStatus === "done" && selectedId) {
+      const metrics = simulateFailure ? SUITE_METRICS_FAILURE : SUITE_METRICS_NORMAL
+      const rebuilt: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => ({
+        label: type === "golden" ? "Golden Suite" : type === "benchmark" ? "Benchmark Suite" : "Full Suite",
+        type,
+        ...metrics[type],
+        cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate),
+      }))
+      setSuites(rebuilt)
+    }
+  }, [simulateFailure, runStatus, selectedId])
 
   function handleRun() {
     if (!selectedId) return
@@ -260,16 +370,13 @@ export function RegressionTest({
       setProgress(Math.min(pct, 99))
       if (pct >= 100) {
         clearInterval(timerRef.current!)
-        const results: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => {
-          const cases = buildSuiteResults(selectedId, type)
-          const metrics = calcMetrics(cases)
-          return {
-            label: type === "golden" ? "Golden Suite" : type === "benchmark" ? "Benchmark Suite" : "Full Suite",
-            type,
-            ...metrics,
-            cases,
-          }
-        })
+        const metrics = simulateFailure ? SUITE_METRICS_FAILURE : SUITE_METRICS_NORMAL
+        const results: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => ({
+          label: type === "golden" ? "Golden Suite" : type === "benchmark" ? "Benchmark Suite" : "Full Suite",
+          type,
+          ...metrics[type],
+          cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate),
+        }))
         setSuites(results)
         setProgress(100)
         setRunStatus("done")
@@ -278,8 +385,8 @@ export function RegressionTest({
   }
 
   const activeSuiteData = suites.find((s) => s.type === activeSuite)
-  const goldenSuite = suites.find((s) => s.type === "golden")
-  const canPublish = runStatus === "done" && goldenSuite?.goldenPassRate === 100
+  const allPass = suites.length > 0 && suites.every((s) => s.goldenPassRate >= 85)
+  const canPublish = runStatus === "done" && allPass
 
   const agentOptions = testingAgents.map((a) => ({
     value: a.id,
@@ -333,23 +440,16 @@ export function RegressionTest({
 
           {runStatus === "done" && (
             <div style={{ paddingTop: 20 }}>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                disabled={!canPublish}
-                style={canPublish ? { background: "#52c41a", borderColor: "#52c41a" } : {}}
-                title={!canPublish ? "Golden Pass Rate must be 100% to publish" : ""}
-              >
-                Publish Version
-              </Button>
-            </div>
-          )}
-
-          {runStatus === "done" && !canPublish && (
-            <div style={{ paddingTop: 20 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Golden Pass Rate must reach 100% before publishing.
-              </Text>
+              <Tooltip title={!canPublish ? "Publishing thresholds not met" : ""}>
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  disabled={!canPublish}
+                  style={canPublish ? { background: "#52c41a", borderColor: "#52c41a" } : {}}
+                >
+                  Publish Version
+                </Button>
+              </Tooltip>
             </div>
           )}
         </div>
@@ -357,7 +457,7 @@ export function RegressionTest({
         {runStatus === "running" && (
           <div style={{ marginTop: 16 }}>
             <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
-              Running test suites: Golden → Benchmark → Full...
+              Running test suites: Golden Suite → Benchmark Suite → Full Suite...
             </Text>
             <Progress
               percent={progress}
@@ -368,7 +468,7 @@ export function RegressionTest({
         )}
       </div>
 
-      {/* Results */}
+      {/* Idle empty state */}
       {runStatus === "idle" && (() => {
         const emptyProps: EmptyProps = {
           image: <ExperimentOutlined style={{ fontSize: 48, color: "#d9d9d9" }} />,
@@ -379,8 +479,10 @@ export function RegressionTest({
         return <Empty {...emptyProps} />
       })()}
 
+      {/* Results */}
       {runStatus === "done" && suites.length > 0 && (
         <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px" }}>
+
           {/* Suite tabs */}
           <div className="flex items-center gap-2 mb-4">
             {suites.map((s) => (
@@ -396,28 +498,14 @@ export function RegressionTest({
             ))}
           </div>
 
+          {/* Verdict Banner — above metric cards */}
+          <VerdictBanner suites={suites} simulateFailure={simulateFailure} />
+
           {activeSuiteData && (
             <>
-              {/* Golden Pass Rate banner */}
-              {activeSuiteData.type === "golden" && (
-                <Alert
-                  type={activeSuiteData.goldenPassRate === 100 ? "success" : "error"}
-                  icon={
-                    activeSuiteData.goldenPassRate === 100
-                      ? <CheckCircleOutlined />
-                      : <CloseCircleOutlined />
-                  }
-                  showIcon
-                  message={
-                    activeSuiteData.goldenPassRate === 100
-                      ? "All golden cases passed. This version is eligible for publishing."
-                      : `Golden Pass Rate is ${activeSuiteData.goldenPassRate}% — all golden cases must pass before publishing.`
-                  }
-                  style={{ marginBottom: 16 }}
-                />
-              )}
-
-              <MetricCards suite={activeSuiteData} />
+              <div style={{ marginTop: 16 }}>
+                <MetricCards suite={activeSuiteData} />
+              </div>
               <Divider style={{ margin: "12px 0" }} />
               <Title level={5} style={{ marginBottom: 12, fontSize: 13, color: "#595959" }}>
                 Case-level Results — {activeSuiteData.label}
@@ -425,6 +513,30 @@ export function RegressionTest({
               <CaseResultTable cases={activeSuiteData.cases} />
             </>
           )}
+
+          {/* Simulate Failure toggle (demo only) */}
+          <Divider style={{ margin: "20px 0 12px" }} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 12px",
+              background: "#fffbe6",
+              border: "1px dashed #ffe58f",
+              borderRadius: 4,
+            }}
+          >
+            <Switch
+              size="small"
+              checked={simulateFailure}
+              onChange={setSimulateFailure}
+              style={simulateFailure ? { background: "#ff4d4f" } : {}}
+            />
+            <Text style={{ fontSize: 12, color: "#874d00" }}>
+              Simulate Failure (demo only) — toggles Full Suite Golden Pass Rate to 78.2%
+            </Text>
+          </div>
         </div>
       )}
     </div>

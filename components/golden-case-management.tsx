@@ -35,7 +35,12 @@ interface AddableCase {
   invoiceNo: string
   supplier: string
   region: string
-  groundTruth: GroundTruth
+  // INVOICE_REVIEW: "Pass" | "Fail"
+  // MATCH: "Matched" | "Rejected"
+  // AP_VOUCHER: "Voucher Submitted" | "Rejected"
+  gtVerdict: string
+  gtDetail: string   // e.g. "3/3 line items matched" or "APV-2025-00312 · SGD 158,050" or ""
+  patterns: string[]
 }
 
 // ── Mock data ─────────────────────────────────────────────────────
@@ -107,21 +112,28 @@ const GOLDEN_CASES: Record<StepType, GoldenCase[]> = {
 
 const ADDABLE_CASES: Record<StepType, AddableCase[]> = {
   INVOICE_REVIEW: [
-    { key: "a1", caseId: "CASE-003", invoiceNo: "INV-2025-0003", supplier: "Google Asia Pacific",   region: "SG", groundTruth: "Pass" },
-    { key: "a2", caseId: "CASE-005", invoiceNo: "INV-2025-0005", supplier: "Deloitte Advisory SEA", region: "VN", groundTruth: "Pass" },
-    { key: "a3", caseId: "CASE-007", invoiceNo: "INV-2025-0007", supplier: "Tencent Cloud Intl",    region: "TW", groundTruth: "Fail" },
-    { key: "a4", caseId: "CASE-009", invoiceNo: "INV-2025-0009", supplier: "Shopee Philippines",    region: "PH", groundTruth: "Pass" },
-    { key: "a5", caseId: "CASE-011", invoiceNo: "INV-2025-0011", supplier: "AWS Singapore Pte Ltd", region: "SG", groundTruth: "Pass" },
-    { key: "a6", caseId: "CASE-013", invoiceNo: "INV-2025-0013", supplier: "Alibaba Cloud HK",      region: "TW", groundTruth: "Fail" },
+    { key: "a1", caseId: "CASE-003", invoiceNo: "INV-2025-0003", supplier: "Google Asia Pacific",   region: "SG", gtVerdict: "Pass", gtDetail: "", patterns: ["gst-calculation-error", "header-check"] },
+    { key: "a2", caseId: "CASE-005", invoiceNo: "INV-2025-0005", supplier: "Deloitte Advisory SEA", region: "VN", gtVerdict: "Pass", gtDetail: "", patterns: [] },
+    { key: "a3", caseId: "CASE-007", invoiceNo: "INV-2025-0007", supplier: "Tencent Cloud Intl",    region: "TW", gtVerdict: "Fail", gtDetail: "", patterns: ["supplier-name-mismatch"] },
+    { key: "a4", caseId: "CASE-009", invoiceNo: "INV-2025-0009", supplier: "Shopee Philippines",    region: "PH", gtVerdict: "Pass", gtDetail: "", patterns: ["amount-mismatch"] },
+    { key: "a5", caseId: "CASE-011", invoiceNo: "INV-2025-0011", supplier: "AWS Singapore Pte Ltd", region: "SG", gtVerdict: "Pass", gtDetail: "", patterns: [] },
+    { key: "a6", caseId: "CASE-013", invoiceNo: "INV-2025-0013", supplier: "Alibaba Cloud HK",      region: "TW", gtVerdict: "Fail", gtDetail: "", patterns: ["duplicate-invoice", "date-out-of-range"] },
   ],
   MATCH: [
-    { key: "a1", caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", groundTruth: "Pass" },
-    { key: "a2", caseId: "CASE-002", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd", region: "SG", groundTruth: "Fail" },
+    { key: "a1", caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", gtVerdict: "Matched",  gtDetail: "3/3 line items matched",                   patterns: [] },
+    { key: "a2", caseId: "CASE-002", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd", region: "SG", gtVerdict: "Rejected", gtDetail: "Unit price mismatch on line 002",           patterns: [] },
+    { key: "a3", caseId: "CASE-004", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",    region: "TH", gtVerdict: "Matched",  gtDetail: "2/2 line items matched",                   patterns: [] },
+    { key: "a4", caseId: "CASE-006", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",      region: "TW", gtVerdict: "Rejected", gtDetail: "PO line 001 quantity discrepancy",         patterns: [] },
+    { key: "a5", caseId: "CASE-008", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",   region: "BR", gtVerdict: "Matched",  gtDetail: "4/4 line items matched",                   patterns: [] },
+    { key: "a6", caseId: "CASE-010", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",      region: "ID", gtVerdict: "Rejected", gtDetail: "Supplier bank account not verified",       patterns: [] },
   ],
   AP_VOUCHER: [
-    { key: "a1", caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", groundTruth: "Pass" },
-    { key: "a2", caseId: "CASE-004", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",    region: "TH", groundTruth: "Pass" },
-    { key: "a3", caseId: "CASE-006", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",      region: "TW", groundTruth: "Pass" },
+    { key: "a1", caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00312 · SGD 158,050",   patterns: [] },
+    { key: "a2", caseId: "CASE-002", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd", region: "SG", gtVerdict: "Rejected",          gtDetail: "Incorrect GL account selected",  patterns: [] },
+    { key: "a3", caseId: "CASE-004", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",    region: "TH", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00318 · THB 215,000",   patterns: [] },
+    { key: "a4", caseId: "CASE-006", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",      region: "TW", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00325 · TWD 56,000",    patterns: [] },
+    { key: "a5", caseId: "CASE-008", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",   region: "BR", gtVerdict: "Rejected",          gtDetail: "Cost center does not match department", patterns: [] },
+    { key: "a6", caseId: "CASE-010", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",      region: "ID", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00341 · IDR 185,000",   patterns: [] },
   ],
 }
 
@@ -138,6 +150,36 @@ function GtTag({ value }: { value: GroundTruth }) {
     <Tag style={{ color: c.color, background: c.bg, borderColor: c.border, fontWeight: 500, fontSize: 11 }}>
       {value}
     </Tag>
+  )
+}
+
+const MODAL_GT_CFG: Record<string, { color: string; bg: string; border: string }> = {
+  "Pass":              { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f" },
+  "Fail":              { color: "#cf1322", bg: "#fff1f0", border: "#ffa39e" },
+  "Matched":           { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f" },
+  "Rejected":          { color: "#cf1322", bg: "#fff1f0", border: "#ffa39e" },
+  "Voucher Submitted": { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f" },
+}
+
+function ModalGtCell({ verdict, detail }: { verdict: string; detail: string }) {
+  const cfg = MODAL_GT_CFG[verdict] ?? { color: "#595959", bg: "#fafafa", border: "#d9d9d9" }
+  return (
+    <div>
+      <Tag style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border, fontWeight: 500, fontSize: 11, marginBottom: detail ? 2 : 0 }}>
+        {verdict}
+      </Tag>
+      {detail && (
+        <Tooltip title={detail} placement="topLeft">
+          <div style={{
+            fontSize: 12, color: "#8c8c8c", lineHeight: 1.3,
+            maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            cursor: "default",
+          }}>
+            {detail}
+          </div>
+        </Tooltip>
+      )}
+    </div>
   )
 }
 
@@ -261,13 +303,24 @@ function AddCaseModal({
   const canAdd = selectedKeys.length > 0 && !wouldExceed
 
   const columns: ColumnsType<AddableCase> = [
-    { title: "Case ID",    dataIndex: "caseId",    width: 100, render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Invoice No", dataIndex: "invoiceNo",  width: 140, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Supplier",   dataIndex: "supplier",   ellipsis: true, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Region",     dataIndex: "region",     width: 70,  render: (v: string) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text> },
+    { title: "Case ID",    dataIndex: "caseId",   width: 100, render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+    { title: "Invoice No", dataIndex: "invoiceNo", width: 130, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
+    { title: "Supplier",   dataIndex: "supplier",  ellipsis: true, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
+    { title: "Region",     dataIndex: "region",    width: 65,  render: (v: string) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text> },
     {
-      title: "Ground Truth", dataIndex: "groundTruth", width: 110,
-      render: (v: GroundTruth) => <GtTag value={v} />,
+      title: "Ground Truth", key: "gt", width: 200,
+      render: (_: unknown, r: AddableCase) => <ModalGtCell verdict={r.gtVerdict} detail={r.gtDetail} />,
+    },
+    {
+      title: "Patterns", dataIndex: "patterns", key: "patterns",
+      render: (tags: string[]) =>
+        tags.length === 0
+          ? <Text type="secondary" style={{ fontSize: 12 }}>—</Text>
+          : <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              {tags.map((t) => (
+                <Tag key={t} style={{ fontSize: 11, padding: "0 5px", margin: 0, color: "#595959", background: "#fafafa", borderColor: "#d9d9d9" }}>{t}</Tag>
+              ))}
+            </div>,
     },
   ]
 
@@ -276,7 +329,7 @@ function AddCaseModal({
       title={`Add Case to Golden Set — ${step}`}
       open={open}
       onCancel={() => { onClose(); setSelectedKeys([]); setSearch("") }}
-      width={760}
+      width={900}
       footer={
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Text type="secondary" style={{ fontSize: 13 }}>
@@ -433,19 +486,16 @@ export function GoldenCaseManagement() {
               onClick={() => { setActiveStep(step); setSearch(""); setPatternFilter([]); setGtFilter("All") }}
               style={{
                 padding: "8px 20px",
-                borderTopWidth: 1,
-                borderBottomWidth: 1,
-                borderRightWidth: 1,
-                borderLeftWidth: step !== "INVOICE_REVIEW" ? 0 : 1,
-                borderStyle: "solid",
-                borderColor: isActive ? "#1890ff" : "#d9d9d9",
-                marginLeft: step !== "INVOICE_REVIEW" ? 0 : 0,
+                borderTopWidth: 1, borderTopStyle: "solid" as const, borderTopColor: isActive ? "#1890ff" : "#d9d9d9",
+                borderBottomWidth: 1, borderBottomStyle: "solid" as const, borderBottomColor: isActive ? "#1890ff" : "#d9d9d9",
+                borderRightWidth: 1, borderRightStyle: "solid" as const, borderRightColor: isActive ? "#1890ff" : "#d9d9d9",
+                borderLeftWidth: step !== "INVOICE_REVIEW" ? 0 : 1, borderLeftStyle: "solid" as const, borderLeftColor: isActive ? "#1890ff" : "#d9d9d9",
                 background: isActive ? "#1890ff" : "#fff",
                 color: isActive ? "#fff" : "#595959",
                 fontWeight: isActive ? 600 : 400,
                 fontSize: 13,
                 cursor: "pointer",
-                position: "relative",
+                position: "relative" as const,
                 zIndex: isActive ? 1 : 0,
                 borderTopLeftRadius:     step === "INVOICE_REVIEW" ? 4 : 0,
                 borderBottomLeftRadius:  step === "INVOICE_REVIEW" ? 4 : 0,

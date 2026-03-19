@@ -20,16 +20,87 @@ const { Text, Title } = Typography
 type RunStatus = "idle" | "running" | "done"
 type SuiteType = "golden" | "benchmark" | "current"
 
+type AgentStep = "INVOICE_REVIEW" | "MATCH" | "AP_VOUCHER"
+
 interface CaseResult {
   key: string
   caseId: string
   invoiceNo: string
+  prNo: string
+  poNo: string
   supplierName: string
   isGolden: boolean
   groundTruth: "Pass" | "Fail"
+  groundTruthReason: string
   agentPrediction: "Pass" | "Fail"
+  agentPredictionReason: string
   correct: boolean
   latencyMs: number
+  // expand panel detail
+  reviewer: string
+  reviewDate: string
+  confidence: number
+  modelVersion: string
+}
+
+// ── Fixed per-case mock data (Invoice Review step) ───────────────
+
+const CASE_MOCK_DATA: Record<string, {
+  prNo: string; poNo: string;
+  gt: "Pass" | "Fail"; gtReason: string;
+  pred: "Pass" | "Fail"; predReason: string;
+  correct: boolean;
+  reviewer: string; reviewDate: string; confidence: number; modelVersion: string;
+}> = {
+  "CASE-001": {
+    prNo: "PR-2025-0041", poNo: "PO-2024-8821",
+    gt: "Pass",   gtReason: "Invoice verified, amounts correct",
+    pred: "Pass", predReason: "Header fields validated successfully",
+    correct: true,
+    reviewer: "alice.tan", reviewDate: "2025-03-10", confidence: 0.95, modelVersion: "gpt-4o-2024-05",
+  },
+  "CASE-002": {
+    prNo: "PR-2025-0042", poNo: "PO-2024-8822",
+    gt: "Fail",   gtReason: "Supplier name mismatch with PO",
+    pred: "Fail", predReason: "Name discrepancy detected on header",
+    correct: true,
+    reviewer: "bob.lim", reviewDate: "2025-03-11", confidence: 0.91, modelVersion: "gpt-4o-2024-05",
+  },
+  "CASE-004": {
+    prNo: "PR-2025-0044", poNo: "PO-2024-8824",
+    gt: "Pass",   gtReason: "All checks passed",
+    pred: "Pass", predReason: "Invoice within approved budget",
+    correct: true,
+    reviewer: "carol.ng", reviewDate: "2025-03-12", confidence: 0.93, modelVersion: "gpt-4o-2024-05",
+  },
+  "CASE-006": {
+    prNo: "PR-2025-0046", poNo: "PO-2024-8826",
+    gt: "Pass",   gtReason: "GST and amounts verified",
+    pred: "Pass", predReason: "GST calculation correct",
+    correct: true,
+    reviewer: "david.wu", reviewDate: "2025-03-13", confidence: 0.97, modelVersion: "gpt-4o-2024-05",
+  },
+  "CASE-008": {
+    prNo: "PR-2025-0048", poNo: "—",
+    gt: "Pass",   gtReason: "Three-way match confirmed",
+    pred: "Pass", predReason: "Line items reconciled successfully",
+    correct: true,
+    reviewer: "alice.tan", reviewDate: "2025-03-14", confidence: 0.89, modelVersion: "gpt-4o-2024-05",
+  },
+  "CASE-010": {
+    prNo: "PR-2025-0050", poNo: "PO-2024-8830",
+    gt: "Fail",   gtReason: "Amount exceeds PO budget",
+    pred: "Fail", predReason: "Budget threshold exceeded",
+    correct: true,
+    reviewer: "bob.lim", reviewDate: "2025-03-15", confidence: 0.88, modelVersion: "gpt-4o-2024-05",
+  },
+  "CASE-012": {
+    prNo: "PR-2025-0052", poNo: "PO-2024-8832",
+    gt: "Pass",   gtReason: "Invoice validated",
+    pred: "Fail", predReason: "Duplicate invoice detected in system",
+    correct: false,
+    reviewer: "carol.ng", reviewDate: "2025-03-16", confidence: 0.76, modelVersion: "gpt-4o-2024-05",
+  },
 }
 
 interface SuiteResult {
@@ -57,26 +128,35 @@ const SUITE_METRICS_FAILURE: Record<SuiteType, { accuracy: number; precision: nu
   current:   { accuracy: 83.3, precision: 100,  recall: 77.8, goldenPassRate: 78.2 },
 }
 
-// ── Case result builder (uses fixed correctness ratio per suite) ──
+// ── Case result builder ──────────────────────────────────────────
 
-function buildSuiteCases(agentId: string, suiteType: SuiteType, passRate: number): CaseResult[] {
+function buildSuiteCases(agentId: string, suiteType: SuiteType, _passRate: number): CaseResult[] {
   const pool = suiteType === "golden"
     ? auditCaseData.filter((c) => c.isGolden === "Golden")
     : auditCaseData
-  const totalToPass = Math.round((passRate / 100) * pool.length)
-  return pool.map((c, idx) => {
-    const correct = idx < totalToPass
-    const gt: "Pass" | "Fail" = c.groundTruth === "Pending" ? "Pass" : (c.groundTruth as "Pass" | "Fail")
+  return pool.map((c) => {
+    const mock = CASE_MOCK_DATA[c.caseId]
+    const gt: "Pass" | "Fail" = mock?.gt ?? (c.groundTruth === "Pending" ? "Pass" : (c.groundTruth as "Pass" | "Fail"))
+    const pred: "Pass" | "Fail" = mock?.pred ?? gt
+    const correct = mock ? mock.correct : gt === pred
     return {
       key: c.key,
       caseId: c.caseId,
       invoiceNo: c.invoiceNo,
+      prNo: mock?.prNo ?? `PR-2025-${c.key.padStart(4, "0")}`,
+      poNo: mock?.poNo ?? `PO-2024-${c.key.padStart(4, "0")}`,
       supplierName: c.supplierName,
       isGolden: c.isGolden === "Golden",
       groundTruth: gt,
-      agentPrediction: correct ? gt : (gt === "Pass" ? "Fail" : "Pass"),
+      groundTruthReason: mock?.gtReason ?? "Review completed",
+      agentPrediction: pred,
+      agentPredictionReason: mock?.predReason ?? "Prediction generated",
       correct,
       latencyMs: 200 + ((c.key.charCodeAt(0) * 37 + agentId.charCodeAt(3 % agentId.length)) % 600),
+      reviewer: mock?.reviewer ?? "system",
+      reviewDate: mock?.reviewDate ?? "2025-03-10",
+      confidence: mock?.confidence ?? 0.85,
+      modelVersion: mock?.modelVersion ?? "gpt-4o-2024-05",
     }
   })
 }
@@ -247,58 +327,155 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
   )
 }
 
+// ── Rich verdict cell ─────────────────────────────────────────────
+
+function VerdictCell({ verdict, reason }: { verdict: "Pass" | "Fail"; reason: string }) {
+  const cfg = RESULT_TAG_CFG[verdict]
+  return (
+    <div>
+      <Tag style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border, fontWeight: 500, fontSize: 11, marginBottom: 2 }}>
+        {verdict}
+      </Tag>
+      <div style={{
+        fontSize: 11, color: "#8c8c8c", lineHeight: 1.3,
+        maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>
+        {reason}
+      </div>
+    </div>
+  )
+}
+
+// ── Expandable row panel ──────────────────────────────────────────
+
+function ExpandedRowPanel({ record }: { record: CaseResult }) {
+  const gtCfg = RESULT_TAG_CFG[record.groundTruth]
+  const predCfg = RESULT_TAG_CFG[record.agentPrediction]
+  return (
+    <div style={{
+      display: "flex", gap: 16,
+      background: "#f8faff", borderLeft: "3px solid #1890ff",
+      borderRadius: 4, padding: "14px 18px", margin: "0 0 4px 0",
+    }}>
+      {/* Ground Truth card */}
+      <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px 14px" }}>
+        <Text strong style={{ fontSize: 12, color: "#8c8c8c", display: "block", marginBottom: 8 }}>GROUND TRUTH (HUMAN)</Text>
+        <Tag style={{ color: gtCfg.color, background: gtCfg.bg, borderColor: gtCfg.border, fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
+          {record.groundTruth}
+        </Tag>
+        <Text style={{ fontSize: 13, display: "block", marginBottom: 10, color: "#434343" }}>
+          {record.groundTruthReason}
+        </Text>
+        <div style={{ display: "flex", gap: 20 }}>
+          <div>
+            <Text type="secondary" style={{ fontSize: 11 }}>Reviewer</Text>
+            <Text style={{ fontSize: 12, display: "block", fontWeight: 500 }}>{record.reviewer}</Text>
+          </div>
+          <div>
+            <Text type="secondary" style={{ fontSize: 11 }}>Review Date</Text>
+            <Text style={{ fontSize: 12, display: "block", fontWeight: 500 }}>{record.reviewDate}</Text>
+          </div>
+        </div>
+      </div>
+      {/* AI Prediction card */}
+      <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px 14px" }}>
+        <Text strong style={{ fontSize: 12, color: "#8c8c8c", display: "block", marginBottom: 8 }}>AI PREDICTION</Text>
+        <Tag style={{ color: predCfg.color, background: predCfg.bg, borderColor: predCfg.border, fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
+          {record.agentPrediction}
+        </Tag>
+        <Text style={{ fontSize: 13, display: "block", marginBottom: 10, color: "#434343" }}>
+          {record.agentPredictionReason}
+        </Text>
+        <div style={{ display: "flex", gap: 20 }}>
+          <div>
+            <Text type="secondary" style={{ fontSize: 11 }}>Confidence</Text>
+            <Text style={{ fontSize: 12, display: "block", fontWeight: 500 }}>{record.confidence}</Text>
+          </div>
+          <div>
+            <Text type="secondary" style={{ fontSize: 11 }}>Model</Text>
+            <Text style={{ fontSize: 12, display: "block", fontWeight: 500 }}>{record.modelVersion}</Text>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Case Result Table ─────────────────────────────────────────────
 
 function CaseResultTable({ cases }: { cases: CaseResult[] }) {
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([])
+
+  function toggleRow(key: string) {
+    setExpandedKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    )
+  }
+
   const columns: ColumnsType<CaseResult> = [
     {
       title: "Case ID",
       dataIndex: "caseId",
       key: "caseId",
-      width: 110,
+      width: 100,
       render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
     },
     {
       title: "Invoice No",
       dataIndex: "invoiceNo",
       key: "invoiceNo",
-      width: 160,
-      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      width: 145,
+      render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text>,
+    },
+    {
+      title: "PR #",
+      dataIndex: "prNo",
+      key: "prNo",
+      width: 130,
+      render: (v: string) => <Text style={{ fontSize: 12, color: "#1890ff" }}>{v}</Text>,
+    },
+    {
+      title: "PO #",
+      dataIndex: "poNo",
+      key: "poNo",
+      width: 130,
+      render: (v: string) =>
+        v === "—"
+          ? <Text type="secondary" style={{ fontSize: 12 }}>—</Text>
+          : <Text style={{ fontSize: 12 }}>{v}</Text>,
     },
     {
       title: "Supplier",
       dataIndex: "supplierName",
       key: "supplierName",
       ellipsis: true,
-      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text>,
     },
     {
       title: "Golden",
       dataIndex: "isGolden",
       key: "isGolden",
-      width: 80,
+      width: 66,
       render: (v: boolean) =>
         v ? <TrophyOutlined style={{ color: "#d48806" }} /> : <Text type="secondary" style={{ fontSize: 11 }}>—</Text>,
     },
     {
       title: "Ground Truth",
-      dataIndex: "groundTruth",
       key: "groundTruth",
-      width: 120,
-      render: (v: "Pass" | "Fail") => <PredictionTag value={v} />,
+      width: 200,
+      render: (_: unknown, r: CaseResult) => <VerdictCell verdict={r.groundTruth} reason={r.groundTruthReason} />,
     },
     {
       title: "Prediction",
-      dataIndex: "agentPrediction",
       key: "agentPrediction",
-      width: 120,
-      render: (v: "Pass" | "Fail") => <PredictionTag value={v} />,
+      width: 200,
+      render: (_: unknown, r: CaseResult) => <VerdictCell verdict={r.agentPrediction} reason={r.agentPredictionReason} />,
     },
     {
       title: "Result",
       dataIndex: "correct",
       key: "correct",
-      width: 90,
+      width: 72,
       render: (v: boolean) =>
         v
           ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
@@ -308,7 +485,7 @@ function CaseResultTable({ cases }: { cases: CaseResult[] }) {
       title: "Latency",
       dataIndex: "latencyMs",
       key: "latencyMs",
-      width: 90,
+      width: 80,
       render: (v: number) => <Text type="secondary" style={{ fontSize: 12 }}>{v} ms</Text>,
     },
   ]
@@ -320,7 +497,13 @@ function CaseResultTable({ cases }: { cases: CaseResult[] }) {
       size="small"
       rowKey="key"
       pagination={{ pageSize: 10, showTotal: (t) => `Total ${t} cases`, showSizeChanger: false }}
-      rowClassName={(r) => r.correct ? "" : "bg-red-50"}
+      rowClassName={(r) => r.correct ? "cursor-pointer" : "bg-red-50 cursor-pointer"}
+      onRow={(r) => ({ onClick: () => toggleRow(r.key) })}
+      expandable={{
+        expandedRowKeys: expandedKeys,
+        showExpandColumn: false,
+        expandedRowRender: (r) => <ExpandedRowPanel record={r} />,
+      }}
     />
   )
 }

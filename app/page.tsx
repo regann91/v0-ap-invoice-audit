@@ -12,8 +12,10 @@ import { KnowledgeDetail } from "@/components/knowledge-base"
 import { KnowledgeEndpoint } from "@/components/knowledge-endpoint"
 import { CaseManagement } from "@/components/case-management"
 import { CaseDetail } from "@/components/case-detail"
+import { GoldenCaseManagement } from "@/components/golden-case-management"
 import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
+import { PatternLibrary } from "@/components/pattern-library"
 import { RegressionTest } from "@/components/regression-test"
 import type { AuditCase } from "@/lib/mock-data"
 
@@ -25,24 +27,28 @@ type Page =
   | "knowledge-endpoint"
   | "case-management"
   | "case-detail"
+  | "golden-case-management"
   | "agent-list"
+  | "pattern-library"
   | "agent-detail"
   | "regression-test"
 
 const BREADCRUMBS: Record<Page, string[]> = {
-  "knowledge-detail":   ["Knowledge Base", "Knowledge Detail"],
-  "knowledge-endpoint": ["Knowledge Base", "Endpoint"],
-  "case-management":    ["Case Management"],
-  "case-detail":        ["Case Management", "Case Detail"],
-  "agent-list":         ["Agent Management", "Agent List"],
-  "agent-detail":       ["Agent Management", "Agent List", "Agent Detail"],
-  "regression-test":    ["Regression Test"],
+  "knowledge-detail":      ["Knowledge Base", "Knowledge Detail"],
+  "knowledge-endpoint":    ["Knowledge Base", "Endpoint"],
+  "case-management":       ["Case Management", "Case List"],
+  "case-detail":           ["Case Management", "Case List", "Case Detail"],
+  "golden-case-management":["Case Management", "Golden Case Management"],
+  "agent-list":            ["Agent Management", "Agent List"],
+  "pattern-library":       ["Case Management", "Pattern Library"],
+  "agent-detail":          ["Agent Management", "Agent List", "Agent Detail"],
+  "regression-test":       ["Regression Test"],
 }
 
 function AppShell() {
   const [page, setPage] = useState<Page>("knowledge-detail")
   const [selectedKey, setSelectedKey] = useState("knowledge-detail")
-  const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base"])
+  const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base", "case-management-menu", "agent-management"])
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
   const [selectedCase, setSelectedCase] = useState<AuditCase | null>(null)
   const { region, setRegion } = useRegion()
@@ -51,8 +57,10 @@ function AppShell() {
     setSelectedKey(key)
     if (key === "knowledge-detail")   setPage("knowledge-detail")
     if (key === "knowledge-endpoint") setPage("knowledge-endpoint")
-    if (key === "case-management")    setPage("case-management")
-    if (key === "agent-management")   setPage("agent-list")
+    if (key === "case-management")         setPage("case-management")
+    if (key === "golden-case-management")  setPage("golden-case-management")
+    if (key === "agent-list")          setPage("agent-list")
+    if (key === "pattern-library")     setPage("pattern-library")
     if (key === "regression-test") {
       setRegressionAgentId(undefined)
       setPage("regression-test")
@@ -68,6 +76,7 @@ function AppShell() {
   function goToCaseList() {
     setPage("case-management")
     setSelectedKey("case-management")
+    setOpenKeys((prev) => prev.includes("case-management-menu") ? prev : [...prev, "case-management-menu"])
   }
 
   function goToAgentDetail() {
@@ -127,9 +136,25 @@ function AppShell() {
                 { key: "knowledge-endpoint", icon: <CodeOutlined />,  label: "Endpoint" },
               ],
             },
-            { key: "case-management",  icon: <FolderOpenOutlined />, label: "Case Management" },
-            { key: "agent-management", icon: <RobotOutlined />,      label: "Agent Management" },
-            { key: "regression-test",  icon: <ExperimentOutlined />, label: "Regression Test" },
+            {
+              key: "case-management-menu",
+              icon: <FolderOpenOutlined />,
+              label: "Case Management",
+              children: [
+                { key: "case-management",        icon: <TableOutlined />, label: "Case List" },
+                { key: "golden-case-management", icon: <CodeOutlined />,  label: "Golden Case Management" },
+                { key: "pattern-library",        icon: <CodeOutlined />,  label: "Pattern Library" },
+              ],
+            },
+            {
+              key: "agent-management",
+              icon: <RobotOutlined />,
+              label: "Agent Management",
+              children: [
+                { key: "agent-list", icon: <TableOutlined />, label: "Agent List" },
+              ],
+            },
+            { key: "regression-test", icon: <ExperimentOutlined />, label: "Regression Test" },
           ]}
         />
       </Sider>
@@ -185,10 +210,12 @@ function AppShell() {
         <Content style={{ padding: 24, minHeight: "calc(100vh - 48px)", background: "#f5f6fa" }}>
           {page === "knowledge-detail"   && <KnowledgeDetail />}
           {page === "knowledge-endpoint" && <KnowledgeEndpoint />}
-          {page === "case-management"    && <CaseManagement onViewDetail={goToCaseDetail} />}
+          {page === "case-management"         && <CaseManagement onViewDetail={goToCaseDetail} />}
+          {page === "golden-case-management"  && <GoldenCaseManagement />}
           {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
           {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} />}
           {page === "agent-list"         && <AgentList onView={goToAgentDetail} onTriggerTest={goToRegressionTest} />}
+          {page === "pattern-library"    && <PatternLibrary />}
           {page === "agent-detail"       && <AgentDetail onBack={goToAgentList} />}
         </Content>
       </Layout>

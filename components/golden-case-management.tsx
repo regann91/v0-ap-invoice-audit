@@ -521,9 +521,8 @@ export function GoldenCaseManagement() {
               onClick={() => { setActiveStep(step); setSearch(""); setPatternFilter([]); setGtFilter("All") }}
               style={{
                 padding: "8px 20px",
-                boxShadow: isActive
-                  ? "0 0 0 1px #1890ff"
-                  : "0 0 0 1px #d9d9d9",
+                border: 0,
+                boxShadow: isActive ? "0 0 0 1px #1890ff" : "0 0 0 1px #d9d9d9",
                 marginLeft: step !== "INVOICE_REVIEW" ? -1 : 0,
                 background: isActive ? "#1890ff" : "#fff",
                 color: isActive ? "#fff" : "#595959",
@@ -532,10 +531,7 @@ export function GoldenCaseManagement() {
                 cursor: "pointer",
                 position: "relative" as const,
                 zIndex: isActive ? 1 : 0,
-                borderTopLeftRadius:     step === "INVOICE_REVIEW" ? 4 : 0,
-                borderBottomLeftRadius:  step === "INVOICE_REVIEW" ? 4 : 0,
-                borderTopRightRadius:    step === "AP_VOUCHER" ? 4 : 0,
-                borderBottomRightRadius: step === "AP_VOUCHER" ? 4 : 0,
+                borderRadius: step === "INVOICE_REVIEW" ? "4px 0 0 4px" : step === "AP_VOUCHER" ? "0 4px 4px 0" : "0",
                 transition: "background 0.2s, color 0.2s, box-shadow 0.2s",
               }}
             >
@@ -610,6 +606,7 @@ export function GoldenCaseManagement() {
           rowKey="key"
           pagination={{
             pageSize: 10,
+            total: filtered.length,
             showTotal: (t) => `Total ${t} records`,
             showSizeChanger: false,
           }}

@@ -6,14 +6,16 @@ import {
   DatabaseOutlined, RobotOutlined,
   FolderOpenOutlined, ExperimentOutlined, TableOutlined, CodeOutlined,
 } from "@ant-design/icons"
-import { RoleProvider, useRole } from "@/lib/role-context"
+import { RoleProvider } from "@/lib/role-context"
 import { RegionProvider, useRegion, REGIONS, type RegionCode } from "@/lib/region-context"
 import { KnowledgeDetail } from "@/components/knowledge-base"
 import { KnowledgeEndpoint } from "@/components/knowledge-endpoint"
 import { CaseManagement } from "@/components/case-management"
+import { CaseDetail } from "@/components/case-detail"
 import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
 import { RegressionTest } from "@/components/regression-test"
+import type { AuditCase } from "@/lib/mock-data"
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
@@ -22,6 +24,7 @@ type Page =
   | "knowledge-detail"
   | "knowledge-endpoint"
   | "case-management"
+  | "case-detail"
   | "agent-list"
   | "agent-detail"
   | "regression-test"
@@ -30,6 +33,7 @@ const breadcrumbs: Record<Page, string[]> = {
   "knowledge-detail":   ["Knowledge Base", "Knowledge Detail"],
   "knowledge-endpoint": ["Knowledge Base", "Endpoint"],
   "case-management":    ["Case Management"],
+  "case-detail":        ["Case Management", "Case Detail"],
   "agent-list":         ["Agent Management", "Agent List"],
   "agent-detail":       ["Agent Management", "Agent List", "Agent Detail"],
   "regression-test":    ["Regression Test"],
@@ -40,6 +44,7 @@ function AppShell() {
   const [selectedKey, setSelectedKey] = useState("knowledge-detail")
   const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base"])
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
+  const [selectedCase, setSelectedCase] = useState<AuditCase | null>(null)
   const { region, setRegion } = useRegion()
 
   function navigate(key: string) {
@@ -52,6 +57,16 @@ function AppShell() {
       setRegressionAgentId(undefined)
       setPage("regression-test")
     }
+  }
+
+  function goToCaseDetail(record: AuditCase) {
+    setSelectedCase(record)
+    setPage("case-detail")
+    setSelectedKey("case-management")
+  }
+  function goToCaseList() {
+    setPage("case-management")
+    setSelectedKey("case-management")
   }
 
   function goToAgentDetail() {
@@ -104,33 +119,13 @@ function AppShell() {
               icon: <DatabaseOutlined />,
               label: "Knowledge Base",
               children: [
-                {
-                  key: "knowledge-detail",
-                  icon: <TableOutlined />,
-                  label: "Knowledge Detail",
-                },
-                {
-                  key: "knowledge-endpoint",
-                  icon: <CodeOutlined />,
-                  label: "Endpoint",
-                },
+                { key: "knowledge-detail",   icon: <TableOutlined />, label: "Knowledge Detail" },
+                { key: "knowledge-endpoint", icon: <CodeOutlined />,  label: "Endpoint" },
               ],
             },
-            {
-              key: "case-management",
-              icon: <FolderOpenOutlined />,
-              label: "Case Management",
-            },
-            {
-              key: "agent-management",
-              icon: <RobotOutlined />,
-              label: "Agent Management",
-            },
-            {
-              key: "regression-test",
-              icon: <ExperimentOutlined />,
-              label: "Regression Test",
-            },
+            { key: "case-management",  icon: <FolderOpenOutlined />, label: "Case Management" },
+            { key: "agent-management", icon: <RobotOutlined />,       label: "Agent Management" },
+            { key: "regression-test",  icon: <ExperimentOutlined />,  label: "Regression Test" },
           ]}
         />
       </Sider>
@@ -181,14 +176,14 @@ function AppShell() {
               ),
             }))}
           />
-          </Space>
         </Header>
 
         {/* Content */}
         <Content style={{ padding: 24, minHeight: "calc(100vh - 48px)", background: "#f5f6fa" }}>
           {page === "knowledge-detail"   && <KnowledgeDetail />}
           {page === "knowledge-endpoint" && <KnowledgeEndpoint />}
-          {page === "case-management"    && <CaseManagement />}
+          {page === "case-management"    && <CaseManagement onViewDetail={goToCaseDetail} />}
+          {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
           {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} />}
           {page === "agent-list"         && <AgentList onView={goToAgentDetail} onTriggerTest={goToRegressionTest} />}
           {page === "agent-detail"       && <AgentDetail onBack={goToAgentList} />}

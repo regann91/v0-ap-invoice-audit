@@ -111,7 +111,7 @@ function CaseDrawer({
 }
 
 // ── Main Component ────────────────────────────────────────────────
-export function CaseManagement() {
+export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: AuditCase) => void }) {
   const [search, setSearch] = useState("")
   const [regionFilter, setRegionFilter] = useState<string | null>(null)
   const [entityFilter, setEntityFilter] = useState<string | null>(null)
@@ -220,13 +220,13 @@ export function CaseManagement() {
       title: "",
       key: "action",
       width: 54,
-      render: (_: unknown, record: AuditCase) => (
+        render: (_: unknown, record: AuditCase) => (
         <Tooltip title="View detail">
           <Button
             type="text"
             size="small"
             icon={<EyeOutlined />}
-            onClick={() => setDetail(record)}
+            onClick={() => onViewDetail ? onViewDetail(record) : setDetail(record)}
           />
         </Tooltip>
       ),

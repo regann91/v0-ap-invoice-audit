@@ -2,16 +2,17 @@
 
 import { useState } from "react"
 import { Layout, Menu, Typography, Space, Select, Breadcrumb, Tag } from "antd"
-import { DatabaseOutlined, RobotOutlined, UserOutlined } from "@ant-design/icons"
+import { DatabaseOutlined, RobotOutlined, UserOutlined, FolderOpenOutlined } from "@ant-design/icons"
 import { RoleProvider, useRole, type UserRole } from "@/lib/role-context"
 import { KnowledgeBase } from "@/components/knowledge-base"
+import { CaseManagement } from "@/components/case-management"
 import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
 
-type Page = "knowledge-base" | "agent-list" | "agent-detail"
+type Page = "knowledge-base" | "case-management" | "agent-list" | "agent-detail"
 
 const ROLE_COLORS: Record<UserRole, string> = {
   AP_MANAGER: "#722ed1",
@@ -33,6 +34,7 @@ function AppShell() {
 
   const breadcrumbs: Record<Page, string[]> = {
     "knowledge-base":  ["Knowledge Base"],
+    "case-management": ["Case Management"],
     "agent-list":      ["Agent Management", "Agent List"],
     "agent-detail":    ["Agent Management", "Agent List", "Agent Detail"],
   }
@@ -68,6 +70,7 @@ function AppShell() {
           onClick={({ key }) => {
             setSelectedKey(key)
             if (key === "knowledge-base") setPage("knowledge-base")
+            if (key === "case-management") setPage("case-management")
             if (key === "agent-management") setPage("agent-list")
           }}
           items={[
@@ -75,6 +78,11 @@ function AppShell() {
               key: "knowledge-base",
               icon: <DatabaseOutlined />,
               label: "Knowledge Base",
+            },
+            {
+              key: "case-management",
+              icon: <FolderOpenOutlined />,
+              label: "Case Management",
             },
             {
               key: "agent-management",
@@ -142,6 +150,7 @@ function AppShell() {
         {/* Content */}
         <Content style={{ padding: 24, minHeight: "calc(100vh - 48px)", background: "#f5f6fa" }}>
           {page === "knowledge-base" && <KnowledgeBase />}
+          {page === "case-management" && <CaseManagement />}
           {page === "agent-list" && (
             <AgentList onView={goToAgentDetail} />
           )}

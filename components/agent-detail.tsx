@@ -15,7 +15,6 @@ import { useRole } from "@/lib/role-context"
 
 const { Text, Title, Paragraph } = Typography
 const { TextArea } = Input
-const { Panel } = Collapse
 
 // ── Version Snapshot Modal ───────────────────────────────────────
 function SnapshotModal({
@@ -302,166 +301,190 @@ export function AgentDetail({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* Platform Input Config */}
-          <Collapse defaultActiveKey={["input"]} style={{ marginBottom: 12, background: "#fff", border: "1px solid #f0f0f0" }}>
-            <Panel header={<Text strong style={{ fontSize: 13 }}>Platform Input Config</Text>} key="input">
-              <div className="flex gap-4">
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Model</label>
-                  <Input defaultValue={d.model} placeholder="e.g. claude-sonnet-4-20250514" disabled={readonlyInput} />
-                </div>
-              </div>
-              <div className="flex gap-4 mt-3">
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Temperature</label>
-                  <InputNumber
-                    defaultValue={d.temperature}
-                    min={0} max={1} step={0.1}
-                    style={{ width: "100%" }}
-                    disabled={readonlyInput}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Max Tokens</label>
-                  <InputNumber
-                    defaultValue={d.maxTokens}
-                    min={1} step={256}
-                    style={{ width: "100%" }}
-                    disabled={readonlyInput}
-                  />
-                </div>
-              </div>
-              <div style={{ marginTop: 14 }}>
-                <label style={labelStyle}>Additional Params</label>
-                <div style={{ border: "1px solid #f0f0f0", borderRadius: 4, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "#fafafa" }}>
-                        <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, color: "#8c8c8c", fontWeight: 500, borderBottom: "1px solid #f0f0f0" }}>Key</th>
-                        <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, color: "#8c8c8c", fontWeight: 500, borderBottom: "1px solid #f0f0f0" }}>Value</th>
-                        {isOps && <th style={{ width: 40, borderBottom: "1px solid #f0f0f0" }} />}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {params.map((p, i) => (
-                        <tr key={i}>
-                          <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8" }}>
-                            <Input
-                              value={p.key}
-                              size="small"
-                              disabled={readonlyInput}
-                              onChange={(e) => updateParam(i, "key", e.target.value)}
-                              style={{ fontFamily: "monospace", fontSize: 12 }}
-                            />
-                          </td>
-                          <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8" }}>
-                            <Input
-                              value={p.value}
-                              size="small"
-                              disabled={readonlyInput}
-                              onChange={(e) => updateParam(i, "value", e.target.value)}
-                              style={{ fontFamily: "monospace", fontSize: 12 }}
-                            />
-                          </td>
-                          {isOps && (
-                            <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8", textAlign: "center" }}>
-                              <Button
-                                type="text"
-                                icon={<DeleteOutlined />}
-                                size="small"
-                                danger
-                                onClick={() => removeParam(i)}
-                              />
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {isOps && (
-                    <div style={{ padding: "8px 10px" }}>
-                      <Button type="dashed" icon={<PlusOutlined />} size="small" onClick={addParam} style={{ fontSize: 12 }}>
-                        Add Param
-                      </Button>
+          <Collapse
+            defaultActiveKey={["input"]}
+            style={{ marginBottom: 12, background: "#fff", border: "1px solid #f0f0f0" }}
+            items={[{
+              key: "input",
+              label: <Text strong style={{ fontSize: 13 }}>Platform Input Config</Text>,
+              children: (
+                <>
+                  <div className="flex gap-4">
+                    <div style={{ flex: 1 }}>
+                      <label style={labelStyle}>Model</label>
+                      <Input defaultValue={d.model} placeholder="e.g. claude-sonnet-4-20250514" disabled={readonlyInput} />
                     </div>
-                  )}
-                </div>
-              </div>
-            </Panel>
-          </Collapse>
+                  </div>
+                  <div className="flex gap-4 mt-3">
+                    <div style={{ flex: 1 }}>
+                      <label style={labelStyle}>Temperature</label>
+                      <InputNumber
+                        defaultValue={d.temperature}
+                        min={0} max={1} step={0.1}
+                        style={{ width: "100%" }}
+                        disabled={readonlyInput}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={labelStyle}>Max Tokens</label>
+                      <InputNumber
+                        defaultValue={d.maxTokens}
+                        min={1} step={256}
+                        style={{ width: "100%" }}
+                        disabled={readonlyInput}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 14 }}>
+                    <label style={labelStyle}>Additional Params</label>
+                    <div style={{ border: "1px solid #f0f0f0", borderRadius: 4, overflow: "hidden" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ background: "#fafafa" }}>
+                            <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, color: "#8c8c8c", fontWeight: 500, borderBottom: "1px solid #f0f0f0" }}>Key</th>
+                            <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, color: "#8c8c8c", fontWeight: 500, borderBottom: "1px solid #f0f0f0" }}>Value</th>
+                            {isOps && <th style={{ width: 40, borderBottom: "1px solid #f0f0f0" }} />}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {params.map((p, i) => (
+                            <tr key={i}>
+                              <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8" }}>
+                                <Input
+                                  value={p.key}
+                                  size="small"
+                                  disabled={readonlyInput}
+                                  onChange={(e) => updateParam(i, "key", e.target.value)}
+                                  style={{ fontFamily: "monospace", fontSize: 12 }}
+                                />
+                              </td>
+                              <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8" }}>
+                                <Input
+                                  value={p.value}
+                                  size="small"
+                                  disabled={readonlyInput}
+                                  onChange={(e) => updateParam(i, "value", e.target.value)}
+                                  style={{ fontFamily: "monospace", fontSize: 12 }}
+                                />
+                              </td>
+                              {isOps && (
+                                <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8", textAlign: "center" }}>
+                                  <Button
+                                    type="text"
+                                    icon={<DeleteOutlined />}
+                                    size="small"
+                                    danger
+                                    onClick={() => removeParam(i)}
+                                  />
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {isOps && (
+                        <div style={{ padding: "8px 10px" }}>
+                          <Button type="dashed" icon={<PlusOutlined />} size="small" onClick={addParam} style={{ fontSize: 12 }}>
+                            Add Param
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ),
+            }]}
+          />
 
           {/* Platform Integration Info */}
-          <Collapse defaultActiveKey={["integration"]} style={{ marginBottom: 12, background: "#fff", border: "1px solid #f0f0f0" }}>
-            <Panel header={<Text strong style={{ fontSize: 13 }}>Platform Integration Info</Text>} key="integration">
-              <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle}>API Endpoint</label>
-                <Input defaultValue={d.apiEndpoint} disabled={readonlyInput} />
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle}>API Key</label>
-                <Input
-                  defaultValue={d.apiKey}
-                  type={apiKeyVisible ? "text" : "password"}
-                  disabled={readonlyInput}
-                  suffix={
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={apiKeyVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                      onClick={() => setApiKeyVisible((v) => !v)}
-                      style={{ color: "#bfbfbf" }}
+          <Collapse
+            defaultActiveKey={["integration"]}
+            style={{ marginBottom: 12, background: "#fff", border: "1px solid #f0f0f0" }}
+            items={[{
+              key: "integration",
+              label: <Text strong style={{ fontSize: 13 }}>Platform Integration Info</Text>,
+              children: (
+                <>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={labelStyle}>API Endpoint</label>
+                    <Input defaultValue={d.apiEndpoint} disabled={readonlyInput} />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={labelStyle}>API Key</label>
+                    <Input
+                      defaultValue={d.apiKey}
+                      type={apiKeyVisible ? "text" : "password"}
+                      disabled={readonlyInput}
+                      suffix={
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={apiKeyVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                          onClick={() => setApiKeyVisible((v) => !v)}
+                          style={{ color: "#bfbfbf" }}
+                        />
+                      }
                     />
-                  }
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Auth Method</label>
-                <Select
-                  defaultValue={d.authMethod}
-                  disabled={readonlyInput}
-                  style={{ width: "100%" }}
-                  options={[
-                    { value: "Bearer Token", label: "Bearer Token" },
-                    { value: "API Key Header", label: "API Key Header" },
-                    { value: "None", label: "None" },
-                  ]}
-                />
-              </div>
-            </Panel>
-          </Collapse>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Auth Method</label>
+                    <Select
+                      defaultValue={d.authMethod}
+                      disabled={readonlyInput}
+                      style={{ width: "100%" }}
+                      options={[
+                        { value: "Bearer Token", label: "Bearer Token" },
+                        { value: "API Key Header", label: "API Key Header" },
+                        { value: "None", label: "None" },
+                      ]}
+                    />
+                  </div>
+                </>
+              ),
+            }]}
+          />
 
           {/* Prompt Config */}
-          <Collapse defaultActiveKey={["prompt"]} style={{ marginBottom: 16, background: "#fff", border: "1px solid #f0f0f0" }}>
-            <Panel header={<Text strong style={{ fontSize: 13 }}>Prompt Config</Text>} key="prompt">
-              <div style={{ background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 4, padding: "10px 14px", marginBottom: 16 }}>
-                <Space>
-                  <InfoCircleOutlined style={{ color: "#1890ff" }} />
-                  <Text style={{ fontSize: 13, color: "#0050b3" }}>
-                    These prompts are used as variables injected into the AI workflow platform. Edit with care.
-                  </Text>
-                </Space>
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle}>System Prompt</label>
-                <TextArea
-                  className="prompt-textarea"
-                  defaultValue={d.systemPrompt}
-                  rows={10}
-                  disabled={readonlyInput}
-                  style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6, resize: "vertical" }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>User Prompt Template</label>
-                <TextArea
-                  className="prompt-textarea"
-                  defaultValue={d.userPromptTemplate}
-                  rows={8}
-                  disabled={readonlyInput}
-                  style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6, resize: "vertical" }}
-                />
-              </div>
-            </Panel>
-          </Collapse>
+          <Collapse
+            defaultActiveKey={["prompt"]}
+            style={{ marginBottom: 16, background: "#fff", border: "1px solid #f0f0f0" }}
+            items={[{
+              key: "prompt",
+              label: <Text strong style={{ fontSize: 13 }}>Prompt Config</Text>,
+              children: (
+                <>
+                  <div style={{ background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 4, padding: "10px 14px", marginBottom: 16 }}>
+                    <Space>
+                      <InfoCircleOutlined style={{ color: "#1890ff" }} />
+                      <Text style={{ fontSize: 13, color: "#0050b3" }}>
+                        These prompts are used as variables injected into the AI workflow platform. Edit with care.
+                      </Text>
+                    </Space>
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={labelStyle}>System Prompt</label>
+                    <TextArea
+                      className="prompt-textarea"
+                      defaultValue={d.systemPrompt}
+                      rows={10}
+                      disabled={readonlyInput}
+                      style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6, resize: "vertical" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>User Prompt Template</label>
+                    <TextArea
+                      className="prompt-textarea"
+                      defaultValue={d.userPromptTemplate}
+                      rows={8}
+                      disabled={readonlyInput}
+                      style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6, resize: "vertical" }}
+                    />
+                  </div>
+                </>
+              ),
+            }]}
+          />
 
           {/* Actions */}
           <Space>

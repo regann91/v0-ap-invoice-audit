@@ -62,6 +62,41 @@ export const supplierBankAccountData: SupplierBankAccount[] = [
   { key: '8', supplierId: 'SUP-008', bankName: 'Banco Bradesco SA', accountNo: '****8834', currency: 'BRL', country: 'Brazil' },
 ]
 
+// ── Case Management ──────────────────────────────────────────────
+
+export type CaseGolden = 'Golden' | 'Non-Golden'
+export type CaseGroundTruth = 'Pass' | 'Fail' | 'Pending'
+
+export interface AuditCase {
+  key: string
+  caseId: string
+  invoiceNo: string
+  supplierName: string
+  region: string
+  entity: string
+  amount: number
+  currency: string
+  invoiceDate: string
+  isGolden: CaseGolden
+  groundTruth: CaseGroundTruth
+  tags: string[]
+}
+
+export const auditCaseData: AuditCase[] = [
+  { key: '1',  caseId: 'CASE-001', invoiceNo: 'INV-2025-0001', supplierName: 'Accenture Pte Ltd',              region: 'SEA',   entity: 'SG', amount: 145000, currency: 'SGD', invoiceDate: '2025-01-05', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['three-way-match', 'header-check'] },
+  { key: '2',  caseId: 'CASE-002', invoiceNo: 'INV-2025-0002', supplierName: 'AWS Singapore Pte Ltd',         region: 'SEA',   entity: 'SG', amount: 87200,  currency: 'SGD', invoiceDate: '2025-01-08', isGolden: 'Golden',     groundTruth: 'Fail',    tags: ['amount-mismatch'] },
+  { key: '3',  caseId: 'CASE-003', invoiceNo: 'INV-2025-0003', supplierName: 'Google Asia Pacific Pte Ltd',   region: 'SEA',   entity: 'TH', amount: 320000, currency: 'THB', invoiceDate: '2025-01-12', isGolden: 'Non-Golden', groundTruth: 'Pass',    tags: ['line-item', 'tax-check'] },
+  { key: '4',  caseId: 'CASE-004', invoiceNo: 'INV-2025-0004', supplierName: 'Microsoft Thailand Co Ltd',     region: 'SEA',   entity: 'TH', amount: 215000, currency: 'THB', invoiceDate: '2025-01-15', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['golden', 'three-way-match'] },
+  { key: '5',  caseId: 'CASE-005', invoiceNo: 'INV-2025-0005', supplierName: 'Deloitte Advisory Vietnam',     region: 'SEA',   entity: 'VN', amount: 98000,  currency: 'VND', invoiceDate: '2025-01-20', isGolden: 'Non-Golden', groundTruth: 'Pending', tags: ['under-review'] },
+  { key: '6',  caseId: 'CASE-006', invoiceNo: 'INV-2025-0006', supplierName: 'Alibaba Cloud (HK) Ltd',        region: 'EA',    entity: 'TW', amount: 56000,  currency: 'TWD', invoiceDate: '2025-02-01', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['header-check'] },
+  { key: '7',  caseId: 'CASE-007', invoiceNo: 'INV-2025-0007', supplierName: 'Tencent Cloud International',   region: 'EA',    entity: 'TW', amount: 134000, currency: 'TWD', invoiceDate: '2025-02-05', isGolden: 'Non-Golden', groundTruth: 'Fail',    tags: ['bank-mismatch', 'amount-mismatch'] },
+  { key: '8',  caseId: 'CASE-008', invoiceNo: 'INV-2025-0008', supplierName: 'Mercado Pago Brasil',           region: 'LATAM', entity: 'BR', amount: 47000,  currency: 'BRL', invoiceDate: '2025-02-10', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['golden', 'three-way-match'] },
+  { key: '9',  caseId: 'CASE-009', invoiceNo: 'INV-2025-0009', supplierName: 'Shopee Philippines Inc',        region: 'SEA',   entity: 'PH', amount: 290000, currency: 'PHP', invoiceDate: '2025-02-14', isGolden: 'Non-Golden', groundTruth: 'Pass',    tags: ['line-item'] },
+  { key: '10', caseId: 'CASE-010', invoiceNo: 'INV-2025-0010', supplierName: 'Shopee Indonesia PT',           region: 'SEA',   entity: 'ID', amount: 185000, currency: 'IDR', invoiceDate: '2025-02-20', isGolden: 'Golden',     groundTruth: 'Fail',    tags: ['golden', 'tax-check'] },
+  { key: '11', caseId: 'CASE-011', invoiceNo: 'INV-2025-0011', supplierName: 'AWS Singapore Pte Ltd',         region: 'SEA',   entity: 'MY', amount: 62000,  currency: 'MYR', invoiceDate: '2025-03-01', isGolden: 'Non-Golden', groundTruth: 'Pass',    tags: ['header-check'] },
+  { key: '12', caseId: 'CASE-012', invoiceNo: 'INV-2025-0012', supplierName: 'Accenture Pte Ltd',             region: 'SEA',   entity: 'SG', amount: 210000, currency: 'SGD', invoiceDate: '2025-03-05', isGolden: 'Golden',     groundTruth: 'Pending', tags: ['golden', 'under-review'] },
+]
+
 // ── Agent Management ─────────────────────────────────────────────
 
 export type AgentStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER'

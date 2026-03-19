@@ -40,7 +40,7 @@ const BREADCRUMBS: Record<Page, string[]> = {
   "case-detail":           ["Case Management", "Case List", "Case Detail"],
   "golden-case-management":["Case Management", "Golden Case Management"],
   "agent-list":            ["Agent Management", "Agent List"],
-  "pattern-library":       ["Agent Management", "Pattern Library"],
+  "pattern-library":       ["Case Management", "Pattern Library"],
   "agent-detail":          ["Agent Management", "Agent List", "Agent Detail"],
   "regression-test":       ["Regression Test"],
 }
@@ -143,6 +143,7 @@ function AppShell() {
               children: [
                 { key: "case-management",        icon: <TableOutlined />, label: "Case List" },
                 { key: "golden-case-management", icon: <CodeOutlined />,  label: "Golden Case Management" },
+                { key: "pattern-library",        icon: <CodeOutlined />,  label: "Pattern Library" },
               ],
             },
             {
@@ -150,8 +151,7 @@ function AppShell() {
               icon: <RobotOutlined />,
               label: "Agent Management",
               children: [
-                { key: "agent-list",      icon: <TableOutlined />, label: "Agent List" },
-                { key: "pattern-library", icon: <CodeOutlined />,  label: "Pattern Library" },
+                { key: "agent-list", icon: <TableOutlined />, label: "Agent List" },
               ],
             },
             { key: "regression-test", icon: <ExperimentOutlined />, label: "Regression Test" },

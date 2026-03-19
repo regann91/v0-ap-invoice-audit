@@ -3,10 +3,12 @@
 import { useState, useMemo } from "react"
 import {
   Table, Input, Select, Space, Tag, Typography, Button,
-  Tooltip, Drawer, Descriptions, Badge
+  Tooltip, Drawer, Descriptions, Badge, Card, Switch, Modal,
+  Form, message,
 } from "antd"
 import {
-  SearchOutlined, FilterOutlined, EyeOutlined, StarFilled
+  SearchOutlined, FilterOutlined, EyeOutlined,
+  StarFilled, StarOutlined, EditOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import {
@@ -16,39 +18,71 @@ import {
 
 const { Text } = Typography
 
-// ── Helpers ──────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────
 
-function GoldenBadge({ value }: { value: CaseGolden }) {
-  if (value === "Golden") {
-    return (
-      <Tag
-        icon={<StarFilled style={{ fontSize: 10 }} />}
-        style={{
-          background: "#fffbe6",
-          borderColor: "#ffe58f",
-          color: "#d48806",
-          fontSize: 12,
-          fontWeight: 600,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 3,
-        }}
-      >
-        Golden
-      </Tag>
-    )
-  }
-  return (
-    <Tag style={{ background: "#fafafa", borderColor: "#d9d9d9", color: "#595959", fontSize: 12 }}>
-      Non-Golden
-    </Tag>
-  )
+type Step = "INVOICE_REVIEW" | "MATCH" | "AP_VOUCHER"
+type StepStatus = "Pass" | "Fail" | "Pending"
+
+interface StepState {
+  golden: boolean
+  patterns: string[]
+  status: StepStatus
 }
 
+interface CaseExpanded {
+  INVOICE_REVIEW: StepState
+  MATCH: StepState
+  AP_VOUCHER: StepState
+}
+
+// ── Pattern options per step ──────────────────────────────────────
+
+const PATTERNS_BY_STEP: Record<Step, string[]> = {
+  INVOICE_REVIEW: ["amount-mismatch", "supplier-name-mismatch", "gst-calculation-error", "duplicate-invoice", "date-out-of-range", "header-check"],
+  MATCH:          ["line-item-qty-mismatch", "unit-price-discrepancy", "three-way-match-fail"],
+  AP_VOUCHER:     ["gl-account-wrong", "cost-center-mismatch"],
+}
+
+// ── Expanded row mock data ────────────────────────────────────────
+
+const EXPANDED_DEFAULTS: Record<string, CaseExpanded> = {
+  "CASE-001": {
+    INVOICE_REVIEW: { golden: true,  patterns: ["amount-mismatch", "header-check"], status: "Pass" },
+    MATCH:          { golden: true,  patterns: ["three-way-match-fail"],            status: "Pass" },
+    AP_VOUCHER:     { golden: false, patterns: [],                                  status: "Pending" },
+  },
+  "CASE-002": {
+    INVOICE_REVIEW: { golden: true,  patterns: ["supplier-name-mismatch"],          status: "Fail" },
+    MATCH:          { golden: false, patterns: ["line-item-qty-mismatch"],          status: "Pass" },
+    AP_VOUCHER:     { golden: false, patterns: [],                                  status: "Pending" },
+  },
+  "CASE-003": {
+    INVOICE_REVIEW: { golden: false, patterns: ["gst-calculation-error"],           status: "Pass" },
+    MATCH:          { golden: false, patterns: [],                                  status: "Pass" },
+    AP_VOUCHER:     { golden: false, patterns: ["gl-account-wrong"],               status: "Pending" },
+  },
+}
+
+function getDefaultExpanded(caseId: string): CaseExpanded {
+  return EXPANDED_DEFAULTS[caseId] ?? {
+    INVOICE_REVIEW: { golden: false, patterns: [], status: "Pending" },
+    MATCH:          { golden: false, patterns: [], status: "Pending" },
+    AP_VOUCHER:     { golden: false, patterns: [], status: "Pending" },
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+
 function GroundTruthBadge({ value }: { value: CaseGroundTruth }) {
-  if (value === "Pass") return <Badge status="success" text={<span style={{ fontSize: 13 }}>Pass</span>} />
-  if (value === "Fail") return <Badge status="error" text={<span style={{ fontSize: 13 }}>Fail</span>} />
-  return <Badge status="processing" text={<span style={{ fontSize: 13, color: "#8c8c8c" }}>Pending</span>} />
+  if (value === "Pass")    return <Badge status="success"    text={<span style={{ fontSize: 13 }}>Pass</span>} />
+  if (value === "Fail")    return <Badge status="error"      text={<span style={{ fontSize: 13 }}>Fail</span>} />
+  return                          <Badge status="processing" text={<span style={{ fontSize: 13, color: "#8c8c8c" }}>Pending</span>} />
+}
+
+function StepStatusBadge({ status }: { status: StepStatus }) {
+  if (status === "Pass")    return <Badge status="success"    text={<span style={{ fontSize: 12 }}>Pass</span>} />
+  if (status === "Fail")    return <Badge status="error"      text={<span style={{ fontSize: 12 }}>Fail</span>} />
+  return                           <Badge status="processing" text={<span style={{ fontSize: 12, color: "#8c8c8c" }}>Pending</span>} />
 }
 
 function AmountCell({ amount, currency }: { amount: number; currency: string }) {
@@ -59,19 +93,163 @@ function AmountCell({ amount, currency }: { amount: number; currency: string }) 
   )
 }
 
-// ── Unique filter options helper ──────────────────────────────────
 function uniqueOptions(items: string[]) {
   return [...new Set(items)].map((v) => ({ label: v, value: v }))
 }
 
-// ── Detail Drawer ─────────────────────────────────────────────────
-function CaseDrawer({
-  record,
-  onClose,
+// ── Edit Step Modal ───────────────────────────────────────────────
+
+function EditStepModal({
+  open,
+  caseId,
+  step,
+  state,
+  onCancel,
+  onSave,
 }: {
-  record: AuditCase | null
-  onClose: () => void
+  open: boolean
+  caseId: string
+  step: Step
+  state: StepState
+  onCancel: () => void
+  onSave: (next: StepState) => void
 }) {
+  const [form] = Form.useForm()
+
+  function handleOk() {
+    form.validateFields().then((vals) => {
+      onSave({ golden: vals.golden, patterns: vals.patterns ?? [], status: state.status })
+    })
+  }
+
+  return (
+    <Modal
+      open={open}
+      title={`Edit — ${step} / ${caseId}`}
+      onCancel={onCancel}
+      footer={[
+        <Button key="cancel" onClick={onCancel}>Cancel</Button>,
+        <Button key="save" type="primary" style={{ background: "#1890ff" }} onClick={handleOk}>Save</Button>,
+      ]}
+      width={440}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ golden: state.golden, patterns: state.patterns }}
+        style={{ marginTop: 12 }}
+      >
+        <Form.Item name="golden" label="Golden Case" valuePropName="checked">
+          <Switch />
+        </Form.Item>
+        <Form.Item name="patterns" label="Patterns">
+          <Select
+            mode="multiple"
+            placeholder="Select patterns"
+            options={PATTERNS_BY_STEP[step].map((p) => ({ value: p, label: p }))}
+            style={{ width: "100%" }}
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
+  )
+}
+
+// ── Expanded Row ──────────────────────────────────────────────────
+
+function ExpandedRow({
+  record,
+  expanded,
+  onEdit,
+}: {
+  record: AuditCase
+  expanded: CaseExpanded
+  onEdit: (step: Step, next: StepState) => void
+}) {
+  const [editStep, setEditStep] = useState<Step | null>(null)
+  const STEPS: Step[] = ["INVOICE_REVIEW", "MATCH", "AP_VOUCHER"]
+
+  const STEP_LABEL_COLOR: Record<Step, string> = {
+    INVOICE_REVIEW: "#0958d9",
+    MATCH:          "#7c3aed",
+    AP_VOUCHER:     "#c05621",
+  }
+
+  return (
+    <div style={{ background: "#f8f9fa", padding: "16px 20px", display: "flex", gap: 12 }}>
+      {STEPS.map((step) => {
+        const s = expanded[step]
+        return (
+          <Card
+            key={step}
+            size="small"
+            style={{ flex: 1, border: "1px solid #e8e8e8", borderRadius: 6 }}
+            styles={{ body: { padding: "12px 14px" } }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <Text strong style={{ fontSize: 12, color: STEP_LABEL_COLOR[step] }}>{step}</Text>
+              <StepStatusBadge status={s.status} />
+            </div>
+
+            {/* Golden toggle */}
+            <div style={{ marginBottom: 10 }}>
+              <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 3 }}>Golden Case</Text>
+              {s.golden
+                ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <StarFilled style={{ color: "#d48806", fontSize: 13 }} />
+                    <Text style={{ fontSize: 13 }}>Yes</Text>
+                  </span>
+                : <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <StarOutlined style={{ color: "#d9d9d9", fontSize: 13 }} />
+                    <Text type="secondary" style={{ fontSize: 13 }}>No</Text>
+                  </span>
+              }
+            </div>
+
+            {/* Patterns */}
+            <div style={{ marginBottom: 12 }}>
+              <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 4 }}>Patterns</Text>
+              {s.patterns.length > 0
+                ? <Space size={4} wrap>
+                    {s.patterns.map((p) => (
+                      <Tag key={p} style={{ fontSize: 11, padding: "0 5px", margin: 0 }}>{p}</Tag>
+                    ))}
+                  </Space>
+                : <Text type="secondary" style={{ fontSize: 13 }}>—</Text>
+              }
+            </div>
+
+            {/* Edit button */}
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => setEditStep(step)}
+              style={{ width: "100%" }}
+            >
+              Edit
+            </Button>
+          </Card>
+        )
+      })}
+
+      {editStep && (
+        <EditStepModal
+          open
+          caseId={record.caseId}
+          step={editStep}
+          state={expanded[editStep]}
+          onCancel={() => setEditStep(null)}
+          onSave={(next) => { onEdit(editStep, next); setEditStep(null) }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Detail Drawer ─────────────────────────────────────────────────
+
+function CaseDrawer({ record, onClose }: { record: AuditCase | null; onClose: () => void }) {
   return (
     <Drawer
       title={record ? `Case Detail — ${record.caseId}` : ""}
@@ -91,18 +269,8 @@ function CaseDrawer({
           <Descriptions.Item label="Amount">
             <AmountCell amount={record.amount} currency={record.currency} />
           </Descriptions.Item>
-          <Descriptions.Item label="Golden Status">
-            <GoldenBadge value={record.isGolden} />
-          </Descriptions.Item>
           <Descriptions.Item label="Ground Truth">
             <GroundTruthBadge value={record.groundTruth} />
-          </Descriptions.Item>
-          <Descriptions.Item label="Tags">
-            <Space wrap size={4}>
-              {record.tags.map((t) => (
-                <Tag key={t} style={{ fontSize: 12 }}>{t}</Tag>
-              ))}
-            </Space>
           </Descriptions.Item>
         </Descriptions>
       )}
@@ -111,13 +279,17 @@ function CaseDrawer({
 }
 
 // ── Main Component ────────────────────────────────────────────────
+
 export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: AuditCase) => void }) {
-  const [search, setSearch] = useState("")
-  const [regionFilter, setRegionFilter] = useState<string | null>(null)
-  const [entityFilter, setEntityFilter] = useState<string | null>(null)
-  const [goldenFilter, setGoldenFilter] = useState<CaseGolden | null>(null)
+  const [search, setSearch]               = useState("")
+  const [regionFilter, setRegionFilter]   = useState<string | null>(null)
+  const [entityFilter, setEntityFilter]   = useState<string | null>(null)
+  const [goldenFilter, setGoldenFilter]   = useState<CaseGolden | null>(null)
   const [groundTruthFilter, setGroundTruthFilter] = useState<CaseGroundTruth | null>(null)
-  const [detail, setDetail] = useState<AuditCase | null>(null)
+  const [detail, setDetail]               = useState<AuditCase | null>(null)
+  const [expandedKeys, setExpandedKeys]   = useState<string[]>([])
+  const [expandedData, setExpandedData]   = useState<Record<string, CaseExpanded>>({})
+  const [msgApi, contextHolder]           = message.useMessage()
 
   const regionOptions = useMemo(() => uniqueOptions(auditCaseData.map((r) => r.region)), [])
   const entityOptions = useMemo(() => uniqueOptions(auditCaseData.map((r) => r.entity)), [])
@@ -133,10 +305,32 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
       const matchRegion = !regionFilter || r.region === regionFilter
       const matchEntity = !entityFilter || r.entity === entityFilter
       const matchGolden = !goldenFilter || r.isGolden === goldenFilter
-      const matchGT = !groundTruthFilter || r.groundTruth === groundTruthFilter
+      const matchGT     = !groundTruthFilter || r.groundTruth === groundTruthFilter
       return matchSearch && matchRegion && matchEntity && matchGolden && matchGT
     })
   }, [search, regionFilter, entityFilter, goldenFilter, groundTruthFilter])
+
+  function getExpanded(caseId: string): CaseExpanded {
+    return expandedData[caseId] ?? getDefaultExpanded(caseId)
+  }
+
+  function handleStepEdit(caseId: string, step: Step, next: StepState) {
+    setExpandedData((prev) => ({
+      ...prev,
+      [caseId]: { ...getExpanded(caseId), [step]: next },
+    }))
+    msgApi.success("Saved")
+  }
+
+  function clearFilters() {
+    setSearch("")
+    setRegionFilter(null)
+    setEntityFilter(null)
+    setGoldenFilter(null)
+    setGroundTruthFilter(null)
+  }
+
+  const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter || groundTruthFilter)
 
   const columns: ColumnsType<AuditCase> = [
     {
@@ -191,13 +385,6 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
     },
     {
-      title: "Golden",
-      dataIndex: "isGolden",
-      key: "isGolden",
-      width: 120,
-      render: (v: CaseGolden) => <GoldenBadge value={v} />,
-    },
-    {
       title: "Ground Truth",
       dataIndex: "groundTruth",
       key: "groundTruth",
@@ -208,41 +395,28 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
       title: "",
       key: "action",
       width: 54,
-        render: (_: unknown, record: AuditCase) => (
+      render: (_: unknown, record: AuditCase) => (
         <Tooltip title="View detail">
           <Button
             type="text"
             size="small"
             icon={<EyeOutlined />}
-            onClick={() => onViewDetail ? onViewDetail(record) : setDetail(record)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewDetail ? onViewDetail(record) : setDetail(record)
+            }}
           />
         </Tooltip>
       ),
     },
   ]
 
-  function clearFilters() {
-    setSearch("")
-    setRegionFilter(null)
-    setEntityFilter(null)
-    setGoldenFilter(null)
-    setGroundTruthFilter(null)
-  }
-
-  const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter || groundTruthFilter)
-
   return (
     <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
+      {contextHolder}
+
       {/* Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 14,
-          flexWrap: "wrap",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         <Input
           prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
           placeholder="Search Case ID / Invoice / Supplier"
@@ -251,14 +425,8 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
           style={{ width: 280 }}
           allowClear
         />
-
         <Select
-          placeholder={
-            <Space size={4}>
-              <FilterOutlined style={{ fontSize: 12 }} />
-              Region
-            </Space>
-          }
+          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Region</Space>}
           value={regionFilter}
           onChange={(v) => setRegionFilter(v)}
           options={regionOptions}
@@ -266,12 +434,7 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
           allowClear
         />
         <Select
-          placeholder={
-            <Space size={4}>
-              <FilterOutlined style={{ fontSize: 12 }} />
-              Entity
-            </Space>
-          }
+          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Entity</Space>}
           value={entityFilter}
           onChange={(v) => setEntityFilter(v)}
           options={entityOptions}
@@ -301,13 +464,11 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
           style={{ width: 140 }}
           allowClear
         />
-
         {hasFilters && (
           <Button type="link" size="small" onClick={clearFilters} style={{ padding: 0 }}>
             Clear all
           </Button>
         )}
-
         <span style={{ marginLeft: "auto" }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {filtered.length} / {auditCaseData.length} cases
@@ -320,13 +481,38 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
         dataSource={filtered}
         rowKey="key"
         size="small"
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1100 }}
         pagination={{
           pageSize: 10,
           showTotal: (total) => `Total ${total} records`,
           showSizeChanger: false,
         }}
         bordered={false}
+        expandable={{
+          expandedRowKeys: expandedKeys,
+          onExpand: (expanded, record) => {
+            setExpandedKeys((prev) =>
+              expanded ? [...prev, record.key] : prev.filter((k) => k !== record.key)
+            )
+          },
+          expandedRowRender: (record) => (
+            <ExpandedRow
+              record={record}
+              expanded={getExpanded(record.caseId)}
+              onEdit={(step, next) => handleStepEdit(record.caseId, step, next)}
+            />
+          ),
+        }}
+        onRow={(record) => ({
+          onClick: () => {
+            setExpandedKeys((prev) =>
+              prev.includes(record.key)
+                ? prev.filter((k) => k !== record.key)
+                : [...prev, record.key]
+            )
+          },
+          style: { cursor: "pointer" },
+        })}
       />
 
       <CaseDrawer record={detail} onClose={() => setDetail(null)} />

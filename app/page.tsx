@@ -17,7 +17,7 @@ import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
 import { PatternLibrary } from "@/components/pattern-library"
 import { RegressionTest } from "@/components/regression-test"
-import { agentListData, type Agent, type AuditCase } from "@/lib/mock-data"
+import { agentListData, INITIAL_GOLDEN_CASES, type Agent, type AuditCase, type GoldenCasesState } from "@/lib/mock-data"
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
@@ -52,6 +52,7 @@ function AppShell() {
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
   const [selectedCase, setSelectedCase] = useState<AuditCase | null>(null)
   const [agents, setAgents] = useState<Agent[]>(agentListData)
+  const [goldenCases, setGoldenCases] = useState<GoldenCasesState>(INITIAL_GOLDEN_CASES)
   const { region, setRegion } = useRegion()
 
   function handlePublish(agentId: string) {
@@ -220,9 +221,9 @@ function AppShell() {
           {page === "knowledge-detail"   && <KnowledgeDetail />}
           {page === "knowledge-endpoint" && <KnowledgeEndpoint />}
           {page === "case-management"         && <CaseManagement onViewDetail={goToCaseDetail} />}
-          {page === "golden-case-management"  && <GoldenCaseManagement />}
+          {page === "golden-case-management"  && <GoldenCaseManagement goldenCases={goldenCases} setGoldenCases={setGoldenCases} />}
           {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
-          {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} onPublish={handlePublish} />}
+          {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} />}
           {page === "agent-list"         && <AgentList agents={agents} setAgents={setAgents} onView={goToAgentDetail} onTriggerTest={goToRegressionTest} />}
           {page === "pattern-library"    && <PatternLibrary />}
           {page === "agent-detail"       && <AgentDetail onBack={goToAgentList} />}

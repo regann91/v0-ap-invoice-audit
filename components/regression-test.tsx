@@ -11,7 +11,7 @@ import {
   ExperimentOutlined, TrophyOutlined, WarningOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
-import { agentListData, auditCaseData, type Agent, type AgentStatus } from "@/lib/mock-data"
+import { agentListData, auditCaseData, INITIAL_GOLDEN_CASES, type Agent, type AgentStatus, type GoldenCasesState } from "@/lib/mock-data"
 
 const { Text, Title } = Typography
 
@@ -130,12 +130,45 @@ const SUITE_METRICS_FAILURE: Record<SuiteType, { accuracy: number; precision: nu
 
 // ── Case result builder ──────────────────────────────────────────
 
-function buildSuiteCases(agentId: string, suiteType: SuiteType, _passRate: number): CaseResult[] {
-  const pool = (suiteType === "golden"
-    ? auditCaseData.filter((c) => c.isGolden === "Golden")
-    : auditCaseData
-  ).filter((c) => c.groundTruth !== "Pending")
+function buildSuiteCases(
+  agentId: string,
+  suiteType: SuiteType,
+  _passRate: number,
+  goldenCases: GoldenCasesState,
+  agentStep: AgentStep,
+): CaseResult[] {
+  if (suiteType === "golden") {
+    // Use the shared golden cases for the agent's step
+    const stepCases = goldenCases[agentStep] ?? []
+    return stepCases.map((c, idx) => {
+      const mock = CASE_MOCK_DATA[c.caseId]
+      const gt: "Pass" | "Fail" = c.groundTruth
+      const pred: "Pass" | "Fail" = mock?.pred ?? gt
+      const correct = mock ? mock.correct : gt === pred
+      return {
+        key: c.key,
+        caseId: c.caseId,
+        invoiceNo: c.invoiceNo,
+        prNo: mock?.prNo ?? `PR-2025-${String(idx + 1).padStart(4, "0")}`,
+        poNo: mock?.poNo ?? `PO-2024-${String(idx + 1).padStart(4, "0")}`,
+        supplierName: c.supplier,
+        isGolden: true,
+        groundTruth: gt,
+        groundTruthReason: mock?.gtReason ?? "Golden case review completed",
+        agentPrediction: pred,
+        agentPredictionReason: mock?.predReason ?? "Prediction generated",
+        correct,
+        latencyMs: 200 + ((c.key.charCodeAt(0) * 37 + agentId.charCodeAt(3 % agentId.length)) % 600),
+        reviewer: mock?.reviewer ?? "system",
+        reviewDate: mock?.reviewDate ?? "2025-03-10",
+        confidence: mock?.confidence ?? 0.85,
+        modelVersion: mock?.modelVersion ?? "gpt-4o-2024-05",
+      }
+    })
+  }
 
+  // benchmark / current: use auditCaseData, exclude Pending
+  const pool = auditCaseData.filter((c) => c.groundTruth !== "Pending")
   return pool.map((c) => {
     const mock = CASE_MOCK_DATA[c.caseId]
     const gt: "Pass" | "Fail" = mock?.gt ?? (c.groundTruth as "Pass" | "Fail")
@@ -515,13 +548,16 @@ function CaseResultTable({ cases }: { cases: CaseResult[] }) {
 export function RegressionTest({
   preselectedAgentId,
   agents,
+  goldenCases,
   onPublish,
 }: {
   preselectedAgentId?: string
   agents?: Agent[]
+  goldenCases?: GoldenCasesState
   onPublish?: (agentId: string) => void
 }) {
   const allAgents = agents ?? agentListData
+  const sharedGoldenCases = goldenCases ?? INITIAL_GOLDEN_CASES
   const testingAgents = allAgents.filter((a) => a.status === "TESTING")
 
   const [selectedId, setSelectedId] = useState<string>(
@@ -539,6 +575,8 @@ export function RegressionTest({
     if (preselectedAgentId) setSelectedId(preselectedAgentId)
   }, [preselectedAgentId])
 
+  const selectedAgentStep = (allAgents.find((a) => a.id === selectedId)?.step ?? "INVOICE_REVIEW") as AgentStep
+
   // Rebuild suites when simulateFailure toggles (only when results are shown)
   useEffect(() => {
     if (runStatus === "done" && selectedId) {
@@ -547,11 +585,11 @@ export function RegressionTest({
         label: type === "golden" ? "Golden Suite" : type === "benchmark" ? "Benchmark Suite" : "Full Suite",
         type,
         ...metrics[type],
-        cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate),
+        cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep),
       }))
       setSuites(rebuilt)
     }
-  }, [simulateFailure, runStatus, selectedId])
+  }, [simulateFailure, runStatus, selectedId, sharedGoldenCases, selectedAgentStep])
 
   function handleRun() {
     if (!selectedId) return
@@ -571,7 +609,7 @@ export function RegressionTest({
           label: type === "golden" ? "Golden Suite" : type === "benchmark" ? "Benchmark Suite" : "Full Suite",
           type,
           ...metrics[type],
-          cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate),
+          cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep),
         }))
         setSuites(results)
         setProgress(100)

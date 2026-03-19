@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo } from "react"
+import { type GoldenCasesState } from "@/lib/mock-data"
 import {
   Table, Button, Tag, Typography, Input, Select, Modal, Alert,
   Popconfirm, Progress, Tooltip,
@@ -408,15 +409,18 @@ function AddCaseModal({
 // Step pill tabs
 const STEPS: StepType[] = ["INVOICE_REVIEW", "MATCH", "AP_VOUCHER"]
 
-export function GoldenCaseManagement() {
+export function GoldenCaseManagement({
+  goldenCases,
+  setGoldenCases,
+}: {
+  goldenCases: GoldenCasesState
+  setGoldenCases: React.Dispatch<React.SetStateAction<GoldenCasesState>>
+}) {
   const [activeStep, setActiveStep] = useState<StepType>("INVOICE_REVIEW")
   const [search, setSearch] = useState("")
   const [patternFilter, setPatternFilter] = useState<string[]>([])
   const [gtFilter, setGtFilter] = useState<GroundTruth | "All">("All")
   const [addModalOpen, setAddModalOpen] = useState(false)
-
-  // Dynamic golden cases per step — starts from mock data, grows on Add
-  const [dynamicCases, setDynamicCases] = useState<Record<StepType, GoldenCase[]>>(GOLDEN_CASES)
 
   function handleConfirmAdd(added: AddableCase[]) {
     const today = new Date().toISOString().slice(0, 10)
@@ -431,13 +435,13 @@ export function GoldenCaseManagement() {
       addedBy: "ai_ops_current",
       addedDate: today,
     }))
-    setDynamicCases((prev) => ({
+    setGoldenCases((prev) => ({
       ...prev,
       [activeStep]: [...prev[activeStep], ...newRows],
     }))
   }
 
-  const allCases = dynamicCases[activeStep]
+  const allCases = goldenCases[activeStep]
   const dynamicTotal = allCases.length
   const cfg = { ...STEP_CONFIG[activeStep], total: dynamicTotal }
   const capColor = capacityColor(cfg.total, cfg.limit)
@@ -500,6 +504,12 @@ export function GoldenCaseManagement() {
           okText="Remove"
           okButtonProps={{ danger: true }}
           cancelText="Cancel"
+          onConfirm={() =>
+            setGoldenCases((prev) => ({
+              ...prev,
+              [activeStep]: prev[activeStep].filter((c) => c.key !== record.key),
+            }))
+          }
         >
           <Button type="link" danger size="small" style={{ padding: 0, fontSize: 12 }}>
             Remove

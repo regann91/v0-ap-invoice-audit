@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Layout, Menu, Typography, Space, Select, Breadcrumb, Tag } from "antd"
+import { Layout, Menu, Typography, Space, Select, Breadcrumb } from "antd"
 import {
-  DatabaseOutlined, RobotOutlined, UserOutlined,
+  DatabaseOutlined, RobotOutlined,
   FolderOpenOutlined, ExperimentOutlined, TableOutlined, CodeOutlined,
 } from "@ant-design/icons"
 import { RoleProvider, useRole } from "@/lib/role-context"
@@ -40,7 +40,6 @@ function AppShell() {
   const [selectedKey, setSelectedKey] = useState("knowledge-detail")
   const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base"])
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
-  const { role } = useRole()
   const { region, setRegion } = useRegion()
 
   function navigate(key: string) {
@@ -166,37 +165,22 @@ function AppShell() {
             separator={<Text type="secondary" style={{ fontSize: 13 }}>/</Text>}
           />
 
-          <Space size={10}>
-            <UserOutlined style={{ color: "#8c8c8c", fontSize: 14 }} />
-            <Tag
-              style={{
-                color: "#1890ff",
-                background: "#1890ff14",
-                border: "1px solid #1890ff44",
-                fontWeight: 600,
-                fontSize: 11,
-                letterSpacing: 0.3,
-                margin: 0,
-              }}
-            >
-              {role}
-            </Tag>
-            <Select
-              value={region}
-              size="small"
-              style={{ width: 180 }}
-              onChange={(v) => setRegion(v as RegionCode)}
-              optionLabelProp="label"
-              options={REGIONS.map((r) => ({
-                value: r.code,
-                label: (
-                  <Space size={6}>
-                    <Text strong style={{ fontSize: 13 }}>{r.code}</Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{r.name}</Text>
-                  </Space>
-                ),
-              }))}
-            />
+          <Select
+            value={region}
+            size="small"
+            style={{ width: 180 }}
+            onChange={(v) => setRegion(v as RegionCode)}
+            optionLabelProp="label"
+            options={REGIONS.map((r) => ({
+              value: r.code,
+              label: (
+                <Space size={6}>
+                  <Text strong style={{ fontSize: 13 }}>{r.code}</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>{r.name}</Text>
+                </Space>
+              ),
+            }))}
+          />
           </Space>
         </Header>
 

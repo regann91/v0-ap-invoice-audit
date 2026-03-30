@@ -605,22 +605,6 @@ export function CaseManagement({
             allowClear
           />
         </Input.Group>
-        <Select
-          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Region</Space>}
-          value={regionFilter}
-          onChange={(v) => setRegionFilter(v)}
-          options={regionOptions}
-          style={{ width: 120 }}
-          allowClear
-        />
-        <Select
-          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Entity</Space>}
-          value={entityFilter}
-          onChange={(v) => setEntityFilter(v)}
-          options={filterEntityOptions}
-          style={{ width: 110 }}
-          allowClear
-        />
         {/* Step + Golden filter */}
         <Input.Group compact style={{ display: "flex", width: "auto" }}>
           <Select

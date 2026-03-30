@@ -1481,7 +1481,7 @@ export function RegressionTest({
                       {selectedCaseDetail.agentPrediction}
                     </Tag>
                     <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 4 }}>
-                      AI recommends you {"approve" in selectedCaseDetail.agentPrediction.toLowerCase() || selectedCaseDetail.agentPrediction === "Matched" ? "approve" : "reject"} this. Invoice & PO will move to next step
+                      AI recommends you {selectedCaseDetail.agentPrediction.toLowerCase().includes("pass") || selectedCaseDetail.agentPrediction === "Matched" ? "approve" : "reject"} this. Invoice & PO will move to next step
                     </Text>
                   </div>
                 </div>

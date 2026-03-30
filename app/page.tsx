@@ -5,6 +5,7 @@ import { Layout, Menu, Typography, Select, Breadcrumb, Space } from "antd"
 import {
   DatabaseOutlined, RobotOutlined,
   FolderOpenOutlined, ExperimentOutlined, TableOutlined, CodeOutlined, InboxOutlined,
+  ApartmentOutlined,
 } from "@ant-design/icons"
 import { RoleProvider } from "@/lib/role-context"
 import { RegionProvider, useRegion, REGIONS, type RegionCode } from "@/lib/region-context"
@@ -18,6 +19,7 @@ import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
 import { PatternLibrary } from "@/components/pattern-library"
 import { RegressionTest } from "@/components/regression-test"
+import { SystemArchitecture } from "@/components/system-architecture"
 import { agentListData, INITIAL_GOLDEN_CASES, type Agent, type AuditCase, type GoldenCasesState } from "@/lib/mock-data"
 import { type ArchivedCase } from "@/lib/archive-utils"
 
@@ -35,6 +37,7 @@ type Page =
   | "pattern-library"
   | "agent-detail"
   | "regression-test"
+  | "system-architecture"
 
 const BREADCRUMBS: Record<Page, string[]> = {
   "knowledge-detail":      ["Knowledge Base", "Knowledge Detail"],
@@ -47,6 +50,7 @@ const BREADCRUMBS: Record<Page, string[]> = {
   "pattern-library":       ["Case Management", "Pattern Library"],
   "agent-detail":          ["Agent Management", "Agent List", "Agent Detail"],
   "regression-test":       ["Regression Test"],
+  "system-architecture":   ["System Architecture"],
 }
 
 function AppShell() {
@@ -102,6 +106,7 @@ function AppShell() {
       setRegressionAgentId(undefined)
       setPage("regression-test")
     }
+    if (key === "system-architecture") setPage("system-architecture")
   }
 
   function goToCaseDetail(record: AuditCase) {
@@ -193,6 +198,7 @@ function AppShell() {
               ],
             },
             { key: "regression-test", icon: <ExperimentOutlined />, label: "Regression Test" },
+            { key: "system-architecture", icon: <ApartmentOutlined />, label: "System Architecture" },
           ]}
         />
       </Sider>
@@ -256,6 +262,7 @@ function AppShell() {
           {page === "agent-list"         && <AgentList agents={agents} setAgents={setAgents} onView={goToAgentDetail} onTriggerTest={goToRegressionTest} />}
           {page === "pattern-library"    && <PatternLibrary />}
           {page === "agent-detail"       && <AgentDetail agentId="AGT-002" passedAgentIds={passedAgentIds} onBack={goToAgentList} onPublish={handlePublish} onGoToRegressionTest={goToRegressionTest} />}
+          {page === "system-architecture" && <SystemArchitecture />}
         </Content>
       </Layout>
     </Layout>

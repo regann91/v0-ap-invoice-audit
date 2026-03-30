@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import {
   Select, Button, Table, Tag, Typography, Space, Progress,
-  Statistic, Card, Divider, Empty, Switch, Tooltip,
+  Statistic, Card, Divider, Empty, Switch, Tooltip, Drawer,
   type EmptyProps,
 } from "antd"
 import {
@@ -180,10 +180,23 @@ function buildSuiteCases(
   const stepCases = goldenCases[agentStep] ?? []
   return stepCases.map((c, idx) => {
   const mock = CASE_MOCK_DATA[c.caseId]
-  // Map ground truth: Matched/Submitted to EBS → Pass, NA/Pending → Fail, otherwise keep original
+  // Map ground truth based on agent step
   const rawGt = c.groundTruth
-  const gt: "Pass" | "Fail" = rawGt === "Matched" || rawGt === "Submitted to EBS" ? "Pass" : rawGt === "NA" || rawGt === "Pending" ? "Fail" : (rawGt as "Pass" | "Fail")
-  const pred: "Pass" | "Fail" = mock?.pred ?? gt
+  let gt: string
+  if (agentStep === "INVOICE_REVIEW") {
+    gt = rawGt === "Matched" || rawGt === "Submitted to EBS" ? "Pass" : rawGt === "NA" || rawGt === "Pending" ? "Fail" : (rawGt as any)
+  } else if (agentStep === "MATCH") {
+    gt = rawGt
+  } else if (agentStep === "AP_VOUCHER") {
+    gt = rawGt
+  } else {
+    gt = rawGt as any
+  }
+  const pred: string = agentStep === "INVOICE_REVIEW" 
+    ? (mock?.pred ?? gt)
+    : agentStep === "MATCH"
+    ? (mock?.matchPred ?? "Matched")
+    : (mock?.voucherPred ?? "Submitted to EBS")
       const correct = mock ? mock.correct : gt === pred
       return {
         key: c.key,
@@ -503,6 +516,13 @@ function CaseResultTable({ cases }: { cases: CaseResult[] }) {
       key: "caseId",
       width: 100,
       render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
+      onCell: (record) => ({
+        onClick: () => {
+          setSelectedCaseDetail(record)
+          setDetailDrawerOpen(true)
+        },
+        style: { cursor: "pointer" },
+      }),
     },
     {
       title: "Invoice No",
@@ -586,7 +606,6 @@ function CaseResultTable({ cases }: { cases: CaseResult[] }) {
       expandable={{
         expandedRowKeys: expandedKeys,
         showExpandColumn: false,
-        expandedRowRender: (r) => <ExpandedRowPanel record={r} />,
       }}
     />
   )
@@ -637,6 +656,8 @@ export function RegressionTest({
   const [simulateFailure, setSimulateFailure] = useState(false)
   const [published, setPublished] = useState(false)
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
+  const [selectedCaseDetail, setSelectedCaseDetail] = useState<CaseResult | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -875,7 +896,8 @@ export function RegressionTest({
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Run ID</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Date / Time</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Pass Rate</th>
-                    <th style={{ textAlign: "left", padding: "6px 0", color: "#8c8c8c", fontWeight: 500 }}>Status</th>
+                    <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Status</th>
+                    <th style={{ textAlign: "left", padding: "6px 0", color: "#8c8c8c", fontWeight: 500 }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -892,7 +914,7 @@ export function RegressionTest({
                           {r.passRate}%
                         </Text>
                       </td>
-                      <td style={{ padding: "8px 0" }}>
+                      <td style={{ padding: "8px 12px 8px 0" }}>
                         <Tag style={{
                           margin: 0,
                           fontWeight: 500,
@@ -903,6 +925,9 @@ export function RegressionTest({
                         }}>
                           {r.status}
                         </Tag>
+                      </td>
+                      <td style={{ padding: "8px 0" }}>
+                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); msgApi.info(`Navigating to regression detail for ${r.runId}...`) }}>View Detail</Typography.Link>
                       </td>
                     </tr>
                   ))}
@@ -984,6 +1009,96 @@ export function RegressionTest({
           </div>
         </div>
       )}
+
+      {/* AI Prediction Detail Drawer */}
+      <Drawer
+        title="AI Prediction Detail"
+        placement="right"
+        width={420}
+        onClose={() => {
+          setDetailDrawerOpen(false)
+          setSelectedCaseDetail(null)
+        }}
+        open={detailDrawerOpen}
+        bodyStyle={{ padding: "20px 0" }}
+      >
+        {selectedCaseDetail && (() => {
+          const gtCfg = RESULT_TAG_CFG[selectedCaseDetail.groundTruth as keyof typeof RESULT_TAG_CFG]
+          const finalGtCfg = gtCfg ?? { color: "#8c8c8c", bg: "#f5f5f5", border: "#d9d9d9" }
+          const predCfg = RESULT_TAG_CFG[selectedCaseDetail.agentPrediction as keyof typeof RESULT_TAG_CFG]
+          const finalPredCfg = predCfg ?? { color: "#8c8c8c", bg: "#f5f5f5", border: "#d9d9d9" }
+          return (
+            <div>
+              {/* Overall Result */}
+              <div style={{ paddingBottom: 20, borderBottom: "1px solid #f0f0f0", paddingLeft: 20, paddingRight: 20 }}>
+                <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>Overall Result</Text>
+                <Tag style={{ color: finalPredCfg.color, background: finalPredCfg.bg, borderColor: finalPredCfg.border, fontWeight: 600, fontSize: 13, padding: "4px 12px" }}>
+                  {selectedCaseDetail.agentPrediction}
+                </Tag>
+              </div>
+
+              {/* Confidence Score */}
+              <div style={{ padding: "20px", borderBottom: "1px solid #f0f0f0" }}>
+                <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>Confidence Score</Text>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <Progress
+                    type="circle"
+                    percent={parseInt(selectedCaseDetail.confidence.split("%")[0])}
+                    width={60}
+                    format={(p) => <Text style={{ fontSize: 12, fontWeight: 500 }}>{p}%</Text>}
+                  />
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Model</Text>
+                    <Text style={{ fontSize: 12, fontWeight: 500 }}>{selectedCaseDetail.modelVersion}</Text>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ground Truth */}
+              <div style={{ padding: "20px", borderBottom: "1px solid #f0f0f0" }}>
+                <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>Ground Truth (Human)</Text>
+                <Tag style={{ color: finalGtCfg.color, background: finalGtCfg.bg, borderColor: finalGtCfg.border, fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
+                  {selectedCaseDetail.groundTruth}
+                </Tag>
+                <Text style={{ fontSize: 12, display: "block", marginBottom: 10, color: "#434343" }}>
+                  {selectedCaseDetail.groundTruthReason}
+                </Text>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 11 }}>Reviewed by {selectedCaseDetail.reviewer} on {selectedCaseDetail.reviewDate}</Text>
+                </div>
+              </div>
+
+              {/* Check Items */}
+              <div style={{ padding: "20px" }}>
+                <Text strong style={{ fontSize: 12, display: "block", marginBottom: 12 }}>Prediction Details</Text>
+                <div style={{ fontSize: 12 }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
+                    <Text style={{ fontSize: 13, color: "#52c41a" }}>✓</Text>
+                    <div>
+                      <Text style={{ display: "block", fontWeight: 500 }}>Invoice Amount Verified</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>Matches PO amount within 2%</Text>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
+                    <Text style={{ fontSize: 13, color: "#52c41a" }}>✓</Text>
+                    <div>
+                      <Text style={{ display: "block", fontWeight: 500 }}>Vendor Verified</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>Vendor registered in system</Text>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <Text style={{ fontSize: 13, color: "#cf1322" }}>✗</Text>
+                    <div>
+                      <Text style={{ display: "block", fontWeight: 500 }}>Tax Code Mismatch</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>Expected: TX-001, Found: TX-002</Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+      </Drawer>
     </div>
   )
 }

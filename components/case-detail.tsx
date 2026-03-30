@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react"
 import {
-  Button, Tag, Badge, Typography, Space, Table, Switch,
+  Button, Tag, Badge, Typography, Space, Table, Switch, Tooltip, Modal, Form, message, TextArea,
 } from "antd"
 import {
   ArrowLeftOutlined, CheckCircleFilled, ClockCircleOutlined,
   StarFilled, FileTextOutlined, FilePdfOutlined, FileImageOutlined,
-  CloseCircleFilled,
+  CloseCircleFilled, InboxOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import type { AuditCase } from "@/lib/mock-data"
@@ -760,57 +760,148 @@ function APVoucherSection({ voucherState, onCycle }: { voucherState: VoucherStat
   )
 }
 
+// ── Archive Confirmation Modal ───────────────────────────────────
+
+function ArchiveConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  record,
+}: {
+  open: boolean
+  onClose: () => void
+  onConfirm: (reason: string) => void
+  record: AuditCase | null
+}) {
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false)
+
+  if (!record) return null
+
+  function handleConfirm() {
+    form.validateFields().then((values) => {
+      setLoading(true)
+      setTimeout(() => {
+        onConfirm(values.archiveReason)
+        form.resetFields()
+        setLoading(false)
+        onClose()
+      }, 300)
+    })
+  }
+
+  return (
+    <Modal
+      title="Archive Case"
+      open={open}
+      onCancel={onClose}
+      onOk={handleConfirm}
+      okText="Confirm Archive"
+      okButtonProps={{ loading, danger: true }}
+      cancelText="Cancel"
+      width={500}
+    >
+      <div style={{ marginBottom: 16, padding: "12px 16px", background: "#fafafa", borderRadius: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 12 }}>
+          <div>
+            <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Case ID</Text>
+            <Text strong style={{ fontFamily: "monospace" }}>{record.caseId}</Text>
+          </div>
+          <div>
+            <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Supplier</Text>
+            <Text>{record.supplierName}</Text>
+          </div>
+        </div>
+      </div>
+
+      <Form form={form} layout="vertical">
+        <Form.Item
+          label="Archive Reason"
+          name="archiveReason"
+          rules={[
+            { required: true, message: "Please provide an archive reason" },
+            { min: 10, message: "Reason must be at least 10 characters" },
+          ]}
+        >
+          <TextArea
+            placeholder="Please describe why this case is being archived..."
+            rows={4}
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
+  )
+}
+
 // ── Case Header bar ───────────────────────────────────────────────
 
-function CaseHeader({ record }: { record: AuditCase }) {
+function CaseHeader({ record, onArchive }: { record: AuditCase; onArchive: () => void }) {
+  const isGolden = record.isGolden === "Golden"
   return (
     <div style={{
       background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4,
       padding: "14px 20px", marginBottom: 16,
-      display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16,
+      display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16, justifyContent: "space-between",
     }}>
-      <div>
-        <Text strong style={{ fontSize: 18, color: "#1d1d1d" }}>{record.caseId}</Text>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1, flexWrap: "wrap" }}>
+        <div>
+          <Text strong style={{ fontSize: 18, color: "#1d1d1d" }}>{record.caseId}</Text>
+        </div>
+        <div style={{ width: 1, height: 28, background: "#e8e8e8" }} />
+        <div>
+          <Text type="secondary" style={{ fontSize: 11 }}>Invoice No.</Text>
+          <Text style={{ display: "block", fontSize: 13 }}>{record.invoiceNo}</Text>
+        </div>
+        <div>
+          <Text type="secondary" style={{ fontSize: 11 }}>Supplier</Text>
+          <Text style={{ display: "block", fontSize: 13 }}>{record.supplierName}</Text>
+        </div>
+        <div>
+          <Text type="secondary" style={{ fontSize: 11 }}>Region / Entity</Text>
+          <Text style={{ display: "block", fontSize: 13 }}>{record.region} / {record.entity}</Text>
+        </div>
+        <div>
+          <Text type="secondary" style={{ fontSize: 11 }}>Amount</Text>
+          <Text style={{ display: "block", fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
+            {record.currency} {record.amount.toLocaleString()}
+          </Text>
+        </div>
       </div>
-      <div style={{ width: 1, height: 28, background: "#e8e8e8" }} />
-      <div>
-        <Text type="secondary" style={{ fontSize: 11 }}>Invoice No.</Text>
-        <Text style={{ display: "block", fontSize: 13 }}>{record.invoiceNo}</Text>
-      </div>
-      <div>
-        <Text type="secondary" style={{ fontSize: 11 }}>Supplier</Text>
-        <Text style={{ display: "block", fontSize: 13 }}>{record.supplierName}</Text>
-      </div>
-      <div>
-        <Text type="secondary" style={{ fontSize: 11 }}>Region / Entity</Text>
-        <Text style={{ display: "block", fontSize: 13 }}>{record.region} / {record.entity}</Text>
-      </div>
-      <div>
-        <Text type="secondary" style={{ fontSize: 11 }}>Amount</Text>
-        <Text style={{ display: "block", fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
-          {record.currency} {record.amount.toLocaleString()}
-        </Text>
-      </div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-        {record.isGolden === "Golden" && (
-          <Tag
-            icon={<StarFilled style={{ fontSize: 10 }} />}
-            style={{ background: "#fffbe6", borderColor: "#ffe58f", color: "#d48806", fontWeight: 600, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 3 }}
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {record.isGolden === "Golden" && (
+            <Tag
+              icon={<StarFilled style={{ fontSize: 10 }} />}
+              style={{ background: "#fffbe6", borderColor: "#ffe58f", color: "#d48806", fontWeight: 600, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 3 }}
+            >
+              Golden
+            </Tag>
+          )}
+          <Badge
+            status={record.groundTruth === "Pass" ? "success" : record.groundTruth === "Fail" ? "error" : "processing"}
+            text={
+              <Text strong style={{ fontSize: 12, color: record.groundTruth === "Pass" ? "#389e0d" : record.groundTruth === "Fail" ? "#cf1322" : "#8c8c8c" }}>
+                {record.groundTruth}
+              </Text>
+            }
+          />
+          {record.tags.map((t) => (
+            <Tag key={t} style={{ fontSize: 11, margin: 0, background: "#f5f5f5", border: "none", color: "#595959" }}>{t}</Tag>
+          ))}
+        </div>
+        <Tooltip title={isGolden ? "Golden cases cannot be manually archived" : "Archive case"}>
+          <Button
+            type="default"
+            danger={!isGolden}
+            icon={<InboxOutlined />}
+            disabled={isGolden}
+            onClick={onArchive}
+            style={{ fontSize: 12 }}
           >
-            Golden
-          </Tag>
-        )}
-        <Badge
-          status={record.groundTruth === "Pass" ? "success" : record.groundTruth === "Fail" ? "error" : "processing"}
-          text={
-            <Text strong style={{ fontSize: 12, color: record.groundTruth === "Pass" ? "#389e0d" : record.groundTruth === "Fail" ? "#cf1322" : "#8c8c8c" }}>
-              {record.groundTruth}
-            </Text>
-          }
-        />
-        {record.tags.map((t) => (
-          <Tag key={t} style={{ fontSize: 11, margin: 0, background: "#f5f5f5", border: "none", color: "#595959" }}>{t}</Tag>
-        ))}
+            Archive Case
+          </Button>
+        </Tooltip>
       </div>
     </div>
   )
@@ -818,10 +909,12 @@ function CaseHeader({ record }: { record: AuditCase }) {
 
 // ── Main Component ────────────────────────────────────────────────
 
-export function CaseDetail({ record, onBack }: { record: AuditCase; onBack: () => void }) {
+export function CaseDetail({ record, onBack, onArchiveSuccess }: { record: AuditCase; onBack: () => void; onArchiveSuccess?: () => void }) {
   const [activeStep, setActiveStep] = useState("invoice-review")
   const [matchState, setMatchState] = useState<MatchState>("matched")
   const [voucherState, setVoucherState] = useState<VoucherState>("pending")
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false)
+  const [msgApi, msgContextHolder] = message.useMessage()
 
   const sectionRefs = {
     "invoice-review": useRef<HTMLDivElement>(null),
@@ -860,6 +953,15 @@ export function CaseDetail({ record, onBack }: { record: AuditCase; onBack: () =
     setVoucherState(VOUCHER_STATE_ORDER[(idx + 1) % VOUCHER_STATE_ORDER.length])
   }
 
+  function handleArchiveConfirm(reason: string) {
+    msgApi.success("Case archived successfully")
+    setArchiveModalOpen(false)
+    setTimeout(() => {
+      onArchiveSuccess?.()
+      onBack()
+    }, 300)
+  }
+
   return (
     <div style={{ display: "flex", gap: 0, alignItems: "flex-start", minHeight: "calc(100vh - 96px)" }}>
       <StepTimeline
@@ -869,6 +971,7 @@ export function CaseDetail({ record, onBack }: { record: AuditCase; onBack: () =
         voucherState={voucherState}
       />
       <div style={{ flex: 1, minWidth: 0, padding: "0 0 40px 20px" }}>
+        {msgContextHolder}
         <Button
           type="link"
           icon={<ArrowLeftOutlined />}
@@ -877,7 +980,7 @@ export function CaseDetail({ record, onBack }: { record: AuditCase; onBack: () =
         >
           Back to Case List
         </Button>
-        <CaseHeader record={record} />
+        <CaseHeader record={record} onArchive={() => setArchiveModalOpen(true)} />
         <div ref={sectionRefs["invoice-review"]}>
           <InvoiceReviewSection />
         </div>
@@ -894,6 +997,12 @@ export function CaseDetail({ record, onBack }: { record: AuditCase; onBack: () =
           />
         </div>
       </div>
+      <ArchiveConfirmModal
+        open={archiveModalOpen}
+        onClose={() => setArchiveModalOpen(false)}
+        onConfirm={handleArchiveConfirm}
+        record={record}
+      />
     </div>
   )
 }

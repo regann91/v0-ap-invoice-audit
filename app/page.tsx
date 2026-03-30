@@ -261,7 +261,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "case-management"         && <CaseManagement onViewDetail={goToCaseDetail} archivedCases={archivedCases} onArchive={handleArchive} onGoToArchived={goToArchivedCases} goldenCaseIds={goldenCaseIdSet} />}
           {page === "archived-cases"          && <ArchivedCases archivedCases={archivedCases} />}
           {page === "golden-case-management"  && <GoldenCaseManagement goldenCases={goldenCases} setGoldenCases={setGoldenCases} />}
-          {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} onArchiveSuccess={() => { setSelectedCase(null); goToCaseList() }} />}
+          {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
           {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} onPassedRun={handlePassedRun} />}
           {page === "agent-list"         && <AgentList agents={agents} setAgents={setAgents} onView={goToAgentDetail} onTriggerTest={goToRegressionTest} />}
           {page === "pattern-library"    && <PatternLibrary />}

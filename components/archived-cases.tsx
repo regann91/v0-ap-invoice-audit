@@ -64,16 +64,7 @@ export function ArchivedCases({ archivedCases }: Props) {
       dataIndex: "caseId",
       key: "caseId",
       width: 130,
-      render: (v: string, record: ArchivedCaseMock) => (
-        <Space size={4}>
-          {record.isGolden === "Golden" && (
-            <Tooltip title="Golden Set case — retained for historical reference">
-              <LockOutlined style={{ color: "#d48806" }} />
-            </Tooltip>
-          )}
-          <Text style={{ fontSize: 13, fontFamily: "monospace" }}>{v}</Text>
-        </Space>
-      ),
+      render: (v: string) => <Text style={{ fontSize: 13, fontFamily: "monospace" }}>{v}</Text>,
     },
     {
       title: "Invoice No.",
@@ -145,24 +136,6 @@ export function ArchivedCases({ archivedCases }: Props) {
           {v.split("T")[0]}
         </Text>
       ),
-    },
-    {
-      title: "Archived By",
-      dataIndex: "archivedBy",
-      key: "archivedBy",
-      width: 140,
-      render: (v: string) =>
-        v === "System" ? (
-          <Tag style={{ fontSize: 11, background: "#f5f5f5", borderColor: "#d9d9d9", color: "#595959" }}>System</Tag>
-        ) : (
-          <Text code style={{ fontSize: 11 }}>{v}</Text>
-        ),
-    },
-    {
-      title: "Archive Reason",
-      dataIndex: "archiveReason",
-      key: "archiveReason",
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text>,
     },
   ]
 

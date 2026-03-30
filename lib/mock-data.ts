@@ -445,9 +445,6 @@ export interface ArchivedCaseMock {
   tags: string[]
   step: CaseStep
   archivedAt: string
-  archivedBy: 'System' | string
-  archiveReason: string
-  archiveType: 'auto' | 'manual'
 }
 
 export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
@@ -467,9 +464,6 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['three-way-match'],
     step: 'INVOICE_REVIEW',
     archivedAt: '2024-08-15T00:00:00.000Z',
-    archivedBy: 'System',
-    archiveReason: 'Inactive for 365+ days',
-    archiveType: 'auto',
   },
   {
     key: 'arc-2',
@@ -487,9 +481,6 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['golden', 'line-item'],
     step: 'MATCH',
     archivedAt: '2024-09-01T00:00:00.000Z',
-    archivedBy: 'System',
-    archiveReason: 'Inactive for 365+ days',
-    archiveType: 'auto',
   },
   {
     key: 'arc-3',
@@ -507,9 +498,6 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['amount-mismatch'],
     step: 'INVOICE_REVIEW',
     archivedAt: '2024-10-05T00:00:00.000Z',
-    archivedBy: 'System',
-    archiveReason: 'Inactive for 365+ days',
-    archiveType: 'auto',
   },
   {
     key: 'arc-4',
@@ -527,9 +515,6 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['header-check'],
     step: 'AP_VOUCHER',
     archivedAt: '2024-10-18T00:00:00.000Z',
-    archivedBy: 'ap_manager_sg_02',
-    archiveReason: 'Duplicate invoice — superseded by CASE-023',
-    archiveType: 'manual',
   },
   {
     key: 'arc-5',
@@ -547,9 +532,6 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['bank-mismatch'],
     step: 'MATCH',
     archivedAt: '2024-11-08T00:00:00.000Z',
-    archivedBy: 'System',
-    archiveReason: 'Inactive for 365+ days',
-    archiveType: 'auto',
   },
   {
     key: 'arc-6',
@@ -567,9 +549,6 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['golden', 'three-way-match'],
     step: 'INVOICE_REVIEW',
     archivedAt: '2024-12-01T00:00:00.000Z',
-    archivedBy: 'System',
-    archiveReason: 'Inactive for 365+ days',
-    archiveType: 'auto',
   },
   {
     key: 'arc-7',
@@ -587,9 +566,6 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['line-item'],
     step: 'MATCH',
     archivedAt: '2025-01-10T00:00:00.000Z',
-    archivedBy: 'ap_manager_sg_02',
-    archiveReason: 'Payment already completed — clearing old records',
-    archiveType: 'manual',
   },
   {
     key: 'arc-8',
@@ -607,8 +583,5 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     tags: ['tax-check'],
     step: 'AP_VOUCHER',
     archivedAt: '2025-02-05T00:00:00.000Z',
-    archivedBy: 'System',
-    archiveReason: 'Inactive for 365+ days',
-    archiveType: 'auto',
   },
 ]

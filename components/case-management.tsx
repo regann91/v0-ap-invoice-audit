@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import {
   Table, Input, Select, Space, Tag, Typography, Button,
   Tooltip, Drawer, Descriptions, Badge, Card, Switch, Modal,
-  Form, message, Empty, Alert, TextArea,
+  Form, message, Empty, Alert,
 } from "antd"
 import {
   SearchOutlined, FilterOutlined, EyeOutlined,
@@ -24,82 +24,7 @@ const { Text } = Typography
 // ── Types ─────────────────────────────────────────────────────────
 
 type Step = "INVOICE_REVIEW" | "MATCH" | "AP_VOUCHER"
-type CaseGroundTruth = "Pass" | "Fail" | "Pending"
-
-// ── Archive Confirmation Modal ───────────────────────────────────
-
-function ArchiveConfirmModal({
-  open,
-  onClose,
-  onConfirm,
-  record,
-}: {
-  open: boolean
-  onClose: () => void
-  onConfirm: (reason: string) => void
-  record: AuditCase | null
-}) {
-  const [form] = Form.useForm()
-  const [loading, setLoading] = useState(false)
-
-  if (!record) return null
-
-  function handleConfirm() {
-    form.validateFields().then((values) => {
-      setLoading(true)
-      setTimeout(() => {
-        onConfirm(values.archiveReason)
-        form.resetFields()
-        setLoading(false)
-        onClose()
-      }, 300)
-    })
-  }
-
-  return (
-    <Modal
-      title="Archive Case"
-      open={open}
-      onCancel={onClose}
-      onOk={handleConfirm}
-      okText="Confirm Archive"
-      okButtonProps={{ loading, danger: true }}
-      cancelText="Cancel"
-      width={500}
-    >
-      <div style={{ marginBottom: 16, padding: "12px 16px", background: "#fafafa", borderRadius: 4 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 12 }}>
-          <div>
-            <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Case ID</Text>
-            <Text strong style={{ fontFamily: "monospace" }}>{record.caseId}</Text>
-          </div>
-          <div>
-            <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Supplier</Text>
-            <Text>{record.supplierName}</Text>
-          </div>
-        </div>
-      </div>
-
-      <Form form={form} layout="vertical">
-        <Form.Item
-          label="Archive Reason"
-          name="archiveReason"
-          rules={[
-            { required: true, message: "Please provide an archive reason" },
-            { min: 10, message: "Reason must be at least 10 characters" },
-          ]}
-        >
-          <TextArea
-            placeholder="Please describe why this case is being archived..."
-            rows={4}
-          />
-        </Form.Item>
-      </Form>
-    </Modal>
-  )
-}
-
-// ── Component Types ──────────────────────────────────────────────
+type StepStatus = "Pass" | "Fail" | "Pending"
 
 interface StepState {
   golden: boolean
@@ -386,8 +311,6 @@ export function CaseManagement({
   const [expandedKeys, setExpandedKeys]   = useState<string[]>([])
   const [expandedData, setExpandedData]   = useState<Record<string, CaseExpanded>>({})
   const [msgApi, contextHolder]           = message.useMessage()
-  const [archiveModalOpen, setArchiveModalOpen] = useState(false)
-  const [archiveTarget, setArchiveTarget] = useState<AuditCase | null>(null)
 
   const archivedIds = useMemo(
     () => new Set(archivedCases.map((c) => c.caseId)),
@@ -446,40 +369,6 @@ export function CaseManagement({
       }
       setArchiveRunning(false)
     }, 1200)
-  }
-
-  function handleArchiveCase(record: AuditCase) {
-    setArchiveTarget(record)
-    setArchiveModalOpen(true)
-  }
-
-  function handleArchiveConfirm(reason: string) {
-    if (!archiveTarget) return
-    const now = new Date()
-    const archivedCase: ArchivedCaseMock = {
-      key: `manual-${archiveTarget.caseId}`,
-      caseId: archiveTarget.caseId,
-      invoiceNo: archiveTarget.invoiceNo,
-      supplierName: archiveTarget.supplierName,
-      region: archiveTarget.region,
-      entity: archiveTarget.entity,
-      amount: archiveTarget.amount,
-      currency: archiveTarget.currency,
-      invoiceDate: archiveTarget.invoiceDate,
-      reviewDate: archiveTarget.reviewDate,
-      isGolden: archiveTarget.isGolden,
-      groundTruth: archiveTarget.groundTruth as any,
-      tags: archiveTarget.tags,
-      step: 'INVOICE_REVIEW' as any,
-      archivedAt: now.toISOString(),
-      archivedBy: role === "AI_OPS" ? "ap_manager_sg_02" : "manual_user",
-      archiveReason: reason,
-      archiveType: "manual",
-    }
-    onArchive([archivedCase])
-    msgApi.success("Case archived successfully")
-    setArchiveModalOpen(false)
-    setArchiveTarget(null)
   }
 
   function clearFilters() {
@@ -554,38 +443,20 @@ export function CaseManagement({
     {
       title: "",
       key: "action",
-      width: 100,
-      render: (_: unknown, record: AuditCase) => {
-        const isGolden = record.isGolden === "Golden"
-        return (
-          <Space size={4}>
-            <Tooltip title="View detail">
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onViewDetail ? onViewDetail(record) : setDetail(record)
-                }}
-              />
-            </Tooltip>
-            <Tooltip title={isGolden ? "Golden cases cannot be manually archived" : "Archive case"}>
-              <Button
-                type="text"
-                size="small"
-                icon={<InboxOutlined />}
-                disabled={isGolden}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleArchiveCase(record)
-                }}
-                style={{ color: isGolden ? "#d9d9d9" : "#faad14" }}
-              />
-            </Tooltip>
-          </Space>
-        )
-      },
+      width: 54,
+      render: (_: unknown, record: AuditCase) => (
+        <Tooltip title="View detail">
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewDetail ? onViewDetail(record) : setDetail(record)
+            }}
+          />
+        </Tooltip>
+      ),
     },
   ]
 
@@ -725,12 +596,6 @@ export function CaseManagement({
       )}
 
       <CaseDrawer record={detail} onClose={() => setDetail(null)} />
-      <ArchiveConfirmModal
-        open={archiveModalOpen}
-        onClose={() => setArchiveModalOpen(false)}
-        onConfirm={handleArchiveConfirm}
-        record={archiveTarget}
-      />
     </div>
   )
 }

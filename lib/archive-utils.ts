@@ -54,9 +54,6 @@ export function runArchiveJob(
         archivedAt: ranAt,
         step: inferStep(c.groundTruth),
         groundTruth: c.groundTruth as ArchivedCaseMock["groundTruth"],
-        archivedBy: "System",
-        archiveReason: "Inactive for 365+ days",
-        archiveType: "auto",
       })
     } else {
       remaining.push(c)

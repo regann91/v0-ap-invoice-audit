@@ -38,11 +38,6 @@ export function RegressionReport({ runId, onBack }: { runId: string; onBack: () 
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
   const [selectedCase, setSelectedCase] = useState<RunReportCase | null>(null)
 
-  console.log("[v0] RegressionReport opened with runId:", runId)
-  console.log("[v0] Report data:", report)
-  console.log("[v0] Drawer open:", detailDrawerOpen)
-  console.log("[v0] Selected case:", selectedCase)
-
   if (!report) {
     return (
       <div style={{ background: "#fff", borderRadius: 8, padding: 40 }}>
@@ -65,18 +60,7 @@ export function RegressionReport({ runId, onBack }: { runId: string; onBack: () 
       dataIndex: "caseId",
       key: "caseId",
       width: 110,
-      render: (v) => (
-        <Text
-          code
-          style={{ fontSize: 12, cursor: "pointer", color: "#1890ff" }}
-          onClick={(e) => {
-            e.stopPropagation()
-            console.log("[v0] Case ID clicked:", v)
-          }}
-        >
-          {v}
-        </Text>
-      ),
+      render: (v) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
     },
     {
       title: "Invoice No.",
@@ -124,6 +108,26 @@ export function RegressionReport({ runId, onBack }: { runId: string; onBack: () 
       key: "latencyMs",
       width: 90,
       render: (v) => <Text type="secondary" style={{ fontSize: 12 }}>{v} ms</Text>,
+    },
+    {
+      title: "AI Detail",
+      dataIndex: "caseId",
+      key: "detail",
+      width: 100,
+      render: (_v, record) => (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0, fontSize: 12 }}
+          onClick={() => {
+            console.log("[v0] AI Detail clicked for case:", record.caseId)
+            setSelectedCase(record)
+            setDetailDrawerOpen(true)
+          }}
+        >
+          View Agents
+        </Button>
+      ),
     },
   ]
 
@@ -217,13 +221,8 @@ export function RegressionReport({ runId, onBack }: { runId: string; onBack: () 
           pagination={false}
           size="small"
           rowClassName={(r) => (r.correct ? "" : "ant-table-row-error")}
-          onRow={(record) => ({
-            onClick: () => {
-              console.log("[v0] Row clicked, record:", record)
-              setSelectedCase(record)
-              setDetailDrawerOpen(true)
-            },
-            style: { cursor: "pointer", background: record.correct ? undefined : "#fff9f9" },
+          onRow={(r) => ({
+            style: { background: r.correct ? undefined : "#fff9f9" },
           })}
         />
       </div>

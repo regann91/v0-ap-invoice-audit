@@ -86,9 +86,9 @@ const ENDPOINTS: Record<KbKey, EndpointDef> = {
 }`,
   },
   term: {
-    title: "Supplier Info API",
+    title: "Supplier Term Date API",
     subtitle: "Integrate this endpoint into your AI workflow platform as a data context source (e.g. Dify, Coze, n8n).",
-    endpoint: "GET /api/v1/knowledge/supplier-info",
+    endpoint: "GET /api/v1/knowledge/supplier-term-date",
     params: [
       { param: "supplier_id", type: "string",  required: "No", desc: "Filter by supplier ID" },
       { param: "region",      type: "string",  required: "No", desc: "Filter by region code (e.g. SEA, EA)" },
@@ -121,7 +121,7 @@ const ENDPOINTS: Record<KbKey, EndpointDef> = {
 
 const LEFT_TABS: { key: KbKey; label: string }[] = [
   { key: "buyer", label: "Buyer Info" },
-  { key: "term",  label: "Supplier Info" },
+  { key: "term",  label: "Supplier Term Date" },
   { key: "bank",  label: "Supplier Bank Account" },
 ]
 

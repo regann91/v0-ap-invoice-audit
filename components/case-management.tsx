@@ -263,9 +263,11 @@ function CaseDrawer({ record, onClose }: { record: AuditCase | null; onClose: ()
     >
       {record && (
         <Descriptions column={1} size="small" bordered styles={{ label: { width: 140 } }}>
-          <Descriptions.Item label="Payment Request">{record.caseId}</Descriptions.Item>
+          <Descriptions.Item label="Case ID">{record.caseId}</Descriptions.Item>
           <Descriptions.Item label="Invoice No.">{record.invoiceNo}</Descriptions.Item>
           <Descriptions.Item label="Supplier">{record.supplierName}</Descriptions.Item>
+          <Descriptions.Item label="Region">{record.region}</Descriptions.Item>
+          <Descriptions.Item label="Entity">{record.entity}</Descriptions.Item>
           <Descriptions.Item label="Invoice Date">{record.invoiceDate}</Descriptions.Item>
           <Descriptions.Item label="Amount">
             <AmountCell amount={record.amount} currency={record.currency} />
@@ -300,6 +302,8 @@ export function CaseManagement({
   const { role } = useRole()
   const isOps = role === "AI_OPS"
   const [search, setSearch]               = useState("")
+  const [regionFilter, setRegionFilter]   = useState<string | null>(null)
+  const [entityFilter, setEntityFilter]   = useState<string | null>(null)
   const [goldenFilter, setGoldenFilter]   = useState<CaseGolden | null>(null)
   const [archiveRunning, setArchiveRunning] = useState(false)
 
@@ -322,6 +326,9 @@ export function CaseManagement({
   // Region-filtered base pool (entity = 2-letter code matching region selector)
   const regionPool = useMemo(() => activePool.filter((r) => r.entity === region), [activePool, region])
 
+  const regionOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.region)), [regionPool])
+  const entityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
+
   const filtered = useMemo(() => {
     return regionPool.filter((r) => {
       const q = search.toLowerCase()
@@ -330,10 +337,12 @@ export function CaseManagement({
         r.caseId.toLowerCase().includes(q) ||
         r.invoiceNo.toLowerCase().includes(q) ||
         r.supplierName.toLowerCase().includes(q)
+      const matchRegion = !regionFilter || r.region === regionFilter
+      const matchEntity = !entityFilter || r.entity === entityFilter
       const matchGolden = !goldenFilter || r.isGolden === goldenFilter
-      return matchSearch && matchGolden
+        return matchSearch && matchRegion && matchEntity && matchGolden
     })
-  }, [regionPool, search, goldenFilter])
+  }, [regionPool, search, regionFilter, entityFilter, goldenFilter])
 
   function getExpanded(caseId: string): CaseExpanded {
     return expandedData[caseId] ?? getDefaultExpanded(caseId)
@@ -364,17 +373,19 @@ export function CaseManagement({
 
   function clearFilters() {
     setSearch("")
+    setRegionFilter(null)
+    setEntityFilter(null)
     setGoldenFilter(null)
   }
 
-  const hasFilters = !!(search || goldenFilter)
+  const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter)
 
   const columns: ColumnsType<AuditCase> = [
     {
-      title: "Payment Request",
+      title: "Case ID",
       dataIndex: "caseId",
       key: "caseId",
-      width: 150,
+      width: 120,
       render: (v: string) => <Text style={{ fontSize: 13, fontFamily: "monospace" }}>{v}</Text>,
     },
     {
@@ -392,6 +403,20 @@ export function CaseManagement({
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
     },
     {
+      title: "Region",
+      dataIndex: "region",
+      key: "region",
+      width: 80,
+      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
+    },
+    {
+      title: "Entity",
+      dataIndex: "entity",
+      key: "entity",
+      width: 70,
+      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
+    },
+    {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
@@ -405,6 +430,14 @@ export function CaseManagement({
       key: "invoiceDate",
       width: 115,
       sorter: (a, b) => a.invoiceDate.localeCompare(b.invoiceDate),
+      render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
+    },
+    {
+      title: "Review Date",
+      dataIndex: "reviewDate",
+      key: "reviewDate",
+      width: 115,
+      sorter: (a, b) => a.reviewDate.localeCompare(b.reviewDate),
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
     },
     {
@@ -470,10 +503,26 @@ export function CaseManagement({
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         <Input
           prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-          placeholder="Search Payment Request / Invoice / Supplier"
+          placeholder="Search Case ID / Invoice / Supplier"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 300 }}
+          style={{ width: 280 }}
+          allowClear
+        />
+        <Select
+          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Region</Space>}
+          value={regionFilter}
+          onChange={(v) => setRegionFilter(v)}
+          options={regionOptions}
+          style={{ width: 120 }}
+          allowClear
+        />
+        <Select
+          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Entity</Space>}
+          value={entityFilter}
+          onChange={(v) => setEntityFilter(v)}
+          options={entityOptions}
+          style={{ width: 110 }}
           allowClear
         />
         <Select

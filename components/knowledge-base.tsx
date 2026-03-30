@@ -1,13 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Table, Tabs, Input, Badge, Tag, Typography } from "antd"
+import { Table, Tabs, Input, Badge, Tag, Typography, Select } from "antd"
 import { SearchOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import {
   buyerInfoData, supplierTermDateData, supplierBankAccountData,
   type BuyerInfo, type SupplierTermDate, type SupplierBankAccount,
 } from "@/lib/mock-data"
+import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
+import React from "react"
 
 const { Text } = Typography
 
@@ -170,6 +172,18 @@ function SupplierBankAccountTab() {
 
 // ── Root ─────────────────────────────────────────────────────────
 export function KnowledgeDetail() {
+  const { region } = useRegion()
+
+  // Entity selector (driven by region)
+  const entityOptions = getEntitiesForRegion(region)
+  const [selectedEntity, setSelectedEntity] = React.useState<EntityCode>(entityOptions[0] ?? "")
+
+  // Reset entity when region changes
+  React.useEffect(() => {
+    const newOptions = getEntitiesForRegion(region)
+    setSelectedEntity(newOptions[0] ?? "")
+  }, [region])
+
   const tabs = [
     { key: "buyer", label: "Buyer Info",           children: <BuyerInfoTab /> },
     { key: "term",  label: "Supplier Term Date",    children: <SupplierTermDateTab /> },
@@ -178,6 +192,17 @@ export function KnowledgeDetail() {
 
   return (
     <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
+      {/* Page Title with Entity Selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <Text strong style={{ fontSize: 18 }}>Knowledge Base</Text>
+        <Select
+          value={selectedEntity}
+          onChange={setSelectedEntity}
+          size="small"
+          style={{ width: 110 }}
+          options={entityOptions.map((e) => ({ value: e, label: e }))}
+        />
+      </div>
       <Tabs items={tabs} defaultActiveKey="buyer" style={{ marginTop: -4 }} />
     </div>
   )

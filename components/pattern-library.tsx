@@ -21,23 +21,23 @@ interface Pattern {
   step: Step
   description: string
   casesUsing: number
-  createdBy: string
-  createdDate: string
+  updatedBy: string
+  updatedTime: string
 }
 
 // ── Mock data ─────────────────────────────────────────────────────
 
 const INITIAL_PATTERNS: Pattern[] = [
-  { key: "1",  name: "amount-mismatch",        step: "INVOICE_REVIEW", description: "Invoice amount does not match PO total",             casesUsing: 5, createdBy: "ai_ops_01", createdDate: "2025-01-10" },
-  { key: "2",  name: "supplier-name-mismatch", step: "INVOICE_REVIEW", description: "Supplier name on invoice differs from PO",           casesUsing: 3, createdBy: "ai_ops_01", createdDate: "2025-01-10" },
-  { key: "3",  name: "gst-calculation-error",  step: "INVOICE_REVIEW", description: "GST amount incorrectly calculated",                  casesUsing: 4, createdBy: "ai_ops_02", createdDate: "2025-01-15" },
-  { key: "4",  name: "duplicate-invoice",      step: "INVOICE_REVIEW", description: "Invoice number already exists in system",            casesUsing: 2, createdBy: "ai_ops_01", createdDate: "2025-02-01" },
-  { key: "5",  name: "date-out-of-range",      step: "INVOICE_REVIEW", description: "Invoice date outside PO validity period",           casesUsing: 3, createdBy: "ai_ops_02", createdDate: "2025-02-10" },
-  { key: "6",  name: "line-item-qty-mismatch", step: "MATCH",          description: "Quantity on invoice line differs from PO line",      casesUsing: 4, createdBy: "ai_ops_01", createdDate: "2025-01-12" },
-  { key: "7",  name: "unit-price-discrepancy", step: "MATCH",          description: "Unit price does not match agreed PO price",          casesUsing: 3, createdBy: "ai_ops_02", createdDate: "2025-01-20" },
-  { key: "8",  name: "three-way-match-fail",   step: "MATCH",          description: "Invoice, PO and receipt do not reconcile",           casesUsing: 2, createdBy: "ai_ops_01", createdDate: "2025-02-05" },
-  { key: "9",  name: "gl-account-wrong",       step: "AP_VOUCHER",     description: "Incorrect GL account selected for posting",          casesUsing: 2, createdBy: "ai_ops_02", createdDate: "2025-02-15" },
-  { key: "10", name: "cost-center-mismatch",   step: "AP_VOUCHER",     description: "Cost center does not match department",              casesUsing: 1, createdBy: "ai_ops_01", createdDate: "2025-02-18" },
+  { key: "1",  name: "amount-mismatch",        step: "INVOICE_REVIEW", description: "Invoice amount does not match PO total",             casesUsing: 5, updatedBy: "ai_ops_01@shopee.com", updatedTime: "2025-01-10 09:30" },
+  { key: "2",  name: "supplier-name-mismatch", step: "INVOICE_REVIEW", description: "Supplier name on invoice differs from PO",           casesUsing: 3, updatedBy: "ai_ops_01@shopee.com", updatedTime: "2025-01-10 11:15" },
+  { key: "3",  name: "gst-calculation-error",  step: "INVOICE_REVIEW", description: "GST amount incorrectly calculated",                  casesUsing: 4, updatedBy: "ai_ops_02@shopee.com", updatedTime: "2025-01-15 14:22" },
+  { key: "4",  name: "duplicate-invoice",      step: "INVOICE_REVIEW", description: "Invoice number already exists in system",            casesUsing: 2, updatedBy: "ai_ops_01@shopee.com", updatedTime: "2025-02-01 10:05" },
+  { key: "5",  name: "date-out-of-range",      step: "INVOICE_REVIEW", description: "Invoice date outside PO validity period",            casesUsing: 3, updatedBy: "ai_ops_02@shopee.com", updatedTime: "2025-02-10 16:48" },
+  { key: "6",  name: "line-item-qty-mismatch", step: "MATCH",          description: "Quantity on invoice line differs from PO line",      casesUsing: 4, updatedBy: "ai_ops_01@shopee.com", updatedTime: "2025-01-12 09:00" },
+  { key: "7",  name: "unit-price-discrepancy", step: "MATCH",          description: "Unit price does not match agreed PO price",          casesUsing: 3, updatedBy: "ai_ops_02@shopee.com", updatedTime: "2025-01-20 13:37" },
+  { key: "8",  name: "three-way-match-fail",   step: "MATCH",          description: "Invoice, PO and receipt do not reconcile",           casesUsing: 2, updatedBy: "ai_ops_01@shopee.com", updatedTime: "2025-02-05 08:55" },
+  { key: "9",  name: "gl-account-wrong",       step: "AP_VOUCHER",     description: "Incorrect GL account selected for posting",          casesUsing: 2, updatedBy: "ai_ops_02@shopee.com", updatedTime: "2025-02-15 15:20" },
+  { key: "10", name: "cost-center-mismatch",   step: "AP_VOUCHER",     description: "Cost center does not match department",              casesUsing: 1, updatedBy: "ai_ops_01@shopee.com", updatedTime: "2025-02-18 11:42" },
 ]
 
 // ── Step badge ────────────────────────────────────────────────────
@@ -48,11 +48,17 @@ const STEP_COLORS: Record<Step, { color: string; bg: string; border: string }> =
   AP_VOUCHER:     { color: "#c05621", bg: "#fff7ed", border: "#fed7aa" },
 }
 
+const STEP_LABELS: Record<Step, string> = {
+  INVOICE_REVIEW: "Invoice Review",
+  MATCH:          "Match",
+  AP_VOUCHER:     "AP Voucher",
+}
+
 function StepTag({ step }: { step: Step }) {
   const c = STEP_COLORS[step]
   return (
     <Tag style={{ color: c.color, background: c.bg, borderColor: c.border, fontSize: 11, fontWeight: 500 }}>
-      {step}
+      {STEP_LABELS[step]}
     </Tag>
   )
 }
@@ -113,9 +119,9 @@ function PatternModal({
           <AntSelect
             placeholder="Select step"
             options={[
-              { value: "INVOICE_REVIEW", label: "INVOICE_REVIEW" },
-              { value: "MATCH",          label: "MATCH" },
-              { value: "AP_VOUCHER",     label: "AP_VOUCHER" },
+              { value: "INVOICE_REVIEW", label: "Invoice Review" },
+              { value: "MATCH",          label: "Match" },
+              { value: "AP_VOUCHER",     label: "AP Voucher" },
             ]}
           />
         </Form.Item>
@@ -153,12 +159,14 @@ export function PatternLibrary() {
 
   function handleSubmit(vals: { name: string; step: Step; description: string }) {
     if (modalMode === "create") {
+      const now = new Date()
+      const updatedTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`
       const next: Pattern = {
         key: String(Date.now()),
         ...vals,
         casesUsing: 0,
-        createdBy: "ai_ops_01",
-        createdDate: new Date().toISOString().slice(0, 10),
+        updatedBy: "ai_ops_01@shopee.com",
+        updatedTime,
       }
       setPatterns((prev) => [next, ...prev])
       msgApi.success("Pattern created")
@@ -209,17 +217,17 @@ export function PatternLibrary() {
       ),
     },
     {
-      title: "Created By",
-      dataIndex: "createdBy",
-      key: "createdBy",
-      width: 110,
+      title: "Updated By",
+      dataIndex: "updatedBy",
+      key: "updatedBy",
+      width: 180,
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
     },
     {
-      title: "Created Date",
-      dataIndex: "createdDate",
-      key: "createdDate",
-      width: 120,
+      title: "Updated Time",
+      dataIndex: "updatedTime",
+      key: "updatedTime",
+      width: 140,
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
     },
     {
@@ -262,9 +270,9 @@ export function PatternLibrary() {
 
   const STEP_TABS: { key: StepFilter; label: string }[] = [
     { key: "ALL",            label: "All" },
-    { key: "INVOICE_REVIEW", label: "INVOICE_REVIEW" },
-    { key: "MATCH",          label: "MATCH" },
-    { key: "AP_VOUCHER",     label: "AP_VOUCHER" },
+    { key: "INVOICE_REVIEW", label: "Invoice Review" },
+    { key: "MATCH",          label: "Match" },
+    { key: "AP_VOUCHER",     label: "AP Voucher" },
   ]
 
   return (

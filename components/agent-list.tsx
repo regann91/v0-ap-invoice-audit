@@ -8,7 +8,7 @@ import {
 import { SearchOutlined, PlusOutlined, ExperimentOutlined, DeleteOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentListData, flowData, type Agent, type AgentStatus, type AgentStep } from "@/lib/mock-data"
-import { useRegion } from "@/lib/region-context"
+import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
 
 const { Text, Link } = Typography
 const { TextArea } = Input
@@ -384,8 +384,17 @@ export function AgentList({
   onTriggerTest?: (id: string) => void
 }) {
   const { region } = useRegion()
-  // Force recompile
-  const _v = 1
+
+  // Entity selector (driven by region)
+  const entityOptions = getEntitiesForRegion(region)
+  const [selectedEntity, setSelectedEntity] = React.useState<EntityCode>(entityOptions[0] ?? "")
+
+  // Reset entity when region changes
+  React.useEffect(() => {
+    const newOptions = getEntitiesForRegion(region)
+    setSelectedEntity(newOptions[0] ?? "")
+  }, [region])
+
   const [search, setSearch] = useState("")
   const [localAgents, setLocalAgents] = useState<Agent[]>(agentListData)
   const agents = agentsProp ?? localAgents
@@ -485,6 +494,18 @@ export function AgentList({
   return (
     <>
       <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
+        {/* Page Title with Entity Selector */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <Text strong style={{ fontSize: 18 }}>Agent Management</Text>
+          <Select
+            value={selectedEntity}
+            onChange={setSelectedEntity}
+            size="small"
+            style={{ width: 110 }}
+            options={entityOptions.map((e) => ({ value: e, label: e }))}
+          />
+        </div>
+
         <div className="flex items-center justify-between mb-4">
           <Input
             prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}

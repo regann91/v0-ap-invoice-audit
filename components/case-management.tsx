@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import {
-  Table, Input, Select, Space, Tag, Typography, Button,
+  Table, Input, InputNumber, Select, Space, Tag, Typography, Button,
   Tooltip, Drawer, Descriptions, Badge, Card, Switch, Modal,
   Form, message, Empty, Alert,
 } from "antd"
@@ -13,13 +13,13 @@ import {
 import type { ColumnsType } from "antd/es/table"
 import {
   auditCaseData,
-  type AuditCase, type CaseGolden, type ArchivedCaseMock,
+  type AuditCase, type CaseGolden, type ArchivedCaseMock, type TestCase,
 } from "@/lib/mock-data"
-import { useRegion } from "@/lib/region-context"
+import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
 import { useRole } from "@/lib/role-context"
 import { getActiveCases, runArchiveJob, ARCHIVE_WINDOW_DAYS } from "@/lib/archive-utils"
 
-const { Text } = Typography
+const { Text, Title } = Typography
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -284,7 +284,7 @@ function CaseDrawer({ record, onClose }: { record: AuditCase | null; onClose: ()
 // ── Main Component ────────────────────────────────────────────────
 
 interface CaseManagementProps {
-  onViewDetail?: (record: AuditCase) => void
+  onViewDetail?: (record: TestCase) => void
   archivedCases: ArchivedCaseMock[]
   onArchive: (newly: ArchivedCaseMock[]) => void
   onGoToArchived: () => void
@@ -301,16 +301,37 @@ export function CaseManagement({
   const { region } = useRegion()
   const { role } = useRole()
   const isOps = role === "AI_OPS"
+
+  // Entity selector (driven by region)
+  const globalEntityOptions = getEntitiesForRegion(region)
+  const [selectedEntity, setSelectedEntity] = useState<EntityCode>(globalEntityOptions[0] ?? "")
+
+  // Reset entity when region changes
+  useEffect(() => {
+    const newOptions = getEntitiesForRegion(region)
+    setSelectedEntity(newOptions[0] ?? "")
+  }, [region])
+
   const [search, setSearch]               = useState("")
+  const [searchField, setSearchField]     = useState<"caseId" | "paymentRequestId" | "paymentGroupId" | "invoiceNo" | "supplierName">("caseId")
   const [regionFilter, setRegionFilter]   = useState<string | null>(null)
   const [entityFilter, setEntityFilter]   = useState<string | null>(null)
+  const [stepFilter, setStepFilter]       = useState<string | null>(null)
   const [goldenFilter, setGoldenFilter]   = useState<CaseGolden | null>(null)
+  const [amountMin, setAmountMin]         = useState<number | null>(null)
+  const [amountMax, setAmountMax]         = useState<number | null>(null)
   const [archiveRunning, setArchiveRunning] = useState(false)
 
   const [detail, setDetail]               = useState<AuditCase | null>(null)
   const [expandedKeys, setExpandedKeys]   = useState<string[]>([])
   const [expandedData, setExpandedData]   = useState<Record<string, CaseExpanded>>({})
   const [msgApi, contextHolder]           = message.useMessage()
+
+  // Archive modal state
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false)
+  const [archiveTarget, setArchiveTarget]       = useState<TestCase | null>(null)
+  const [archiveReason, setArchiveReason]       = useState("")
+  const [archiveSubmitting, setArchiveSubmitting] = useState(false)
 
   const archivedIds = useMemo(
     () => new Set(archivedCases.map((c) => c.caseId)),
@@ -327,22 +348,40 @@ export function CaseManagement({
   const regionPool = useMemo(() => activePool.filter((r) => r.entity === region), [activePool, region])
 
   const regionOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.region)), [regionPool])
-  const entityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
+  const filterEntityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
 
   const filtered = useMemo(() => {
     return regionPool.filter((r) => {
       const q = search.toLowerCase()
-      const matchSearch =
-        !q ||
-        r.caseId.toLowerCase().includes(q) ||
-        r.invoiceNo.toLowerCase().includes(q) ||
-        r.supplierName.toLowerCase().includes(q)
+      
+      // Match search field
+      let matchSearch = !q
+      if (q) {
+        if (searchField === "caseId") {
+          matchSearch = r.caseId.toLowerCase().includes(q)
+        } else if (searchField === "paymentRequestId") {
+          matchSearch = r.paymentRequestId.toLowerCase().includes(q)
+        } else if (searchField === "paymentGroupId") {
+          matchSearch = r.paymentGroupId.toLowerCase().includes(q)
+        } else if (searchField === "invoiceNo") {
+          matchSearch = r.invoiceNo.toLowerCase().includes(q)
+        } else if (searchField === "supplierName") {
+          matchSearch = r.supplierName.toLowerCase().includes(q)
+        }
+      }
+      
       const matchRegion = !regionFilter || r.region === regionFilter
       const matchEntity = !entityFilter || r.entity === entityFilter
-      const matchGolden = !goldenFilter || r.isGolden === goldenFilter
-        return matchSearch && matchRegion && matchEntity && matchGolden
+      
+      // Step filter applies independently; Golden only filters when Step is selected
+      const matchStep = !stepFilter || r.step === stepFilter
+      const matchGolden = !goldenFilter || !stepFilter || r.isGolden === goldenFilter
+      const matchAmountMin = amountMin === null || r.amount >= amountMin
+      const matchAmountMax = amountMax === null || r.amount <= amountMax
+      
+      return matchSearch && matchRegion && matchEntity && matchStep && matchGolden && matchAmountMin && matchAmountMax
     })
-  }, [regionPool, search, regionFilter, entityFilter, goldenFilter])
+  }, [regionPool, search, searchField, regionFilter, entityFilter, stepFilter, goldenFilter, amountMin, amountMax])
 
   function getExpanded(caseId: string): CaseExpanded {
     return expandedData[caseId] ?? getDefaultExpanded(caseId)
@@ -373,89 +412,166 @@ export function CaseManagement({
 
   function clearFilters() {
     setSearch("")
+    setSearchField("caseId")
     setRegionFilter(null)
     setEntityFilter(null)
+    setStepFilter(null)
     setGoldenFilter(null)
+    setAmountMin(null)
+    setAmountMax(null)
   }
 
-  const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter)
+  // Open archive modal
+  function openArchiveModal(record: TestCase) {
+    setArchiveTarget(record)
+    setArchiveReason("")
+    setArchiveModalOpen(true)
+  }
 
-  const columns: ColumnsType<AuditCase> = [
+  // Handle archive confirm
+  function handleArchiveConfirm() {
+    if (!archiveTarget || !archiveReason.trim()) return
+
+    setArchiveSubmitting(true)
+
+    // Simulate async operation
+    setTimeout(() => {
+      const archivedCase: ArchivedCaseMock = {
+        key: `arc-manual-${Date.now()}`,
+        caseId: archiveTarget.caseId,
+        paymentRequestId: archiveTarget.paymentRequestId,
+        paymentGroupId: archiveTarget.paymentGroupId,
+        invoiceNo: archiveTarget.invoiceNo,
+        supplierName: archiveTarget.supplierName,
+        region: archiveTarget.region,
+        entity: archiveTarget.entity,
+        amount: archiveTarget.amount,
+        currency: archiveTarget.currency,
+        invoiceDate: archiveTarget.invoiceDate,
+        reviewDate: archiveTarget.updateTime.split(" ")[0],
+        isGolden: archiveTarget.isGolden,
+        groundTruth: archiveTarget.invoiceReviewGroundTruth === "Pass" ? "Pass" : "Fail",
+        tags: archiveTarget.tags,
+        step: "INVOICE_REVIEW",
+        archivedAt: new Date().toISOString(),
+        archiveReason: "Manual Move",
+        archiveReasonText: archiveReason.trim(),
+        archivedBy: "Current User",
+      }
+
+      onArchive([archivedCase])
+      setArchiveSubmitting(false)
+      setArchiveModalOpen(false)
+      setArchiveTarget(null)
+      setArchiveReason("")
+      msgApi.success(`Case ${archiveTarget.caseId} archived successfully`)
+    }, 500)
+  }
+
+  const hasFilters = !!(search || regionFilter || entityFilter || stepFilter || goldenFilter || amountMin !== null || amountMax !== null)
+
+  const columns: ColumnsType<TestCase> = [
     {
       title: "Case ID",
       dataIndex: "caseId",
       key: "caseId",
-      width: 120,
-      render: (v: string) => <Text style={{ fontSize: 13, fontFamily: "monospace" }}>{v}</Text>,
+      width: 155,
+      render: (v: string, record: TestCase) => (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0, fontSize: 13, fontFamily: "monospace" }}
+          onClick={() => window.open(`https://billing.workatsea.com/sbc/br/apr/payment_request/${record.paymentRequestId}`, '_blank')}
+        >
+          {v}
+        </Button>
+      ),
+      sorter: (a, b) => a.caseId.localeCompare(b.caseId),
+    },
+    {
+      title: "Payment Request ID",
+      dataIndex: "paymentRequestId",
+      key: "paymentRequestId",
+      width: 150,
+      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.paymentRequestId.localeCompare(b.paymentRequestId),
+    },
+    {
+      title: "Payment Group ID",
+      dataIndex: "paymentGroupId",
+      key: "paymentGroupId",
+      width: 140,
+      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.paymentGroupId.localeCompare(b.paymentGroupId),
     },
     {
       title: "Invoice No.",
       dataIndex: "invoiceNo",
       key: "invoiceNo",
-      width: 160,
+      width: 150,
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.invoiceNo.localeCompare(b.invoiceNo),
     },
     {
-      title: "Supplier",
+      title: "Supplier Name",
       dataIndex: "supplierName",
       key: "supplierName",
       ellipsis: true,
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.supplierName.localeCompare(b.supplierName),
     },
     {
-      title: "Region",
-      dataIndex: "region",
-      key: "region",
-      width: 80,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
-    },
-    {
-      title: "Entity",
-      dataIndex: "entity",
-      key: "entity",
-      width: 70,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
-    },
-    {
-      title: "Amount",
+      title: "Invoice Amount (Including Tax)",
       dataIndex: "amount",
       key: "amount",
-      width: 170,
-      render: (v: number, r: AuditCase) => <AmountCell amount={v} currency={r.currency} />,
+      width: 180,
+      render: (v: number, r: TestCase) => <AmountCell amount={v} currency={r.currency} />,
       sorter: (a, b) => a.amount - b.amount,
+      defaultSortOrder: "descend",
     },
     {
       title: "Invoice Date",
       dataIndex: "invoiceDate",
       key: "invoiceDate",
-      width: 115,
+      width: 120,
       sorter: (a, b) => a.invoiceDate.localeCompare(b.invoiceDate),
+      defaultSortOrder: "descend",
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
     },
     {
-      title: "Review Date",
-      dataIndex: "reviewDate",
-      key: "reviewDate",
-      width: 115,
-      sorter: (a, b) => a.reviewDate.localeCompare(b.reviewDate),
+      title: "Update Time",
+      dataIndex: "updateTime",
+      key: "updateTime",
+      width: 150,
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
+      sorter: (a, b) => a.updateTime.localeCompare(b.updateTime),
     },
     {
-      title: "",
+      title: "Action",
       key: "action",
-      width: 54,
-      render: (_: unknown, record: AuditCase) => (
-        <Tooltip title="View detail">
-          <Button
-            type="text"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={(e) => {
-              e.stopPropagation()
-              onViewDetail ? onViewDetail(record) : setDetail(record)
-            }}
-          />
-        </Tooltip>
+      width: 140,
+      render: (_: unknown, record: TestCase) => (
+        <Space size={8}>
+          <Tooltip title="View Detail">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => window.open(`https://billing.workatsea.com/sbc/br/apr/payment_request/${record.paymentRequestId}`, '_blank')}
+            >
+              Detail
+            </Button>
+          </Tooltip>
+          <Tooltip title="Move to Archive">
+            <Button
+              type="link"
+              danger
+              size="small"
+              onClick={() => openArchiveModal(record)}
+            >
+              Archive
+            </Button>
+          </Tooltip>
+        </Space>
       ),
     },
   ]
@@ -463,6 +579,18 @@ export function CaseManagement({
   return (
     <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
       {contextHolder}
+
+      {/* Page Title with Entity Selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>Test Case List</Title>
+        <Select
+          value={selectedEntity}
+          onChange={setSelectedEntity}
+          size="small"
+          style={{ width: 110 }}
+          options={globalEntityOptions.map((e) => ({ value: e, label: e }))}
+        />
+      </div>
 
       {/* Active-window info banner */}
       <Alert
@@ -501,41 +629,85 @@ export function CaseManagement({
 
       {/* Toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <Input
-          prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-          placeholder="Search Case ID / Invoice / Supplier"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 280 }}
-          allowClear
-        />
-        <Select
-          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Region</Space>}
-          value={regionFilter}
-          onChange={(v) => setRegionFilter(v)}
-          options={regionOptions}
-          style={{ width: 120 }}
-          allowClear
-        />
-        <Select
-          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Entity</Space>}
-          value={entityFilter}
-          onChange={(v) => setEntityFilter(v)}
-          options={entityOptions}
-          style={{ width: 110 }}
-          allowClear
-        />
-        <Select
-          placeholder="Golden"
-          value={goldenFilter}
-          onChange={(v) => setGoldenFilter(v)}
-          options={[
-            { label: "Golden", value: "Golden" },
-            { label: "Non-Golden", value: "Non-Golden" },
-          ]}
-          style={{ width: 130 }}
-          allowClear
-        />
+        {/* Search with field selector */}
+        <Input.Group compact style={{ display: "flex", width: "auto" }}>
+          <Select
+            value={searchField}
+            onChange={(v) => setSearchField(v)}
+            style={{ width: 140 }}
+            options={[
+              { label: "Case ID", value: "caseId" },
+              { label: "Payment Request ID", value: "paymentRequestId" },
+              { label: "Payment Group ID", value: "paymentGroupId" },
+              { label: "Invoice Number", value: "invoiceNo" },
+              { label: "Supplier Name", value: "supplierName" },
+            ]}
+          />
+          <Input
+            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="Search keyword"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 220, borderLeft: 0 }}
+            allowClear
+          />
+        </Input.Group>
+        {/* Step + Golden filter: select Step first, then Golden */}
+        <Input.Group compact style={{ display: "flex", width: "auto" }}>
+          <Select
+            value={stepFilter}
+            onChange={(v) => {
+              setStepFilter(v)
+              if (!v) setGoldenFilter(null) // clear Golden when Step is cleared
+            }}
+            style={{ width: 140 }}
+            options={[
+              { label: "Invoice Review", value: "INVOICE_REVIEW" },
+              { label: "Match", value: "MATCH" },
+              { label: "AP Voucher", value: "AP_VOUCHER" },
+            ]}
+            placeholder="Step"
+            allowClear
+          />
+          <Select
+            value={goldenFilter}
+            onChange={(v) => setGoldenFilter(v)}
+            style={{ width: 130, borderLeft: 0 }}
+            disabled={!stepFilter}
+            options={[
+              { label: "Golden", value: "Golden" },
+              { label: "Non-Golden", value: "Non-Golden" },
+            ]}
+            placeholder="Golden"
+            allowClear
+          />
+        </Input.Group>
+        <Space size={4} style={{ background: "#fafafa", border: "1px solid #d9d9d9", borderRadius: 6, padding: "0 8px", height: 32, display: "flex", alignItems: "center" }}>
+          <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>Amount</Text>
+          <InputNumber
+            placeholder="Min"
+            value={amountMin}
+            onChange={(v) => setAmountMin(v)}
+            min={0}
+            style={{ width: 90 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+          <Text type="secondary" style={{ fontSize: 12 }}>–</Text>
+          <InputNumber
+            placeholder="Max"
+            value={amountMax}
+            onChange={(v) => setAmountMax(v)}
+            min={0}
+            style={{ width: 90 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+        </Space>
         {hasFilters && (
           <Button type="link" size="small" onClick={clearFilters} style={{ padding: 0 }}>
             Clear all
@@ -596,6 +768,63 @@ export function CaseManagement({
       )}
 
       <CaseDrawer record={detail} onClose={() => setDetail(null)} />
+
+      {/* Archive Confirmation Modal */}
+      <Modal
+        title="Move to Archive"
+        open={archiveModalOpen}
+        onCancel={() => {
+          setArchiveModalOpen(false)
+          setArchiveTarget(null)
+          setArchiveReason("")
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setArchiveModalOpen(false)
+              setArchiveTarget(null)
+              setArchiveReason("")
+            }}
+          >
+            Cancel
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            danger
+            loading={archiveSubmitting}
+            disabled={!archiveReason.trim()}
+            onClick={handleArchiveConfirm}
+          >
+            Confirm
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text>
+            This action will move case <Text strong>{archiveTarget?.caseId}</Text> to the Archive Case list.
+            Once archived, it will no longer appear in the active Case List.
+          </Text>
+        </div>
+        <div>
+          <Text strong style={{ display: "block", marginBottom: 8 }}>
+            Reason <Text type="danger">*</Text>
+          </Text>
+          <Input.TextArea
+            placeholder="Please enter the reason for archiving this case..."
+            value={archiveReason}
+            onChange={(e) => setArchiveReason(e.target.value)}
+            rows={3}
+            status={archiveReason.trim() === "" ? "error" : undefined}
+          />
+          {archiveReason.trim() === "" && (
+            <Text type="danger" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
+              Reason is required
+            </Text>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

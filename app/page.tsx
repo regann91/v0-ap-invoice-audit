@@ -5,16 +5,16 @@ import { Layout, Menu, Typography, Select, Breadcrumb, Space } from "antd"
 import {
   DatabaseOutlined, RobotOutlined,
   FolderOpenOutlined, ExperimentOutlined, TableOutlined, CodeOutlined, InboxOutlined,
-  ApartmentOutlined, FileTextOutlined,
+  ApartmentOutlined, FileTextOutlined, GlobalOutlined,
 } from "@ant-design/icons"
 import { RoleProvider } from "@/lib/role-context"
 import { RegionProvider, useRegion, REGIONS, type RegionCode } from "@/lib/region-context"
 import { KnowledgeDetail } from "@/components/knowledge-base"
 import { KnowledgeEndpoint } from "@/components/knowledge-endpoint"
 import { CaseManagement } from "@/components/case-management"
+import { ArchiveCase } from "@/components/archive-case"
 import { CaseDetail } from "@/components/case-detail"
 import { GoldenCaseManagement } from "@/components/golden-case-management"
-import { ArchivedCases } from "@/components/archived-cases"
 import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
 import { PatternLibrary } from "@/components/pattern-library"
@@ -46,7 +46,7 @@ const BREADCRUMBS: Record<Page, string[]> = {
   "case-management":       ["Case Management", "Case List"],
   "case-detail":           ["Case Management", "Case List", "Case Detail"],
   "golden-case-management":["Case Management", "Golden Case Management"],
-  "archived-cases":        ["Case Management", "Archived Cases"],
+  "archived-cases":        ["Case Management", "Archive Case"],
   "agent-list":            ["Agent Management", "Agent List"],
   "pattern-library":       ["Case Management", "Pattern Library"],
   "agent-detail":          ["Agent Management", "Agent List", "Agent Detail"],
@@ -87,6 +87,10 @@ function AppShell() {
 
 function handleArchive(newly: ArchivedCaseMock[]) {
   setArchivedCases((prev) => [...prev, ...newly])
+  }
+
+  function handleRestore(caseKey: string) {
+    setArchivedCases((prev) => prev.filter((c) => c.key !== caseKey))
   }
 
   function goToArchivedCases() {
@@ -187,7 +191,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
               label: "Case Management",
               children: [
                 { key: "case-management",        icon: <TableOutlined />, label: "Case List" },
-                { key: "archived-cases",         icon: <InboxOutlined />, label: "Archived Cases" },
+                { key: "archived-cases",         icon: <InboxOutlined />, label: "Archive Case" },
                 { key: "golden-case-management", icon: <CodeOutlined />,  label: "Golden Case Management" },
                 { key: "pattern-library",        icon: <CodeOutlined />,  label: "Pattern Library" },
               ],
@@ -239,10 +243,19 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           <Select
             value={region}
             size="small"
-            style={{ width: 180 }}
+            popupMatchSelectWidth={160}
             onChange={(v) => setRegion(v as RegionCode)}
-            optionLabelProp="label"
-            options={REGIONS.map((r) => ({
+            suffixIcon={null}
+            labelRender={() => (
+              <Space size={5}>
+                <GlobalOutlined style={{ fontSize: 13, color: "#595959" }} />
+                <Text strong style={{ fontSize: 13 }}>{region}</Text>
+              </Space>
+            )}
+            style={{ width: 80 }}
+            options={REGIONS.filter((r) =>
+              ["SG", "ID", "TH", "MY", "PH", "VN"].includes(r.code)
+            ).map((r) => ({
               value: r.code,
               label: (
                 <Space size={6}>
@@ -259,7 +272,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "knowledge-detail"   && <KnowledgeDetail />}
           {page === "knowledge-endpoint" && <KnowledgeEndpoint />}
           {page === "case-management"         && <CaseManagement onViewDetail={goToCaseDetail} archivedCases={archivedCases} onArchive={handleArchive} onGoToArchived={goToArchivedCases} goldenCaseIds={goldenCaseIdSet} />}
-          {page === "archived-cases"          && <ArchivedCases archivedCases={archivedCases} />}
+          {page === "archived-cases"          && <ArchiveCase archivedCases={archivedCases} onRestoreToList={handleRestore} />}
           {page === "golden-case-management"  && <GoldenCaseManagement goldenCases={goldenCases} setGoldenCases={setGoldenCases} />}
           {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
           {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} onPassedRun={handlePassedRun} />}

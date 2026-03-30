@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentListData, auditCaseData, INITIAL_GOLDEN_CASES, type Agent, type AgentStatus, type GoldenCasesState } from "@/lib/mock-data"
+import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
 
 const { Text, Title } = Typography
 
@@ -562,6 +563,18 @@ export function RegressionTest({
   onPublish?: (agentId: string) => void
   onPassedRun?: (agentId: string) => void
 }) {
+  const { region } = useRegion()
+
+  // Entity selector (driven by region)
+  const entityOptions = getEntitiesForRegion(region)
+  const [selectedEntity, setSelectedEntity] = React.useState<EntityCode>(entityOptions[0] ?? "")
+
+  // Reset entity when region changes
+  React.useEffect(() => {
+    const newOptions = getEntitiesForRegion(region)
+    setSelectedEntity(newOptions[0] ?? "")
+  }, [region])
+
   const allAgents = agents ?? agentListData
   const sharedGoldenCases = goldenCases ?? INITIAL_GOLDEN_CASES
   const testingAgents = allAgents.filter((a) => a.status === "TESTING")
@@ -642,6 +655,18 @@ export function RegressionTest({
 
   return (
     <div>
+      {/* Page Title with Entity Selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>Regression Test</Title>
+        <Select
+          value={selectedEntity}
+          onChange={setSelectedEntity}
+          size="small"
+          style={{ width: 110 }}
+          options={entityOptions.map((e) => ({ value: e, label: e }))}
+        />
+      </div>
+
       {/* Selector + Run bar */}
       <div
         style={{

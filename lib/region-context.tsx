@@ -44,3 +44,23 @@ export function RegionProvider({ children }: { children: ReactNode }) {
 export function useRegion() {
   return useContext(RegionContext)
 }
+
+// ── Entity options per Region ────────────────────────────────────
+export type EntityCode = string
+
+export const REGION_ENTITIES: Record<RegionCode, EntityCode[]> = {
+  SG: ["SPSG", "SPXSG"],
+  ID: ["SPEID", "SPXID"],
+  TH: ["SPETH", "SPXTH"],
+  MY: ["SPEMY", "SPXMY"],
+  PH: ["SPEPH", "SPXPH"],
+  VN: ["SPEVN", "SPXVN"],
+  TW: ["SPETW", "SPXTW"],
+  BR: ["SPEBR", "SPXBR"],
+  CN: ["SPECN", "SPXCN"],
+  HK: ["SPEHK", "SPXHK"],
+}
+
+export function getEntitiesForRegion(region: RegionCode): EntityCode[] {
+  return REGION_ENTITIES[region] ?? []
+}

@@ -121,7 +121,6 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
   const { role } = useRole()
   const isOps = role === "AI_OPS"
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [snapshotVersion, setSnapshotVersion] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [versions, setVersions] = useState(agentDetailData.versions.all)
   const [msgApi, msgContextHolder] = message.useMessage()
@@ -209,18 +208,33 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
             {cfg.label}
           </Tag>
         </div>
-        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
           {versionInfo.publishedAt ? `Published: ${versionInfo.publishedAt} by ${versionInfo.publishedBy}` : `Created: ${versionInfo.createdAt} by ${versionInfo.createdBy}`}
         </Text>
-        <div style={{ marginBottom: 8 }}>
-          <Typography.Link style={{ fontSize: 12, marginRight: 12 }} onClick={(e) => { e.stopPropagation(); setSnapshotVersion(versionInfo.version) }}>View Snapshot</Typography.Link>
-          {isTesting && isOps && <Typography.Link style={{ fontSize: 12, color: '#faad14' }}>Run Regression Test →</Typography.Link>}
-        </div>
-        {isTesting && !versionInfo.regressionTestPassed && <Text style={{ fontSize: 11, color: '#ff4d4f', display: 'block', marginBottom: 8 }}>No passing test run found</Text>}
+        
+        {/* Regression Test Status Row (TESTING only) */}
         {isTesting && isOps && (
-          <div style={{ display: 'flex', gap: 12 }}>
-            <Typography.Link style={{ fontSize: 12, color: '#faad14' }} onClick={(e) => { e.stopPropagation(); handleReleaseToLive(versionInfo.version) }}>Release to Live</Typography.Link>
-            <Typography.Link style={{ fontSize: 12, color: '#8c8c8c' }} onClick={(e) => { e.stopPropagation(); handleArchive(versionInfo.version) }}>Archive</Typography.Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffe58f', borderRadius: 4, marginBottom: 12, fontSize: 12 }}>
+            {versionInfo.regressionTestPassed ? (
+              <>
+                <span style={{ color: '#52c41a', fontSize: 14 }}>✓</span>
+                <Text style={{ fontSize: 12, color: '#52c41a', flex: 1 }}>Last test passed</Text>
+              </>
+            ) : (
+              <>
+                <span style={{ color: '#faad14', fontSize: 14 }}>⚠</span>
+                <Text style={{ fontSize: 12, color: '#faad14', flex: 1 }}>No passing test run</Text>
+                <Button type="link" size="small" style={{ padding: 0, height: 'auto', fontSize: 11, color: '#faad14' }} onClick={(e) => { e.stopPropagation(); msgApi.info('Navigating to Regression Test page...') }}>Run →</Button>
+              </>
+            )}
+          </div>
+        )}
+        
+        {/* Release to Live & Archive Buttons (TESTING only) */}
+        {isTesting && isOps && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button type="primary" size="small" style={{ background: '#faad14', fontSize: 12 }} onClick={(e) => { e.stopPropagation(); handleReleaseToLive(versionInfo.version) }}>Release to Live</Button>
+            <Button size="small" style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); handleArchive(versionInfo.version) }}>Archive</Button>
           </div>
         )}
       </div>
@@ -237,7 +251,7 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
     <div>
       {msgContextHolder}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={5} style={{ margin: 0 }}>Version History</Title>
+        <Title level={5} style={{ margin: 0 }}>Versions</Title>
         {isOps && <Button type="primary" size="small" icon={<PlusOutlined />} style={{ background: '#1890ff', fontSize: 12 }} onClick={() => setCreateModalOpen(true)}>New Version</Button>}
       </div>
 
@@ -262,7 +276,6 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
                     <Text code style={{ fontSize: 12, marginRight: 12 }}>{v.version}</Text>
                     <Tag style={{ fontSize: 11, background: '#f5f5f5', borderColor: '#d9d9d9', color: '#8c8c8c', margin: 0 }}>{v.state}</Tag>
                   </div>
-                  <Typography.Link style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setSnapshotVersion(v.version) }}>View Snapshot</Typography.Link>
                 </div>
               ))}
             </div>
@@ -271,7 +284,6 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
       )}
 
       {/* Modals */}
-      {snapshotVersion && <SnapshotModal version={snapshotVersion} open={!!snapshotVersion} onClose={() => setSnapshotVersion(null)} />}
       <CreateVersionModal open={createModalOpen} onClose={() => setCreateModalOpen(false)} onConfirm={handleCreateVersion} availableVersions={availableVersions} />
       
       <Modal title="Release to Live?" open={releaseModalOpen} onCancel={() => setReleaseModalOpen(false)} onOk={confirmReleaseToLive} okText="Confirm" okButtonProps={{ danger: false }}>

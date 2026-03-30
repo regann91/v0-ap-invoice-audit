@@ -31,22 +31,8 @@ function BuyerInfoTab() {
   )
 
   const columns: ColumnsType<BuyerInfo> = [
-    { title: "Buyer ID",    dataIndex: "buyerId",   key: "buyerId",   width: 120 },
-    { title: "Buyer Name",  dataIndex: "buyerName", key: "buyerName", ellipsis: true },
-    { title: "Region",      dataIndex: "region",    key: "region",    width: 90 },
-    { title: "Entity",      dataIndex: "entity",    key: "entity",    width: 80 },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 110,
-      render: (status: BuyerInfo["status"]) =>
-        status === "Active" ? (
-          <Badge status="success" text={<span style={{ fontSize: 13 }}>Active</span>} />
-        ) : (
-          <Badge status="default" text={<span style={{ color: "#8c8c8c", fontSize: 13 }}>Inactive</span>} />
-        ),
-    },
+    { title: "Buyer ID",   dataIndex: "buyerId",   key: "buyerId",   width: 120 },
+    { title: "Buyer Name", dataIndex: "buyerName", key: "buyerName", ellipsis: true },
   ]
 
   return (
@@ -74,8 +60,8 @@ function BuyerInfoTab() {
   )
 }
 
-// ── Supplier Term Date ───────────────────────────────────────────
-function SupplierTermDateTab() {
+// ── Supplier Info ────────────────────────────────────────────────
+function SupplierInfoTab() {
   const [search, setSearch] = useState("")
   const filtered = supplierTermDateData.filter(
     (r) =>
@@ -88,7 +74,6 @@ function SupplierTermDateTab() {
     { title: "Supplier Name", dataIndex: "supplierName", key: "supplierName", ellipsis: true },
     { title: "Payment Term",  dataIndex: "paymentTerm",  key: "paymentTerm",  width: 130 },
     { title: "Due Date Rule", dataIndex: "dueDateRule",  key: "dueDateRule" },
-    { title: "Region",        dataIndex: "region",       key: "region",       width: 90 },
   ]
 
   return (
@@ -116,7 +101,7 @@ function SupplierTermDateTab() {
   )
 }
 
-// ── Supplier Bank Account ────────────────────────────────────────
+// ── Supplier Bank Account ─────────────────────────────────────────
 function SupplierBankAccountTab() {
   const [search, setSearch] = useState("")
   const filtered = supplierBankAccountData.filter(
@@ -128,17 +113,7 @@ function SupplierBankAccountTab() {
   const columns: ColumnsType<SupplierBankAccount> = [
     { title: "Supplier ID", dataIndex: "supplierId", key: "supplierId", width: 120 },
     { title: "Bank Name",   dataIndex: "bankName",   key: "bankName",   ellipsis: true },
-    {
-      title: "Account No.",
-      dataIndex: "accountNo",
-      key: "accountNo",
-      width: 150,
-      render: (v: string) => (
-        <Tag style={{ fontFamily: "monospace", letterSpacing: 1, background: "#f5f5f5", border: "none", color: "#434343", fontSize: 12 }}>
-          {v}
-        </Tag>
-      ),
-    },
+    { title: "Account No.", dataIndex: "accountNo", key: "accountNo", width: 160 },
     { title: "Currency", dataIndex: "currency", key: "currency", width: 95 },
     { title: "Country",  dataIndex: "country",  key: "country" },
   ]
@@ -172,7 +147,7 @@ function SupplierBankAccountTab() {
 export function KnowledgeDetail() {
   const tabs = [
     { key: "buyer", label: "Buyer Info",           children: <BuyerInfoTab /> },
-    { key: "term",  label: "Supplier Term Date",    children: <SupplierTermDateTab /> },
+    { key: "term",  label: "Supplier Info",         children: <SupplierInfoTab /> },
     { key: "bank",  label: "Supplier Bank Account", children: <SupplierBankAccountTab /> },
   ]
 

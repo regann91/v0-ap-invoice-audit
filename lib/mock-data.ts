@@ -133,24 +133,6 @@ export const flowData: AgentFlow[] = [
       { id: 'AP_VOUCHER',     name: 'AP Voucher',      flowId: 'FLOW-001' },
     ],
   },
-  {
-    id: 'FLOW-002',
-    name: 'Supplier Onboarding',
-    description: 'Validates new supplier data, bank accounts, and tax compliance before activation.',
-    steps: [
-      { id: 'SUPPLIER_VERIFY', name: 'Supplier Verification', flowId: 'FLOW-002' },
-      { id: 'BANK_CHECK',      name: 'Bank Account Check',    flowId: 'FLOW-002' },
-    ],
-  },
-  {
-    id: 'FLOW-003',
-    name: 'Payment Reconciliation',
-    description: 'Reconciles bank statements against AP ledger and flags unmatched transactions.',
-    steps: [
-      { id: 'BANK_RECON',   name: 'Bank Reconciliation', flowId: 'FLOW-003' },
-      { id: 'EXCEPTION_MGT', name: 'Exception Management', flowId: 'FLOW-003' },
-    ],
-  },
 ]
 
 // Flat step id type (union of all step ids across all flows)
@@ -452,7 +434,7 @@ export interface ArchivedCaseMock {
 
 export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
   {
-    key: 'arc-1',
+    key: 'arc-1', // first archived case
     caseId: 'Case-SG-20230815-000001',
     paymentRequestId: 'PR-001',
     paymentGroupId: 'PG-001',

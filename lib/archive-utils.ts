@@ -1,10 +1,6 @@
-import { type AuditCase } from "@/lib/mock-data"
+import { type AuditCase, type ArchivedCaseMock, type CaseStep } from "@/lib/mock-data"
 
 export const ARCHIVE_WINDOW_DAYS = 365
-
-export interface ArchivedCase extends AuditCase {
-  archivedAt: string
-}
 
 /**
  * Returns true if the case is eligible for archiving:
@@ -21,11 +17,18 @@ export function isArchivable(c: AuditCase, goldenCaseIds: Set<string>): boolean 
 
 export interface ArchiveJobResult {
   /** Cases that were newly archived in this run */
-  newly: ArchivedCase[]
+  newly: ArchivedCaseMock[]
   /** Updated active case list (archived cases removed) */
   remaining: AuditCase[]
   /** Timestamp the job ran */
   ranAt: string
+}
+
+// Default step assignment based on ground truth
+function inferStep(groundTruth: string): CaseStep {
+  if (groundTruth === "Matched" || groundTruth === "Rejected") return "MATCH"
+  if (groundTruth === "Submitted") return "AP_VOUCHER"
+  return "INVOICE_REVIEW"
 }
 
 /**
@@ -35,18 +38,23 @@ export interface ArchiveJobResult {
  */
 export function runArchiveJob(
   activeCases: AuditCase[],
-  existingArchived: ArchivedCase[],
+  existingArchived: ArchivedCaseMock[],
   goldenCaseIds: Set<string>,
 ): ArchiveJobResult {
   const alreadyArchivedIds = new Set(existingArchived.map((c) => c.caseId))
   const ranAt = new Date().toISOString()
 
-  const newly: ArchivedCase[] = []
+  const newly: ArchivedCaseMock[] = []
   const remaining: AuditCase[] = []
 
   for (const c of activeCases) {
     if (!alreadyArchivedIds.has(c.caseId) && isArchivable(c, goldenCaseIds)) {
-      newly.push({ ...c, archivedAt: ranAt })
+      newly.push({
+        ...c,
+        archivedAt: ranAt,
+        step: inferStep(c.groundTruth),
+        groundTruth: c.groundTruth as ArchivedCaseMock["groundTruth"],
+      })
     } else {
       remaining.push(c)
     }

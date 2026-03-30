@@ -21,8 +21,7 @@ import { PatternLibrary } from "@/components/pattern-library"
 import { RegressionTest } from "@/components/regression-test"
 import { SystemArchitecture } from "@/components/system-architecture"
 import { PrdViewer } from "@/components/prd-viewer"
-import { agentListData, INITIAL_GOLDEN_CASES, type Agent, type AuditCase, type GoldenCasesState } from "@/lib/mock-data"
-import { type ArchivedCase } from "@/lib/archive-utils"
+import { agentListData, INITIAL_GOLDEN_CASES, INITIAL_ARCHIVED_CASES, type Agent, type AuditCase, type GoldenCasesState, type ArchivedCaseMock } from "@/lib/mock-data"
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
@@ -65,7 +64,7 @@ function AppShell() {
   const [agents, setAgents] = useState<Agent[]>(agentListData)
   const [goldenCases, setGoldenCases] = useState<GoldenCasesState>(INITIAL_GOLDEN_CASES)
   const [passedAgentIds, setPassedAgentIds] = useState<string[]>([])
-  const [archivedCases, setArchivedCases] = useState<ArchivedCase[]>([])
+  const [archivedCases, setArchivedCases] = useState<ArchivedCaseMock[]>(INITIAL_ARCHIVED_CASES)
   const { region, setRegion } = useRegion()
 
   // Golden case IDs across all steps — used for archive retention
@@ -86,8 +85,8 @@ function AppShell() {
     setPassedAgentIds((prev) => prev.includes(agentId) ? prev : [...prev, agentId])
   }
 
-  function handleArchive(newly: ArchivedCase[]) {
-    setArchivedCases((prev) => [...prev, ...newly])
+function handleArchive(newly: ArchivedCaseMock[]) {
+  setArchivedCases((prev) => [...prev, ...newly])
   }
 
   function goToArchivedCases() {

@@ -2,30 +2,35 @@
 
 import { useState, useMemo } from "react"
 import {
-  Table, Input, Select, Space, Tag, Typography, Empty,
+  Table, Input, Select, Space, Tag, Typography, Empty, Tooltip,
 } from "antd"
-import { SearchOutlined, FilterOutlined, InboxOutlined } from "@ant-design/icons"
+import { SearchOutlined, FilterOutlined, InboxOutlined, LockOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
-import { type CaseGolden } from "@/lib/mock-data"
-import { type ArchivedCase } from "@/lib/archive-utils"
+import { type CaseGolden, type ArchivedCaseMock } from "@/lib/mock-data"
 import { useRegion } from "@/lib/region-context"
 
 const { Text } = Typography
-
-function AmountCell({ amount, currency }: { amount: number; currency: string }) {
-  return (
-    <Text style={{ fontSize: 13, fontFamily: "monospace" }}>
-      {currency} {amount.toLocaleString()}
-    </Text>
-  )
-}
 
 function uniqueOptions(values: string[]) {
   return [...new Set(values)].sort().map((v) => ({ label: v, value: v }))
 }
 
 interface Props {
-  archivedCases: ArchivedCase[]
+  archivedCases: ArchivedCaseMock[]
+}
+
+const stepColors: Record<string, { color: string; bg: string; border: string }> = {
+  INVOICE_REVIEW: { color: "#0958d9", bg: "#e6f4ff", border: "#91caff" },
+  MATCH: { color: "#531dab", bg: "#f9f0ff", border: "#d3adf7" },
+  AP_VOUCHER: { color: "#08979c", bg: "#e6fffb", border: "#87e8de" },
+}
+
+const gtColors: Record<string, { color: string; bg: string; border: string }> = {
+  Pass: { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f" },
+  Fail: { color: "#cf1322", bg: "#fff1f0", border: "#ffa39e" },
+  Matched: { color: "#531dab", bg: "#f9f0ff", border: "#d3adf7" },
+  Rejected: { color: "#d4380d", bg: "#fff2e8", border: "#ffbb96" },
+  Submitted: { color: "#08979c", bg: "#e6fffb", border: "#87e8de" },
 }
 
 export function ArchivedCases({ archivedCases }: Props) {
@@ -37,11 +42,6 @@ export function ArchivedCases({ archivedCases }: Props) {
   const regionPool = useMemo(
     () => archivedCases.filter((c) => c.entity === region),
     [archivedCases, region],
-  )
-
-  const entityOptions = useMemo(
-    () => uniqueOptions(regionPool.map((c) => c.entity)),
-    [regionPool],
   )
 
   const filtered = useMemo(() => {
@@ -58,19 +58,19 @@ export function ArchivedCases({ archivedCases }: Props) {
     })
   }, [regionPool, search, goldenFilter, gtFilter])
 
-  const columns: ColumnsType<ArchivedCase> = [
+  const columns: ColumnsType<ArchivedCaseMock> = [
     {
       title: "Case ID",
       dataIndex: "caseId",
       key: "caseId",
-      width: 120,
+      width: 130,
       render: (v: string) => <Text style={{ fontSize: 13, fontFamily: "monospace" }}>{v}</Text>,
     },
     {
       title: "Invoice No.",
       dataIndex: "invoiceNo",
       key: "invoiceNo",
-      width: 155,
+      width: 170,
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
     },
     {
@@ -81,69 +81,59 @@ export function ArchivedCases({ archivedCases }: Props) {
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
     },
     {
-      title: "Entity",
-      dataIndex: "entity",
-      key: "entity",
-      width: 70,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
-    },
-    {
-      title: "Amount",
-      dataIndex: "amount",
-      key: "amount",
-      width: 160,
-      sorter: (a, b) => a.amount - b.amount,
-      render: (v: number, r: ArchivedCase) => <AmountCell amount={v} currency={r.currency} />,
-    },
-    {
-      title: "Invoice Date",
-      dataIndex: "invoiceDate",
-      key: "invoiceDate",
-      width: 115,
-      sorter: (a, b) => a.invoiceDate.localeCompare(b.invoiceDate),
-      render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
-    },
-    {
-      title: "Review Date",
-      dataIndex: "reviewDate",
-      key: "reviewDate",
-      width: 115,
-      sorter: (a, b) => a.reviewDate.localeCompare(b.reviewDate),
-      render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
-    },
-    {
-      title: "Golden",
-      dataIndex: "isGolden",
-      key: "isGolden",
-      width: 90,
-      render: (v: CaseGolden) =>
-        v === "Golden" ? (
-          <Tag style={{ fontSize: 11, color: "#d48806", background: "#fffbe6", borderColor: "#ffe58f" }}>Golden</Tag>
-        ) : (
-          <Text type="secondary" style={{ fontSize: 12 }}>—</Text>
-        ),
+      title: "Step",
+      dataIndex: "step",
+      key: "step",
+      width: 130,
+      render: (v: string) => {
+        const c = stepColors[v] || { color: "#8c8c8c", bg: "#f5f5f5", border: "#d9d9d9" }
+        return <Tag style={{ fontSize: 10, color: c.color, background: c.bg, borderColor: c.border }}>{v}</Tag>
+      },
     },
     {
       title: "Ground Truth",
       dataIndex: "groundTruth",
       key: "groundTruth",
-      width: 110,
+      width: 100,
       render: (v: string) => {
-        const color = v === "Pass" ? "#389e0d" : v === "Fail" ? "#cf1322" : "#8c8c8c"
-        const bg = v === "Pass" ? "#f6ffed" : v === "Fail" ? "#fff1f0" : "#f5f5f5"
-        const border = v === "Pass" ? "#b7eb8f" : v === "Fail" ? "#ffa39e" : "#d9d9d9"
-        return <Tag style={{ fontSize: 11, color, background: bg, borderColor: border }}>{v}</Tag>
+        const c = gtColors[v] || { color: "#8c8c8c", bg: "#f5f5f5", border: "#d9d9d9" }
+        return <Tag style={{ fontSize: 11, color: c.color, background: c.bg, borderColor: c.border }}>{v}</Tag>
       },
     },
     {
-      title: "Archived At",
+      title: "Is Golden",
+      dataIndex: "isGolden",
+      key: "isGolden",
+      width: 100,
+      render: (v: CaseGolden) =>
+        v === "Golden" ? (
+          <Tooltip title="Golden Set cases are always retained in the active list">
+            <Tag style={{ fontSize: 11, color: "#d48806", background: "#fffbe6", borderColor: "#ffe58f" }}>
+              <LockOutlined style={{ marginRight: 4 }} />
+              Yes
+            </Tag>
+          </Tooltip>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 12 }}>No</Text>
+        ),
+    },
+    {
+      title: "Last Active",
+      dataIndex: "reviewDate",
+      key: "reviewDate",
+      width: 110,
+      sorter: (a, b) => a.reviewDate.localeCompare(b.reviewDate),
+      render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
+    },
+    {
+      title: "Archived Date",
       dataIndex: "archivedAt",
       key: "archivedAt",
-      width: 165,
+      width: 120,
       sorter: (a, b) => a.archivedAt.localeCompare(b.archivedAt),
       render: (v: string) => (
-        <Text style={{ fontSize: 12, color: "#8c8c8c", fontFamily: "monospace" }}>
-          {new Date(v).toLocaleString("en-SG", { timeZone: "Asia/Singapore", hour12: false })}
+        <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
+          {v.split("T")[0]}
         </Text>
       ),
     },
@@ -203,7 +193,9 @@ export function ArchivedCases({ archivedCases }: Props) {
           options={[
             { label: "Pass", value: "Pass" },
             { label: "Fail", value: "Fail" },
-            { label: "Pending", value: "Pending" },
+            { label: "Matched", value: "Matched" },
+            { label: "Rejected", value: "Rejected" },
+            { label: "Submitted", value: "Submitted" },
           ]}
           style={{ width: 140 }}
           allowClear
@@ -226,7 +218,7 @@ export function ArchivedCases({ archivedCases }: Props) {
           dataSource={filtered}
           rowKey="key"
           size="small"
-          scroll={{ x: 1300 }}
+          scroll={{ x: 1100 }}
           pagination={{
             pageSize: 10,
             showTotal: (total) => `Total ${total} archived records`,

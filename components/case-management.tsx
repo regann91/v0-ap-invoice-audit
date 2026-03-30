@@ -13,11 +13,11 @@ import {
 import type { ColumnsType } from "antd/es/table"
 import {
   auditCaseData,
-  type AuditCase, type CaseGolden,
+  type AuditCase, type CaseGolden, type ArchivedCaseMock,
 } from "@/lib/mock-data"
 import { useRegion } from "@/lib/region-context"
 import { useRole } from "@/lib/role-context"
-import { getActiveCases, runArchiveJob, ARCHIVE_WINDOW_DAYS, type ArchivedCase } from "@/lib/archive-utils"
+import { getActiveCases, runArchiveJob, ARCHIVE_WINDOW_DAYS } from "@/lib/archive-utils"
 
 const { Text } = Typography
 
@@ -285,8 +285,8 @@ function CaseDrawer({ record, onClose }: { record: AuditCase | null; onClose: ()
 
 interface CaseManagementProps {
   onViewDetail?: (record: AuditCase) => void
-  archivedCases: ArchivedCase[]
-  onArchive: (newly: ArchivedCase[]) => void
+  archivedCases: ArchivedCaseMock[]
+  onArchive: (newly: ArchivedCaseMock[]) => void
   onGoToArchived: () => void
   goldenCaseIds?: Set<string>
 }

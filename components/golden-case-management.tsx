@@ -1,5 +1,4 @@
 "use client"
-// [Cache-Buster: 2025-03-19-v2] Step pills use div role=button, no native button element
 
 import React, { useState, useMemo } from "react"
 import { type GoldenCasesState } from "@/lib/mock-data"
@@ -424,6 +423,8 @@ export function GoldenCaseManagement({
   const [patternFilter, setPatternFilter] = useState<string[]>([])
   const [gtFilter, setGtFilter] = useState<GroundTruth | "All">("All")
   const [addModalOpen, setAddModalOpen] = useState(false)
+  // Force recompile: touch module
+  const _v = 1
 
   function handleConfirmAdd(added: AddableCase[]) {
     const today = new Date().toISOString().slice(0, 10)

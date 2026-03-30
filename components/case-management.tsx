@@ -4,18 +4,20 @@ import { useState, useMemo } from "react"
 import {
   Table, Input, Select, Space, Tag, Typography, Button,
   Tooltip, Drawer, Descriptions, Badge, Card, Switch, Modal,
-  Form, message, Empty,
+  Form, message, Empty, Alert,
 } from "antd"
 import {
   SearchOutlined, FilterOutlined, EyeOutlined,
-  StarFilled, StarOutlined, EditOutlined,
+  StarFilled, StarOutlined, EditOutlined, InboxOutlined, ClockCircleOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import {
   auditCaseData,
-  type AuditCase, type CaseGolden,
+  type AuditCase, type CaseGolden, type ArchivedCaseMock,
 } from "@/lib/mock-data"
 import { useRegion } from "@/lib/region-context"
+import { useRole } from "@/lib/role-context"
+import { getActiveCases, runArchiveJob, ARCHIVE_WINDOW_DAYS } from "@/lib/archive-utils"
 
 const { Text } = Typography
 
@@ -281,20 +283,48 @@ function CaseDrawer({ record, onClose }: { record: AuditCase | null; onClose: ()
 
 // ── Main Component ────────────────────────────────────────────────
 
-export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: AuditCase) => void }) {
+interface CaseManagementProps {
+  onViewDetail?: (record: AuditCase) => void
+  archivedCases: ArchivedCaseMock[]
+  onArchive: (newly: ArchivedCaseMock[]) => void
+  onGoToArchived: () => void
+  goldenCaseIds?: Set<string>
+}
+
+export function CaseManagement({
+  onViewDetail,
+  archivedCases,
+  onArchive,
+  onGoToArchived,
+  goldenCaseIds = new Set(),
+}: CaseManagementProps) {
   const { region } = useRegion()
+  const { role } = useRole()
+  const isOps = role === "AI_OPS"
   const [search, setSearch]               = useState("")
   const [regionFilter, setRegionFilter]   = useState<string | null>(null)
   const [entityFilter, setEntityFilter]   = useState<string | null>(null)
   const [goldenFilter, setGoldenFilter]   = useState<CaseGolden | null>(null)
+  const [archiveRunning, setArchiveRunning] = useState(false)
 
   const [detail, setDetail]               = useState<AuditCase | null>(null)
   const [expandedKeys, setExpandedKeys]   = useState<string[]>([])
   const [expandedData, setExpandedData]   = useState<Record<string, CaseExpanded>>({})
   const [msgApi, contextHolder]           = message.useMessage()
 
+  const archivedIds = useMemo(
+    () => new Set(archivedCases.map((c) => c.caseId)),
+    [archivedCases],
+  )
+
+  // Active-window pool: cases within 365 days OR Golden Set, minus already-archived
+  const activePool = useMemo(
+    () => getActiveCases(auditCaseData, archivedIds, goldenCaseIds),
+    [archivedIds, goldenCaseIds],
+  )
+
   // Region-filtered base pool (entity = 2-letter code matching region selector)
-  const regionPool = useMemo(() => auditCaseData.filter((r) => r.entity === region), [region])
+  const regionPool = useMemo(() => activePool.filter((r) => r.entity === region), [activePool, region])
 
   const regionOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.region)), [regionPool])
   const entityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
@@ -324,6 +354,21 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
       [caseId]: { ...getExpanded(caseId), [step]: next },
     }))
     msgApi.success("Saved")
+  }
+
+  function handleRunArchive() {
+    setArchiveRunning(true)
+    // Simulate async job with a short delay
+    setTimeout(() => {
+      const { newly } = runArchiveJob(auditCaseData, archivedCases, goldenCaseIds)
+      if (newly.length === 0) {
+        msgApi.info("Archive job complete — no new cases to archive.")
+      } else {
+        onArchive(newly)
+        msgApi.success(`Archive job complete — ${newly.length} case${newly.length > 1 ? "s" : ""} moved to archive.`)
+      }
+      setArchiveRunning(false)
+    }, 1200)
   }
 
   function clearFilters() {
@@ -383,8 +428,16 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
       title: "Invoice Date",
       dataIndex: "invoiceDate",
       key: "invoiceDate",
-      width: 120,
+      width: 115,
       sorter: (a, b) => a.invoiceDate.localeCompare(b.invoiceDate),
+      render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
+    },
+    {
+      title: "Review Date",
+      dataIndex: "reviewDate",
+      key: "reviewDate",
+      width: 115,
+      sorter: (a, b) => a.reviewDate.localeCompare(b.reviewDate),
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
     },
     {
@@ -410,6 +463,41 @@ export function CaseManagement({ onViewDetail }: { onViewDetail?: (record: Audit
   return (
     <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
       {contextHolder}
+
+      {/* Active-window info banner */}
+      <Alert
+        style={{ marginBottom: 14, fontSize: 12 }}
+        type="info"
+        showIcon
+        icon={<ClockCircleOutlined style={{ fontSize: 13 }} />}
+        message={
+          <span style={{ fontSize: 12 }}>
+            Showing cases from the last {ARCHIVE_WINDOW_DAYS} days. Golden Set cases are always retained.{" "}
+            <Button
+              type="link"
+              size="small"
+              style={{ padding: 0, fontSize: 12, height: "auto" }}
+              icon={<InboxOutlined />}
+              onClick={onGoToArchived}
+            >
+              View Archived Cases
+            </Button>
+          </span>
+        }
+        action={
+          isOps ? (
+            <Button
+              size="small"
+              icon={<InboxOutlined />}
+              loading={archiveRunning}
+              onClick={handleRunArchive}
+              style={{ fontSize: 12 }}
+            >
+              Run Archive Now
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>

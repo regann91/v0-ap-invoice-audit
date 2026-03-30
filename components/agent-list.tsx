@@ -384,15 +384,18 @@ export function AgentList({
   onTriggerTest?: (id: string) => void
 }) {
   const { region } = useRegion()
+  // Force recompile
+  const _v = 1
   const [search, setSearch] = useState("")
   const [localAgents, setLocalAgents] = useState<Agent[]>(agentListData)
   const agents = agentsProp ?? localAgents
   const setAgents = setAgentsProp ?? setLocalAgents
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // Filter by region first, then by search
-  // Guard against agents created before `regions` field existed (e.g. via NewAgentDrawer)
-  const regionAgents = agents.filter((r) => !r.regions || r.regions.length === 0 || r.regions.includes(region))
+  // Filter by region first, then by search.
+  // Use optional chaining to guard against agents where `regions` is undefined
+  // (e.g. agents created via NewAgentDrawer before the field was added).
+  const regionAgents = agents.filter((r) => (r.regions?.length ?? 0) === 0 || r.regions?.includes(region))
 
   const filtered = regionAgents.filter(
     (r) =>

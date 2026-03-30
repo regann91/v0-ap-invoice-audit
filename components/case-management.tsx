@@ -468,66 +468,33 @@ export function CaseManagement({
       sorter: (a, b) => a.updateTime.localeCompare(b.updateTime),
     },
     {
-      title: "Invoice Review",
-      dataIndex: "invoiceReviewGroundTruth",
-      key: "invoiceReviewGroundTruth",
-      width: 120,
-      render: (v: string) => (
-        <Tag color={v === 'Pass' ? 'green' : 'red'} style={{ fontSize: 11 }}>
-          {v}
-        </Tag>
-      ),
-      sorter: (a, b) => a.invoiceReviewGroundTruth.localeCompare(b.invoiceReviewGroundTruth),
-    },
-    {
-      title: "Match",
-      dataIndex: "matchGroundTruth",
-      key: "matchGroundTruth",
-      width: 110,
-      render: (v: string) => (
-        <Tag color={v === 'Matched' ? 'blue' : 'default'} style={{ fontSize: 11 }}>
-          {v}
-        </Tag>
-      ),
-      sorter: (a, b) => a.matchGroundTruth.localeCompare(b.matchGroundTruth),
-    },
-    {
-      title: "AP Voucher",
-      dataIndex: "apVoucherGroundTruth",
-      key: "apVoucherGroundTruth",
-      width: 130,
-      render: (v: string) => (
-        <Tag color={v === 'Submit to EBS' ? 'green' : 'red'} style={{ fontSize: 11 }}>
-          {v}
-        </Tag>
-      ),
-      sorter: (a, b) => a.apVoucherGroundTruth.localeCompare(b.apVoucherGroundTruth),
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 90,
-      render: (v: string) => (
-        <Tag color={v === 'Active' ? 'green' : 'default'} style={{ fontSize: 11 }}>
-          {v}
-        </Tag>
-      ),
-      sorter: (a, b) => a.status.localeCompare(b.status),
-    },
-    {
-      title: "Actions",
+      title: "Detail / Archive",
       key: "action",
-      width: 80,
+      width: 140,
       render: (_: unknown, record: TestCase) => (
-        <Tooltip title="Open Payment Request">
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => window.open(`https://billing.workatsea.com/sbc/br/apr/payment_request/${record.paymentRequestId}`, '_blank')}
-          />
-        </Tooltip>
+        <Space size={8}>
+          <Tooltip title="View Detail">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => window.open(`https://billing.workatsea.com/sbc/br/apr/payment_request/${record.paymentRequestId}`, '_blank')}
+            >
+              Detail
+            </Button>
+          </Tooltip>
+          <Tooltip title="Archive this case">
+            <Button
+              type="link"
+              danger
+              size="small"
+              onClick={() => {
+                message.info(`Archived case: ${record.caseId}`)
+              }}
+            >
+              Archive
+            </Button>
+          </Tooltip>
+        </Space>
       ),
     },
   ]

@@ -144,12 +144,16 @@ export type AgentStatus = 'ACTIVE' | 'TESTING' | 'DEPRECATED'
 export interface GoldenCase {
   key: string
   caseId: string
+  paymentRequestId: string
+  paymentGroupId: string
   invoiceNo: string
   supplier: string
   region: string
-  groundTruth: 'Pass' | 'Fail'
+  groundTruth: 'Pass' | 'Fail' | 'Matched' | 'Submit to EBS'
   patterns: string[]
-  addedBy: string
+  amount: number
+  currency: string
+  addedBy: { name: string; email: string }
   addedDate: string
 }
 
@@ -157,31 +161,31 @@ export type GoldenCasesState = Record<'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER',
 
 export const INITIAL_GOLDEN_CASES: GoldenCasesState = {
   INVOICE_REVIEW: [
-    { key: "1",  caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",      region: "SG", groundTruth: "Pass", patterns: ["amount-mismatch", "header-check"],        addedBy: "ai_ops_01", addedDate: "2025-01-10" },
-    { key: "2",  caseId: "CASE-002", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd",  region: "SG", groundTruth: "Fail", patterns: ["supplier-name-mismatch"],                  addedBy: "ai_ops_01", addedDate: "2025-01-10" },
-    { key: "3",  caseId: "CASE-004", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",     region: "TH", groundTruth: "Pass", patterns: ["gst-calculation-error"],                   addedBy: "ai_ops_02", addedDate: "2025-01-15" },
-    { key: "4",  caseId: "CASE-006", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",       region: "TW", groundTruth: "Pass", patterns: ["header-check"],                            addedBy: "ai_ops_01", addedDate: "2025-02-01" },
-    { key: "5",  caseId: "CASE-008", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",    region: "BR", groundTruth: "Pass", patterns: ["amount-mismatch"],                         addedBy: "ai_ops_02", addedDate: "2025-02-05" },
-    { key: "6",  caseId: "CASE-010", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",       region: "ID", groundTruth: "Fail", patterns: ["duplicate-invoice"],                       addedBy: "ai_ops_01", addedDate: "2025-02-10" },
-    { key: "7",  caseId: "CASE-012", invoiceNo: "INV-2025-0012", supplier: "Accenture Pte Ltd",      region: "SG", groundTruth: "Pass", patterns: ["date-out-of-range"],                       addedBy: "ai_ops_02", addedDate: "2025-02-12" },
-    { key: "8",  caseId: "CASE-014", invoiceNo: "INV-2025-0014", supplier: "Google Asia Pacific",    region: "SG", groundTruth: "Pass", patterns: ["gst-calculation-error", "header-check"],   addedBy: "ai_ops_01", addedDate: "2025-02-15" },
-    { key: "9",  caseId: "CASE-016", invoiceNo: "INV-2025-0016", supplier: "Tencent Cloud Intl",     region: "TW", groundTruth: "Fail", patterns: ["amount-mismatch", "duplicate-invoice"],    addedBy: "ai_ops_02", addedDate: "2025-02-18" },
-    { key: "10", caseId: "CASE-018", invoiceNo: "INV-2025-0018", supplier: "Deloitte Advisory SEA",  region: "VN", groundTruth: "Pass", patterns: ["supplier-name-mismatch"],                  addedBy: "ai_ops_01", addedDate: "2025-02-20" },
-    { key: "11", caseId: "CASE-020", invoiceNo: "INV-2025-0020", supplier: "Shopee Philippines",     region: "PH", groundTruth: "Pass", patterns: ["date-out-of-range", "header-check"],       addedBy: "ai_ops_02", addedDate: "2025-02-22" },
-    { key: "12", caseId: "CASE-022", invoiceNo: "INV-2025-0022", supplier: "Microsoft Thailand",     region: "TH", groundTruth: "Fail", patterns: ["gst-calculation-error"],                   addedBy: "ai_ops_01", addedDate: "2025-02-25" },
+    { key: "1",  caseId: "CASE-001", paymentRequestId: "PR-001", paymentGroupId: "PG-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",      region: "SG", groundTruth: "Pass", patterns: ["amount-mismatch", "header-check"],        amount: 42500, currency: "SGD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-01-10" },
+    { key: "2",  caseId: "CASE-002", paymentRequestId: "PR-002", paymentGroupId: "PG-001", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd",  region: "SG", groundTruth: "Fail", patterns: ["supplier-name-mismatch"],                  amount: 18750, currency: "SGD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-01-10" },
+    { key: "3",  caseId: "CASE-004", paymentRequestId: "PR-003", paymentGroupId: "PG-002", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",     region: "TH", groundTruth: "Pass", patterns: ["gst-calculation-error"],                   amount: 67800, currency: "THB", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-01-15" },
+    { key: "4",  caseId: "CASE-006", paymentRequestId: "PR-004", paymentGroupId: "PG-002", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",       region: "TW", groundTruth: "Pass", patterns: ["header-check"],                            amount: 35600, currency: "TWD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-01" },
+    { key: "5",  caseId: "CASE-008", paymentRequestId: "PR-005", paymentGroupId: "PG-003", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",    region: "BR", groundTruth: "Pass", patterns: ["amount-mismatch"],                         amount: 89600, currency: "BRL", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-02-05" },
+    { key: "6",  caseId: "CASE-010", paymentRequestId: "PR-006", paymentGroupId: "PG-004", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",       region: "ID", groundTruth: "Fail", patterns: ["duplicate-invoice"],                       amount: 24300, currency: "IDR", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-10" },
+    { key: "7",  caseId: "CASE-012", paymentRequestId: "PR-007", paymentGroupId: "PG-005", invoiceNo: "INV-2025-0012", supplier: "Accenture Pte Ltd",      region: "SG", groundTruth: "Pass", patterns: ["date-out-of-range"],                       amount: 52300, currency: "SGD", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-02-12" },
+    { key: "8",  caseId: "CASE-014", paymentRequestId: "PR-008", paymentGroupId: "PG-006", invoiceNo: "INV-2025-0014", supplier: "Google Asia Pacific",    region: "SG", groundTruth: "Pass", patterns: ["gst-calculation-error", "header-check"],   amount: 78900, currency: "SGD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-15" },
+    { key: "9",  caseId: "CASE-016", paymentRequestId: "PR-009", paymentGroupId: "PG-007", invoiceNo: "INV-2025-0016", supplier: "Tencent Cloud Intl",     region: "TW", groundTruth: "Fail", patterns: ["amount-mismatch", "duplicate-invoice"],    amount: 31200, currency: "TWD", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-02-18" },
+    { key: "10", caseId: "CASE-018", paymentRequestId: "PR-010", paymentGroupId: "PG-008", invoiceNo: "INV-2025-0018", supplier: "Deloitte Advisory SEA",  region: "VN", groundTruth: "Pass", patterns: ["supplier-name-mismatch"],                  amount: 15400, currency: "VND", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-20" },
+    { key: "11", caseId: "CASE-020", paymentRequestId: "PR-011", paymentGroupId: "PG-009", invoiceNo: "INV-2025-0020", supplier: "Shopee Philippines",     region: "PH", groundTruth: "Pass", patterns: ["date-out-of-range", "header-check"],       amount: 28400, currency: "PHP", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-02-22" },
+    { key: "12", caseId: "CASE-022", paymentRequestId: "PR-012", paymentGroupId: "PG-010", invoiceNo: "INV-2025-0022", supplier: "Microsoft Thailand",     region: "TH", groundTruth: "Fail", patterns: ["gst-calculation-error"],                   amount: 11200, currency: "THB", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-25" },
   ],
   MATCH: [
-    { key: "1", caseId: "CASE-003", invoiceNo: "INV-2025-0003", supplier: "Google Asia Pacific",   region: "SG", groundTruth: "Fail", patterns: ["three-way-match-fail"],                         addedBy: "ai_ops_01", addedDate: "2025-01-12" },
-    { key: "2", caseId: "CASE-005", invoiceNo: "INV-2025-0005", supplier: "Deloitte Advisory SEA", region: "VN", groundTruth: "Pass", patterns: ["line-item-qty-mismatch"],                       addedBy: "ai_ops_02", addedDate: "2025-01-20" },
-    { key: "3", caseId: "CASE-007", invoiceNo: "INV-2025-0007", supplier: "Tencent Cloud Intl",    region: "TW", groundTruth: "Fail", patterns: ["unit-price-discrepancy"],                       addedBy: "ai_ops_01", addedDate: "2025-02-05" },
-    { key: "4", caseId: "CASE-009", invoiceNo: "INV-2025-0009", supplier: "Shopee Philippines",    region: "PH", groundTruth: "Pass", patterns: ["line-item-qty-mismatch", "three-way-match-fail"], addedBy: "ai_ops_02", addedDate: "2025-02-14" },
-    { key: "5", caseId: "CASE-011", invoiceNo: "INV-2025-0011", supplier: "AWS Singapore Pte Ltd", region: "SG", groundTruth: "Pass", patterns: ["unit-price-discrepancy"],                       addedBy: "ai_ops_01", addedDate: "2025-02-18" },
-    { key: "6", caseId: "CASE-013", invoiceNo: "INV-2025-0013", supplier: "Alibaba Cloud HK",      region: "TW", groundTruth: "Fail", patterns: ["three-way-match-fail"],                         addedBy: "ai_ops_02", addedDate: "2025-02-20" },
+    { key: "1", caseId: "CASE-003", paymentRequestId: "PR-013", paymentGroupId: "PG-011", invoiceNo: "INV-2025-0003", supplier: "Google Asia Pacific",   region: "SG", groundTruth: "Matched", patterns: ["three-way-match-fail"],                         amount: 45600, currency: "SGD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-01-12" },
+    { key: "2", caseId: "CASE-005", paymentRequestId: "PR-014", paymentGroupId: "PG-012", invoiceNo: "INV-2025-0005", supplier: "Deloitte Advisory SEA", region: "VN", groundTruth: "Matched", patterns: ["line-item-qty-mismatch"],                       amount: 72300, currency: "VND", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-01-20" },
+    { key: "3", caseId: "CASE-007", paymentRequestId: "PR-015", paymentGroupId: "PG-013", invoiceNo: "INV-2025-0007", supplier: "Tencent Cloud Intl",    region: "TW", groundTruth: "Matched", patterns: ["unit-price-discrepancy"],                       amount: 89200, currency: "TWD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-05" },
+    { key: "4", caseId: "CASE-009", paymentRequestId: "PR-016", paymentGroupId: "PG-014", invoiceNo: "INV-2025-0009", supplier: "Shopee Philippines",    region: "PH", groundTruth: "Matched", patterns: ["line-item-qty-mismatch", "three-way-match-fail"], amount: 56700, currency: "PHP", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-02-14" },
+    { key: "5", caseId: "CASE-011", paymentRequestId: "PR-017", paymentGroupId: "PG-015", invoiceNo: "INV-2025-0011", supplier: "AWS Singapore Pte Ltd", region: "SG", groundTruth: "Matched", patterns: ["unit-price-discrepancy"],                       amount: 34500, currency: "SGD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-18" },
+    { key: "6", caseId: "CASE-013", paymentRequestId: "PR-018", paymentGroupId: "PG-016", invoiceNo: "INV-2025-0013", supplier: "Alibaba Cloud HK",      region: "TW", groundTruth: "Matched", patterns: ["three-way-match-fail"],                         amount: 64800, currency: "TWD", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-02-20" },
   ],
   AP_VOUCHER: [
-    { key: "1", caseId: "CASE-015", invoiceNo: "INV-2025-0015", supplier: "Mercado Pago Brasil", region: "BR", groundTruth: "Fail", patterns: ["gl-account-wrong"],                        addedBy: "ai_ops_01", addedDate: "2025-02-10" },
-    { key: "2", caseId: "CASE-017", invoiceNo: "INV-2025-0017", supplier: "Shopee Indonesia",    region: "ID", groundTruth: "Pass", patterns: ["cost-center-mismatch"],                    addedBy: "ai_ops_02", addedDate: "2025-02-15" },
-    { key: "3", caseId: "CASE-019", invoiceNo: "INV-2025-0019", supplier: "Accenture Pte Ltd",   region: "SG", groundTruth: "Fail", patterns: ["gl-account-wrong", "cost-center-mismatch"], addedBy: "ai_ops_01", addedDate: "2025-02-20" },
+    { key: "1", caseId: "CASE-015", paymentRequestId: "PR-019", paymentGroupId: "PG-017", invoiceNo: "INV-2025-0015", supplier: "Mercado Pago Brasil", region: "BR", groundTruth: "Submit to EBS", patterns: ["gl-account-wrong"],                        amount: 38900, currency: "BRL", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-10" },
+    { key: "2", caseId: "CASE-017", paymentRequestId: "PR-020", paymentGroupId: "PG-018", invoiceNo: "INV-2025-0017", supplier: "Shopee Indonesia",    region: "ID", groundTruth: "Submit to EBS", patterns: ["cost-center-mismatch"],                    amount: 21400, currency: "IDR", addedBy: { name: "Li Chen", email: "lichen@shopee.com" }, addedDate: "2025-02-15" },
+    { key: "3", caseId: "CASE-019", paymentRequestId: "PR-021", paymentGroupId: "PG-019", invoiceNo: "INV-2025-0019", supplier: "Accenture Pte Ltd",   region: "SG", groundTruth: "Submit to EBS", patterns: ["gl-account-wrong", "cost-center-mismatch"], amount: 93700, currency: "SGD", addedBy: { name: "Zhang Wei", email: "zhangwei@shopee.com" }, addedDate: "2025-02-20" },
   ],
 }
 

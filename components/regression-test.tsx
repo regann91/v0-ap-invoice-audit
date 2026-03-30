@@ -844,14 +844,12 @@ export function RegressionTest({
   goldenCases,
   onPublish,
   onPassedRun,
-  onViewReport,
   }: {
   preselectedAgentId?: string
   agents?: Agent[]
   goldenCases?: GoldenCasesState
   onPublish?: (agentId: string) => void
   onPassedRun?: (agentId: string) => void
-  onViewReport?: (runId: string) => void
   }) {
   const { region } = useRegion()
 
@@ -1223,16 +1221,135 @@ export function RegressionTest({
           </div>
 
           {activeSuiteData && (
-            <>
-              <div style={{ marginTop: 16 }}>
-                <MetricCards suite={activeSuiteData} />
+            <div style={{ display: "flex", gap: 0, height: detailDrawerOpen ? "600px" : "auto" }}>
+              {/* Left: Case Results Table (compressed when drawer opens) */}
+              <div style={{ flex: detailDrawerOpen ? "0 0 calc(100% - 420px)" : "1 1 100%", minWidth: 0, transition: "flex 0.3s ease" }}>
+                <div style={{ marginTop: 16 }}>
+                  <MetricCards suite={activeSuiteData} />
+                </div>
+                <Divider style={{ margin: "12px 0" }} />
+                <Title level={5} style={{ marginBottom: 12, fontSize: 13, color: "#595959" }}>
+                  Case-level Results — {activeSuiteData.label}
+                </Title>
+                <CaseResultTable cases={activeSuiteData.cases} onViewDetail={(c) => { setSelectedCaseDetail(c); setDetailDrawerOpen(true) }} />
               </div>
-              <Divider style={{ margin: "12px 0" }} />
-              <Title level={5} style={{ marginBottom: 12, fontSize: 13, color: "#595959" }}>
-                Case-level Results — {activeSuiteData.label}
-              </Title>
-              <CaseResultTable cases={activeSuiteData.cases} onViewDetail={(c) => { setSelectedCaseDetail(c); setDetailDrawerOpen(true) }} />
-            </>
+
+              {/* Right: AI Prediction Detail Panel (slides in from right) */}
+              {detailDrawerOpen && selectedCaseDetail && (
+                <div style={{
+                  flex: "0 0 420px",
+                  background: "white",
+                  borderLeft: "1px solid #f0f0f0",
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.08)"
+                }}>
+                  {/* Detail Panel Header */}
+                  <div style={{ padding: "12px 20px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fafafa" }}>
+                    <Text strong style={{ fontSize: 13 }}>AI Prediction Detail</Text>
+                    <Button type="text" size="small" icon={<span>✕</span>} onClick={() => { setDetailDrawerOpen(false); setSelectedCaseDetail(null) }} />
+                  </div>
+
+                  {/* Detail Content */}
+                  {(() => {
+                    const gtCfg = RESULT_TAG_CFG[selectedCaseDetail.groundTruth as keyof typeof RESULT_TAG_CFG]
+                    const finalGtCfg = gtCfg ?? { color: "#8c8c8c", bg: "#f5f5f5", border: "#d9d9d9" }
+                    const predCfg = RESULT_TAG_CFG[selectedCaseDetail.agentPrediction as keyof typeof RESULT_TAG_CFG]
+                    const finalPredCfg = predCfg ?? { color: "#8c8c8c", bg: "#f5f5f5", border: "#d9d9d9" }
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+                        {/* Top Summary Card */}
+                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                            <div style={{ 
+                              width: 28, height: 28, borderRadius: "50%", 
+                              background: finalPredCfg.bg, 
+                              border: `1px solid ${finalPredCfg.border}`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              color: finalPredCfg.color, fontSize: 14, fontWeight: 600
+                            }}>
+                              {selectedCaseDetail.agentPrediction === "Pass" || selectedCaseDetail.agentPrediction === "Matched" ? "✓" : selectedCaseDetail.agentPrediction === "Fail" ? "✗" : "—"}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <Tag style={{ color: finalPredCfg.color, background: finalPredCfg.bg, borderColor: finalPredCfg.border, fontWeight: 600, fontSize: 12, marginBottom: 4 }}>
+                                {selectedCaseDetail.agentPrediction}
+                              </Tag>
+                              <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 4 }}>
+                                AI recommends you {"approve" in selectedCaseDetail.agentPrediction.toLowerCase() || selectedCaseDetail.agentPrediction === "Matched" ? "approve" : "reject"} this. Invoice & PO will move to next step
+                              </Text>
+                            </div>
+                          </div>
+                          <Progress percent={Math.round(selectedCaseDetail.confidence)} size="small" status={selectedCaseDetail.confidence >= 80 ? "success" : "normal"} />
+                        </div>
+
+                        {/* Agent Name and Confidence */}
+                        <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#1890ff", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 600 }}>
+                              {selectedCaseDetail.agentName.charAt(0)}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <Text strong style={{ fontSize: 12, display: "block" }}>{selectedCaseDetail.agentName}</Text>
+                            </div>
+                            <Tag color={selectedCaseDetail.correct ? "green" : "red"} style={{ fontSize: 11, fontWeight: 500 }}>
+                              {selectedCaseDetail.correct ? "Correct" : "Incorrect"}
+                            </Tag>
+                          </div>
+                          <Text type="secondary" style={{ fontSize: 11, display: "block" }}>Confidence: {Math.round(selectedCaseDetail.confidence)}%</Text>
+                        </div>
+
+                        {/* Check Items List */}
+                        <div style={{ padding: "16px 20px", flex: 1, overflowY: "auto" }}>
+                          <Text strong style={{ fontSize: 12, display: "block", marginBottom: 12 }}>Confidence</Text>
+                          <div style={{ fontSize: 12 }}>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "flex-start" }}>
+                              <Text style={{ fontSize: 13, color: "#52c41a", minWidth: 16 }}>✓</Text>
+                              <div>
+                                <Text style={{ display: "block", fontWeight: 500 }}>WIT file uploaded</Text>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "flex-start" }}>
+                              <Text style={{ fontSize: 13, color: "#52c41a", minWidth: 16 }}>✓</Text>
+                              <div>
+                                <Text style={{ display: "block", fontWeight: 500 }}>Tax invoice uploaded</Text>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "flex-start" }}>
+                              <Text style={{ fontSize: 13, color: "#52c41a", minWidth: 16 }}>✓</Text>
+                              <div>
+                                <Text style={{ display: "block", fontWeight: 500 }}>Invoice Amount Verified</Text>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "flex-start" }}>
+                              <Text style={{ fontSize: 13, color: "#cf1322", minWidth: 16 }}>✗</Text>
+                              <div>
+                                <Text style={{ display: "block", fontWeight: 500 }}>Vendor Registered</Text>
+                                <Text type="secondary" style={{ fontSize: 11, color: "#cf1322" }}>Vendor not found in system</Text>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "flex-start" }}>
+                              <Text style={{ fontSize: 13, color: "#cf1322", minWidth: 16 }}>✗</Text>
+                              <div>
+                                <Text style={{ display: "block", fontWeight: 500 }}>Tax Code Match</Text>
+                                <Text type="secondary" style={{ fontSize: 11, color: "#cf1322" }}>Expected: TX-001, Found: TX-002</Text>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Action - Accept Button Only */}
+                        <div style={{ padding: "16px 20px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
+                          <Button type="primary" block style={{ fontWeight: 500 }}>
+                            Accept
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Simulate Failure toggle (demo only) */}

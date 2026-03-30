@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import {
-  Select, Button, Table, Tag, Typography, Space, Progress,
+  Select, Cascader, Button, Table, Tag, Typography, Space, Progress,
   Statistic, Card, Divider, Empty, Switch, Tooltip,
   type EmptyProps,
 } from "antd"
@@ -586,11 +586,16 @@ export function RegressionTest({
 
   const allAgents = agents ?? agentListData
   const sharedGoldenCases = goldenCases ?? INITIAL_GOLDEN_CASES
-  const testingAgents = allAgents.filter((a) => a.status === "TESTING")
 
-  const [selectedId, setSelectedId] = useState<string>(
-    preselectedAgentId ?? testingAgents[0]?.id ?? "",
+  // Agents that have at least one TESTING version
+  const agentsWithTestingVersions = allAgents.filter(
+    (a) => (a.testingVersions ?? []).length > 0
   )
+
+  const [cascaderValue, setCascaderValue] = useState<[string, string] | []>([])
+  const selectedId = cascaderValue.length === 2 ? cascaderValue[0] : ""
+  const selectedVersion = cascaderValue.length === 2 ? cascaderValue[1] : ""
+
   const [runStatus, setRunStatus] = useState<RunStatus>("idle")
   const [progress, setProgress] = useState(0)
   const [suites, setSuites] = useState<SuiteResult[]>([])
@@ -600,7 +605,11 @@ export function RegressionTest({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    if (preselectedAgentId) setSelectedId(preselectedAgentId)
+    if (preselectedAgentId) {
+      const agent = agentsWithTestingVersions.find(a => a.id === preselectedAgentId)
+      const firstVersion = agent?.testingVersions?.[0]
+      if (agent && firstVersion) setCascaderValue([preselectedAgentId, firstVersion])
+    }
   }, [preselectedAgentId])
 
   const selectedAgentStep = (allAgents.find((a) => a.id === selectedId)?.step ?? "INVOICE_REVIEW") as AgentStep
@@ -652,14 +661,18 @@ export function RegressionTest({
   const allPass = suites.length > 0 && suites.every((s) => s.goldenPassRate >= 85)
   const canPublish = runStatus === "done" && allPass
 
-  const agentOptions = testingAgents.map((a) => ({
+  const cascaderOptions = agentsWithTestingVersions.map((a) => ({
     value: a.id,
-    label: (
-      <span>
-        <Text strong style={{ fontSize: 13 }}>{a.agentName}</Text>
-        <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>{a.currentVersion}</Text>
-      </span>
-    ),
+    label: a.agentName,
+    children: (a.testingVersions ?? []).map((v) => ({
+      value: v,
+      label: (
+        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Text code style={{ fontSize: 12 }}>{v}</Text>
+          <Text type="secondary" style={{ fontSize: 11 }}>{a.lastUpdated}</Text>
+        </span>
+      ),
+    })),
   }))
 
   return (
@@ -689,15 +702,17 @@ export function RegressionTest({
         <div className="flex items-center gap-4">
           <div>
             <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
-              Select Agent (TESTING status)
+              Select Agent
             </Text>
-            <Select
-              value={selectedId || undefined}
-              onChange={setSelectedId}
-              style={{ width: 320 }}
-              placeholder="Select an agent to test"
-              options={agentOptions}
+            <Cascader
+              value={cascaderValue.length === 2 ? cascaderValue : undefined}
+              onChange={(val) => setCascaderValue((val as [string, string]) ?? [])}
+              options={cascaderOptions}
+              style={{ width: 360 }}
+              placeholder="Select agent and version"
               disabled={runStatus === "running"}
+              displayRender={(labels) => labels.join("  /  ")}
+              expandTrigger="hover"
             />
           </div>
 

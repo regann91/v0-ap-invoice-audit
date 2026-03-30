@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react"
 import { type GoldenCasesState } from "@/lib/mock-data"
 import { useRegion } from "@/lib/region-context"
 import {
-  Table, Button, Tag, Typography, Input, Select, Modal, Alert,
+  Table, Button, Tag, Typography, Input, InputNumber, Select, Modal, Alert,
   Progress, Tooltip, Empty, Space,
 } from "antd"
 import {
@@ -475,13 +475,15 @@ export function GoldenCaseManagement({
     setSearch("")
     setPatternFilter([])
     setGtFilter("All")
-    setAmountSort("none")
+    setAmountMin(null)
+    setAmountMax(null)
   }
   const [searchField, setSearchField] = useState<"caseId" | "invoiceNo">("caseId")
   const [search, setSearch] = useState("")
   const [patternFilter, setPatternFilter] = useState<string[]>([])
   const [gtFilter, setGtFilter] = useState<GroundTruth | "All">("All")
-  const [amountSort, setAmountSort] = useState<"none" | "desc" | "asc">("none")
+  const [amountMin, setAmountMin] = useState<number | null>(null)
+  const [amountMax, setAmountMax] = useState<number | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<GoldenCase | null>(null)
 
@@ -513,17 +515,16 @@ export function GoldenCaseManagement({
   const capColor = capacityColor(cfg.total, cfg.limit)
 
   const filtered = useMemo(() => {
-    let result = allCases.filter((c) => {
+    return allCases.filter((c) => {
       const q = search.toLowerCase()
       const matchSearch = !q || c[searchField].toLowerCase().includes(q)
       const matchGt = activeStep !== "INVOICE_REVIEW" || gtFilter === "All" || c.groundTruth === gtFilter
       const matchPattern = patternFilter.length === 0 || patternFilter.every((p) => c.patterns.includes(p))
-      return matchSearch && matchGt && matchPattern
+      const matchAmountMin = amountMin === null || c.amount >= amountMin
+      const matchAmountMax = amountMax === null || c.amount <= amountMax
+      return matchSearch && matchGt && matchPattern && matchAmountMin && matchAmountMax
     })
-    if (amountSort === "desc") result = [...result].sort((a, b) => b.amount - a.amount)
-    if (amountSort === "asc")  result = [...result].sort((a, b) => a.amount - b.amount)
-    return result
-  }, [allCases, search, searchField, gtFilter, patternFilter, amountSort, activeStep])
+  }, [allCases, search, searchField, gtFilter, patternFilter, amountMin, amountMax, activeStep])
 
   const columns: ColumnsType<GoldenCase> = [
     {
@@ -665,17 +666,33 @@ onClick={() => handleStepChange(step)}
           allowClear
         />
 
-        {/* Amount sort */}
-        <Select
-          value={amountSort}
-          onChange={(v) => setAmountSort(v as "none" | "desc" | "asc")}
-          style={{ width: 160 }}
-          options={[
-            { value: "none", label: "Amount" },
-            { value: "desc", label: "Amount: High to Low" },
-            { value: "asc",  label: "Amount: Low to High" },
-          ]}
-        />
+        {/* Amount min/max filter */}
+        <Space size={4} style={{ background: "#fafafa", border: "1px solid #d9d9d9", borderRadius: 6, padding: "0 8px", height: 32, display: "flex", alignItems: "center" }}>
+          <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>Amount</Text>
+          <InputNumber
+            placeholder="Min"
+            value={amountMin}
+            onChange={(v) => setAmountMin(v)}
+            min={0}
+            style={{ width: 90 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+          <Text type="secondary" style={{ fontSize: 12 }}>–</Text>
+          <InputNumber
+            placeholder="Max"
+            value={amountMax}
+            onChange={(v) => setAmountMax(v)}
+            min={0}
+            style={{ width: 90 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+        </Space>
 
         {/* Ground Truth filter — Invoice Review only */}
         {activeStep === "INVOICE_REVIEW" && (

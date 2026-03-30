@@ -261,31 +261,33 @@ interface RegressionRunRecord {
   runAt: string
   passRate: number
   status: "Passed" | "Failed"
+  agentId: string
+  version: string
 }
 
 const REGRESSION_HISTORY: Record<string, RegressionRunRecord[]> = {
   // keyed by "agentId::version"
   "AGT-001::v1.3.0": [
-    { runId: "RUN-2043", runAt: "2025-03-18 14:22", passRate: 92, status: "Passed" },
-    { runId: "RUN-2031", runAt: "2025-03-12 10:05", passRate: 88, status: "Passed" },
-    { runId: "RUN-2020", runAt: "2025-03-05 09:40", passRate: 76, status: "Failed" },
+    { runId: "RUN-2043", runAt: "2025-03-18 14:22", passRate: 92, status: "Passed", agentId: "AGT-001", version: "v1.3.0" },
+    { runId: "RUN-2031", runAt: "2025-03-12 10:05", passRate: 88, status: "Passed", agentId: "AGT-001", version: "v1.3.0" },
+    { runId: "RUN-2020", runAt: "2025-03-05 09:40", passRate: 76, status: "Failed",  agentId: "AGT-001", version: "v1.3.0" },
   ],
   "AGT-001::v1.4.0-beta": [
-    { runId: "RUN-2043", runAt: "2025-03-20 11:30", passRate: 89, status: "Passed" },
-    { runId: "RUN-2038", runAt: "2025-03-19 16:15", passRate: 72, status: "Failed" },
+    { runId: "RUN-2043", runAt: "2025-03-20 11:30", passRate: 89, status: "Passed", agentId: "AGT-001", version: "v1.4.0-beta" },
+    { runId: "RUN-2038", runAt: "2025-03-19 16:15", passRate: 72, status: "Failed",  agentId: "AGT-001", version: "v1.4.0-beta" },
   ],
   "AGT-001::v1.5.0-beta": [
-    { runId: "RUN-2042", runAt: "2025-03-21 09:10", passRate: 65, status: "Failed" },
+    { runId: "RUN-2042", runAt: "2025-03-21 09:10", passRate: 65, status: "Failed",  agentId: "AGT-001", version: "v1.5.0-beta" },
   ],
   "AGT-002::v1.2.0": [
-    { runId: "RUN-2035", runAt: "2025-03-15 13:00", passRate: 91, status: "Passed" },
+    { runId: "RUN-2035", runAt: "2025-03-15 13:00", passRate: 91, status: "Passed", agentId: "AGT-002", version: "v1.2.0" },
   ],
   "AGT-002::v1.3.0-beta": [
-    { runId: "RUN-2044", runAt: "2025-03-22 10:00", passRate: 84, status: "Failed" },
-    { runId: "RUN-2040", runAt: "2025-03-20 14:30", passRate: 90, status: "Passed" },
+    { runId: "RUN-2044", runAt: "2025-03-22 10:00", passRate: 84, status: "Failed",  agentId: "AGT-002", version: "v1.3.0-beta" },
+    { runId: "RUN-2040", runAt: "2025-03-20 14:30", passRate: 90, status: "Passed", agentId: "AGT-002", version: "v1.3.0-beta" },
   ],
   "AGT-002::v1.4.0-beta": [
-    { runId: "RUN-2045", runAt: "2025-03-23 09:45", passRate: 78, status: "Failed" },
+    { runId: "RUN-2045", runAt: "2025-03-23 09:45", passRate: 78, status: "Failed",  agentId: "AGT-002", version: "v1.4.0-beta" },
   ],
 }
 
@@ -844,14 +846,12 @@ export function RegressionTest({
   goldenCases,
   onPublish,
   onPassedRun,
-  onViewRunDetail,
   }: {
   preselectedAgentId?: string
   agents?: Agent[]
   goldenCases?: GoldenCasesState
   onPublish?: (agentId: string) => void
   onPassedRun?: (agentId: string) => void
-  onViewRunDetail?: (runId: string) => void
   }) {
   const { region } = useRegion()
 
@@ -884,6 +884,7 @@ export function RegressionTest({
   const [published, setPublished] = useState(false)
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
   const [selectedHistoryRunId, setSelectedHistoryRunId] = useState<string | null>(null)
+  const [viewingHistoryRun, setViewingHistoryRun] = useState<RegressionRunRecord | null>(null)
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
   const [selectedCaseDetail, setSelectedCaseDetail] = useState<CaseResult | null>(null)
   const [configMismatchModalOpen, setConfigMismatchModalOpen] = useState(false)
@@ -1179,9 +1180,21 @@ export function RegressionTest({
                         </Tag>
                       </td>
                       <td style={{ padding: "8px 0" }}>
-                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => { 
+                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {
                           e.stopPropagation()
-                          onViewRunDetail?.(r.runId)
+                          const histAgentStep = (allAgents.find(a => a.id === r.agentId)?.step ?? "INVOICE_REVIEW") as AgentStep
+                          const builtSuites: SuiteResult[] = (["golden", "random"] as SuiteType[]).map((type) => {
+                            const cases = buildSuiteCases(r.agentId, type, r.passRate, sharedGoldenCases, histAgentStep)
+                            const passed = cases.filter(c => c.correct).length
+                            return { type, label: type === "golden" ? "Golden Cases" : "Random Sample", total: cases.length, passed, failed: cases.length - passed, cases }
+                          })
+                          setSuites(builtSuites)
+                          setActiveSuite("golden")
+                          setRunStatus("done")
+                          setViewingHistoryRun(r)
+                          setHistoryPanelOpen(false)
+                          setDetailDrawerOpen(false)
+                          setSelectedCaseDetail(null)
                         }}>View Detail</Typography.Link>
                       </td>
                     </tr>
@@ -1207,6 +1220,26 @@ export function RegressionTest({
       {/* Results */}
       {runStatus === "done" && suites.length > 0 && (
         <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px" }}>
+
+          {/* History run banner */}
+          {viewingHistoryRun && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 4, padding: "8px 14px", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Text style={{ fontSize: 12, color: "#874d00" }}>
+                  正在查看历史记录：
+                </Text>
+                <Text code style={{ fontSize: 12 }}>{viewingHistoryRun.runId}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{viewingHistoryRun.runAt}</Text>
+                <Tag style={{ fontSize: 11, margin: 0, color: viewingHistoryRun.status === "Passed" ? "#389e0d" : "#cf1322", background: viewingHistoryRun.status === "Passed" ? "#f6ffed" : "#fff1f0", borderColor: viewingHistoryRun.status === "Passed" ? "#b7eb8f" : "#ffa39e" }}>
+                  {viewingHistoryRun.status}
+                </Tag>
+                <Text style={{ fontSize: 12, color: viewingHistoryRun.passRate >= 85 ? "#52c41a" : "#cf1322", fontWeight: 500 }}>{viewingHistoryRun.passRate}%</Text>
+              </div>
+              <Button size="small" onClick={() => { setViewingHistoryRun(null); setRunStatus("idle"); setSuites([]) }}>
+                返回
+              </Button>
+            </div>
+          )}
 
           {/* Verdict Banner */}
           <VerdictBanner suites={suites} simulateFailure={simulateFailure} />

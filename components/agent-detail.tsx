@@ -312,9 +312,6 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
               </pre>
             </div>
           </CollapsibleSection>
-
-          {isOps && <Button type="primary" style={{ background: "#1890ff", marginTop: 16 }} onClick={() => msgApi.success("New version saved successfully")}>Save as New Version</Button>}
-          <Button onClick={onBack} style={{ marginTop: 16, marginLeft: 8 }}>Cancel</Button>
         </div>
 
         {/* Right column: Version Management */}

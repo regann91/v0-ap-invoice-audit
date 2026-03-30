@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import {
   Table, Input, Select, Space, Tag, Typography, Button,
   Tooltip, Drawer, Descriptions, Badge, Card, Switch, Modal,
@@ -307,7 +307,7 @@ export function CaseManagement({
   const [selectedEntity, setSelectedEntity] = useState<EntityCode>(globalEntityOptions[0] ?? "")
 
   // Reset entity when region changes
-  React.useEffect(() => {
+  useEffect(() => {
     const newOptions = getEntitiesForRegion(region)
     setSelectedEntity(newOptions[0] ?? "")
   }, [region])
@@ -338,7 +338,7 @@ export function CaseManagement({
   const regionPool = useMemo(() => activePool.filter((r) => r.entity === region), [activePool, region])
 
   const regionOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.region)), [regionPool])
-  const entityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
+  const filterEntityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
 
   const filtered = useMemo(() => {
     return regionPool.filter((r) => {
@@ -544,7 +544,7 @@ export function CaseManagement({
           placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Entity</Space>}
           value={entityFilter}
           onChange={(v) => setEntityFilter(v)}
-          options={entityOptions}
+          options={filterEntityOptions}
           style={{ width: 110 }}
           allowClear
         />

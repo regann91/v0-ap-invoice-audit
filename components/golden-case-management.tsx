@@ -5,7 +5,7 @@ import { type GoldenCasesState } from "@/lib/mock-data"
 import { useRegion } from "@/lib/region-context"
 import {
   Table, Button, Tag, Typography, Input, Select, Modal, Alert,
-  Progress, Tooltip, Empty,
+  Progress, Tooltip, Empty, Space,
 } from "antd"
 import {
   PlusOutlined, SearchOutlined, WarningOutlined,

@@ -1300,10 +1300,10 @@ export function RegressionTest({
                         <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#1890ff", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 600 }}>
-                              {selectedCaseDetail.agentName.charAt(0)}
+                              {selectedCaseDetail?.agentName?.[0] || "?"}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <Text strong style={{ fontSize: 12, display: "block" }}>{selectedCaseDetail.agentName}</Text>
+                              <Text strong style={{ fontSize: 12, display: "block" }}>{selectedCaseDetail?.agentName || "Unknown Agent"}</Text>
                             </div>
                             <Tag color={selectedCaseDetail.correct ? "green" : "red"} style={{ fontSize: 11, fontWeight: 500 }}>
                               {selectedCaseDetail.correct ? "Correct" : "Incorrect"}
@@ -1499,10 +1499,10 @@ export function RegressionTest({
               <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#1890ff", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 600 }}>
-                    {selectedCaseDetail.agentName.charAt(0)}
+                    {selectedCaseDetail?.agentName?.[0] || "?"}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <Text strong style={{ fontSize: 12, display: "block" }}>{selectedCaseDetail.agentName}</Text>
+                    <Text strong style={{ fontSize: 12, display: "block" }}>{selectedCaseDetail?.agentName || "Unknown Agent"}</Text>
                   </div>
                   <Tag color={selectedCaseDetail.correct ? "green" : "red"} style={{ fontSize: 11, fontWeight: 500 }}>
                     {selectedCaseDetail.correct ? "Correct" : "Incorrect"}

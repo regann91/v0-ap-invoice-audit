@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Table, Input, Select, Button, Typography, Space, Tag, Tooltip, Modal, message } from "antd"
+import { Table, Input, InputNumber, Select, Button, Typography, Space, Tag, Tooltip, Modal, message } from "antd"
 import type { ColumnsType } from "antd/es/table"
-import { SearchOutlined, FilterOutlined } from "@ant-design/icons"
+import { SearchOutlined, FilterOutlined, RobotOutlined } from "@ant-design/icons"
 import { type ArchivedCaseMock } from "@/lib/mock-data"
 import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
 import React from "react"
@@ -41,10 +41,14 @@ export function ArchiveCase({ archivedCases, onBack, onRestoreToList }: ArchiveC
     setSelectedEntity(newOptions[0] ?? "")
   }, [region])
 
+  // Filter state
   const [search, setSearch] = useState("")
-  const [regionFilter, setRegionFilter] = useState<string | null>(null)
-  const [entityFilter, setEntityFilter] = useState<string | null>(null)
-  const [goldenFilter, setGoldenFilter] = useState<string | null>(null)
+  const [searchField, setSearchField] = useState<"caseId" | "paymentRequestId" | "paymentGroupId" | "invoiceNo" | "supplierName" | "amount">("caseId")
+  const [archiveReasonFilter, setArchiveReasonFilter] = useState<string[]>([])
+  const [archiveByMode, setArchiveByMode] = useState<"system" | "person" | null>(null)
+  const [archiveByPerson, setArchiveByPerson] = useState("")
+  const [amountMin, setAmountMin] = useState<number | null>(null)
+  const [amountMax, setAmountMax] = useState<number | null>(null)
 
   // Restore modal state
   const [restoreTarget, setRestoreTarget] = useState<ArchivedCaseMock | null>(null)
@@ -56,29 +60,73 @@ export function ArchiveCase({ archivedCases, onBack, onRestoreToList }: ArchiveC
   const regionOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
   const filterEntityOptions = useMemo(() => uniqueOptions(regionPool.map((r) => r.entity)), [regionPool])
 
+  // Extract unique archive reasons (both system and manual)
+  const archiveReasonOptions = useMemo(() => {
+    const systemReasons = Array.from(new Set(regionPool.filter(c => c.archiveReason !== "Manual Move").map(c => c.archiveReason)))
+    return [
+      ...systemReasons.map(r => ({ label: r, value: r })),
+      { label: "Manual Reasons", value: "Manual Move" }
+    ]
+  }, [regionPool])
+
+  // Extract unique archive-by persons (non-System)
+  const archiveByPersonOptions = useMemo(() => {
+    const persons = Array.from(new Set(regionPool.filter(c => c.archivedBy && c.archivedBy !== "System").map(c => c.archivedBy!))).sort()
+    return persons.map(p => ({ label: p, value: p }))
+  }, [regionPool])
+
   const filtered = useMemo(() => {
     return regionPool.filter((r) => {
       const q = search.toLowerCase()
-      const matchSearch =
-        !q ||
-        r.caseId.toLowerCase().includes(q) ||
-        r.invoiceNo.toLowerCase().includes(q) ||
-        r.supplierName.toLowerCase().includes(q)
-      const matchRegion = !regionFilter || r.entity === regionFilter
-      const matchEntity = !entityFilter || r.entity === entityFilter
-      const matchGolden = !goldenFilter || r.isGolden === goldenFilter
-      return matchSearch && matchRegion && matchEntity && matchGolden
+      
+      // Match search field
+      let matchSearch = !q
+      if (q) {
+        if (searchField === "caseId") {
+          matchSearch = r.caseId.toLowerCase().includes(q)
+        } else if (searchField === "paymentRequestId") {
+          matchSearch = r.paymentRequestId.toLowerCase().includes(q)
+        } else if (searchField === "paymentGroupId") {
+          matchSearch = r.paymentGroupId.toLowerCase().includes(q)
+        } else if (searchField === "invoiceNo") {
+          matchSearch = r.invoiceNo.toLowerCase().includes(q)
+        } else if (searchField === "supplierName") {
+          matchSearch = r.supplierName.toLowerCase().includes(q)
+        } else if (searchField === "amount") {
+          matchSearch = String(r.amount).includes(q)
+        }
+      }
+      
+      // Match archive reason
+      const matchArchiveReason = archiveReasonFilter.length === 0 || archiveReasonFilter.includes(r.archiveReason)
+      
+      // Match archive by (system or specific person)
+      let matchArchiveBy = true
+      if (archiveByMode === "system") {
+        matchArchiveBy = r.archivedBy === "System"
+      } else if (archiveByMode === "person" && archiveByPerson) {
+        matchArchiveBy = r.archivedBy === archiveByPerson
+      }
+      
+      // Match amount range
+      const matchAmountMin = amountMin === null || r.amount >= amountMin
+      const matchAmountMax = amountMax === null || r.amount <= amountMax
+      
+      return matchSearch && matchArchiveReason && matchArchiveBy && matchAmountMin && matchAmountMax
     })
-  }, [regionPool, search, regionFilter, entityFilter, goldenFilter])
+  }, [regionPool, search, searchField, archiveReasonFilter, archiveByMode, archiveByPerson, amountMin, amountMax])
 
   const clearFilters = () => {
     setSearch("")
-    setRegionFilter(null)
-    setEntityFilter(null)
-    setGoldenFilter(null)
+    setSearchField("caseId")
+    setArchiveReasonFilter([])
+    setArchiveByMode(null)
+    setArchiveByPerson("")
+    setAmountMin(null)
+    setAmountMax(null)
   }
 
-  const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter)
+  const hasFilters = !!(search || archiveReasonFilter.length > 0 || archiveByMode || amountMin !== null || amountMax !== null)
 
   const columns: ColumnsType<ArchivedCaseMock> = [
     {
@@ -232,34 +280,99 @@ export function ArchiveCase({ archivedCases, onBack, onRestoreToList }: ArchiveC
       </div>
 
       {/* Toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <Input
-          prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-          placeholder="Search by Case ID / Invoice / Supplier"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 280 }}
-          allowClear
-        />
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        {/* Search with field selector */}
+        <Input.Group compact style={{ display: "flex", width: "auto" }}>
+          <Select
+            value={searchField}
+            onChange={(v) => setSearchField(v)}
+            style={{ width: 140 }}
+            options={[
+              { label: "Case ID", value: "caseId" },
+              { label: "Payment Request", value: "paymentRequestId" },
+              { label: "Payment Group", value: "paymentGroupId" },
+              { label: "Invoice Number", value: "invoiceNo" },
+              { label: "Supplier Name", value: "supplierName" },
+              { label: "Invoice Amount", value: "amount" },
+            ]}
+          />
+          <Input
+            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="Search keyword"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 220, borderLeft: 0 }}
+            allowClear
+          />
+        </Input.Group>
+
+        {/* Archive Reason filter (multi-select) */}
         <Select
-          placeholder={<Space size={4}><FilterOutlined style={{ fontSize: 12 }} />Entity</Space>}
-          value={entityFilter}
-          onChange={(v) => setEntityFilter(v)}
-          options={filterEntityOptions}
-          style={{ width: 110 }}
+          placeholder="Archive Reason"
+          mode="multiple"
+          value={archiveReasonFilter}
+          onChange={(v) => setArchiveReasonFilter(v)}
+          options={archiveReasonOptions}
+          style={{ width: 160 }}
           allowClear
         />
-        <Select
-          placeholder="Golden"
-          value={goldenFilter}
-          onChange={(v) => setGoldenFilter(v)}
-          options={[
-            { label: "Golden", value: "Golden" },
-            { label: "Non-Golden", value: "Non-Golden" },
-          ]}
-          style={{ width: 110 }}
-          allowClear
-        />
+
+        {/* Archive By filter with dual mode */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <Select
+            placeholder="Archive By"
+            value={archiveByMode}
+            onChange={(v) => {
+              setArchiveByMode(v)
+              if (v !== "person") setArchiveByPerson("")
+            }}
+            options={[
+              { label: <Space size={4}><RobotOutlined />System</Space>, value: "system" },
+              { label: "Specific Person", value: "person" },
+            ]}
+            style={{ width: 140 }}
+            allowClear
+          />
+          {archiveByMode === "person" && (
+            <Select
+              placeholder="Select person"
+              value={archiveByPerson}
+              onChange={(v) => setArchiveByPerson(v)}
+              options={archiveByPersonOptions}
+              style={{ width: 150 }}
+              allowClear
+            />
+          )}
+        </div>
+
+        {/* Amount range filter */}
+        <Space size={4} style={{ background: "#fafafa", border: "1px solid #d9d9d9", borderRadius: 6, padding: "0 8px", height: 32, display: "flex", alignItems: "center" }}>
+          <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>Amount</Text>
+          <InputNumber
+            placeholder="Min"
+            value={amountMin}
+            onChange={(v) => setAmountMin(v)}
+            min={0}
+            style={{ width: 80 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+          <Text type="secondary" style={{ fontSize: 12 }}>–</Text>
+          <InputNumber
+            placeholder="Max"
+            value={amountMax}
+            onChange={(v) => setAmountMax(v)}
+            min={0}
+            style={{ width: 80 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+        </Space>
+
         {hasFilters && (
           <Button size="small" onClick={clearFilters} style={{ fontSize: 12 }}>
             Clear Filters

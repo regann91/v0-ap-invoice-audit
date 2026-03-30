@@ -367,13 +367,9 @@ export function CaseManagement({
       const matchRegion = !regionFilter || r.region === regionFilter
       const matchEntity = !entityFilter || r.entity === entityFilter
       
-      // Step filter only applies when Golden filter is set
-      let matchStep = true
-      if (goldenFilter && stepFilter) {
-        matchStep = r.step === stepFilter
-      }
-      
-      const matchGolden = !goldenFilter || r.isGolden === goldenFilter
+      // Step filter applies independently; Golden only filters when Step is selected
+      const matchStep = !stepFilter || r.step === stepFilter
+      const matchGolden = !goldenFilter || !stepFilter || r.isGolden === goldenFilter
       const matchAmountMin = amountMin === null || r.amount >= amountMin
       const matchAmountMax = amountMax === null || r.amount <= amountMax
       
@@ -605,15 +601,16 @@ export function CaseManagement({
             allowClear
           />
         </Input.Group>
-        {/* Step + Golden filter */}
+        {/* Step + Golden filter: select Step first, then Golden */}
         <Input.Group compact style={{ display: "flex", width: "auto" }}>
           <Select
             value={stepFilter}
-            onChange={(v) => setStepFilter(v)}
-            style={{ width: 130, opacity: goldenFilter ? 1 : 0.5, cursor: goldenFilter ? "pointer" : "not-allowed" }}
-            disabled={!goldenFilter}
+            onChange={(v) => {
+              setStepFilter(v)
+              if (!v) setGoldenFilter(null) // clear Golden when Step is cleared
+            }}
+            style={{ width: 140 }}
             options={[
-              { label: "All Steps", value: null },
               { label: "Invoice Review", value: "INVOICE_REVIEW" },
               { label: "Match", value: "MATCH" },
               { label: "AP Voucher", value: "AP_VOUCHER" },
@@ -623,17 +620,14 @@ export function CaseManagement({
           />
           <Select
             value={goldenFilter}
-            onChange={(v) => {
-              setGoldenFilter(v)
-              if (!v) setStepFilter(null) // Clear step filter when Golden is cleared
-            }}
+            onChange={(v) => setGoldenFilter(v)}
             style={{ width: 130, borderLeft: 0 }}
+            disabled={!stepFilter}
             options={[
-              { label: "All", value: null },
               { label: "Golden", value: "Golden" },
               { label: "Non-Golden", value: "Non-Golden" },
             ]}
-            placeholder="Golden Status"
+            placeholder="Golden"
             allowClear
           />
         </Input.Group>

@@ -548,30 +548,25 @@ export function GoldenCaseManagement({
       render: (v: GroundTruth) => <GtTag value={v} step={activeStep} />,
     },
     {
-      title: "Action", key: "actions", width: 180,
+      title: "Action", key: "actions", width: 140,
       render: (_: unknown, record: GoldenCase) => (
-        <div style={{ display: "flex", gap: 8 }}>
+        <Space size={8}>
           <Button
-            type="default"
+            type="link"
             size="small"
-            style={{ fontSize: 12 }}
-            onClick={() => {
-              const prUrl = `https://shopee.com/payment-request/${record.paymentRequestId}`
-              window.open(prUrl, "_blank")
-            }}
+            onClick={() => window.open(`https://shopee.com/payment-request/${record.paymentRequestId}`, "_blank")}
           >
-            See Detail
+            Detail
           </Button>
           <Button
-            type="default"
+            type="link"
             danger
             size="small"
-            style={{ fontSize: 12 }}
             onClick={() => setRemoveTarget(record)}
           >
             Remove
           </Button>
-        </div>
+        </Space>
       ),
     },
   ]

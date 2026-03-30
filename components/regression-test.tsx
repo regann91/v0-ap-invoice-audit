@@ -881,6 +881,7 @@ export function RegressionTest({
   const [simulateFailure, setSimulateFailure] = useState(false)
   const [published, setPublished] = useState(false)
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
+  const [selectedHistoryRunId, setSelectedHistoryRunId] = useState<string | null>(null)
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
   const [selectedCaseDetail, setSelectedCaseDetail] = useState<CaseResult | null>(null)
   const [configMismatchModalOpen, setConfigMismatchModalOpen] = useState(false)
@@ -1176,7 +1177,19 @@ export function RegressionTest({
                         </Tag>
                       </td>
                       <td style={{ padding: "8px 0" }}>
-                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); onViewReport?.(r.runId) }}>View Detail</Typography.Link>
+                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => { 
+                          e.stopPropagation()
+                          setSelectedHistoryRunId(r.runId)
+                          setRunStatus("completed")
+                          // Build mock suites from history
+                          const mockSuites: SuiteResult[] = [
+                            { type: "golden", label: "Golden Cases", total: 5, passed: Math.round(5 * r.passRate / 100), failed: 5 - Math.round(5 * r.passRate / 100), cases: buildSuiteCases("golden", r.passRate >= 85) },
+                            { type: "random", label: "Random Sample", total: 3, passed: Math.round(3 * r.passRate / 100), failed: 3 - Math.round(3 * r.passRate / 100), cases: buildSuiteCases("random", r.passRate >= 85) },
+                          ]
+                          setSuites(mockSuites)
+                          setHistoryPanelOpen(false)
+                          msgApi.success(`Loaded results for ${r.runId}`)
+                        }}>View Detail</Typography.Link>
                       </td>
                     </tr>
                   ))}

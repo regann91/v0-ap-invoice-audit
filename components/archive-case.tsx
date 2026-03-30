@@ -179,14 +179,6 @@ export function ArchiveCase({ archivedCases, onBack, onRestoreToList }: ArchiveC
       defaultSortOrder: "descend",
     },
     {
-      title: "Last Active",
-      dataIndex: "reviewDate",
-      key: "reviewDate",
-      width: 120,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
-      sorter: (a, b) => a.reviewDate.localeCompare(b.reviewDate),
-    },
-    {
       title: "Archive Date",
       dataIndex: "archivedAt",
       key: "archivedAt",

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react"
 import {
-  Table, Input, Select, Space, Tag, Typography, Button,
+  Table, Input, InputNumber, Select, Space, Tag, Typography, Button,
   Tooltip, Drawer, Descriptions, Badge, Card, Switch, Modal,
   Form, message, Empty, Alert,
 } from "antd"
@@ -316,6 +316,8 @@ export function CaseManagement({
   const [regionFilter, setRegionFilter]   = useState<string | null>(null)
   const [entityFilter, setEntityFilter]   = useState<string | null>(null)
   const [goldenFilter, setGoldenFilter]   = useState<CaseGolden | null>(null)
+  const [amountMin, setAmountMin]         = useState<number | null>(null)
+  const [amountMax, setAmountMax]         = useState<number | null>(null)
   const [archiveRunning, setArchiveRunning] = useState(false)
 
   const [detail, setDetail]               = useState<AuditCase | null>(null)
@@ -351,9 +353,11 @@ export function CaseManagement({
       const matchRegion = !regionFilter || r.region === regionFilter
       const matchEntity = !entityFilter || r.entity === entityFilter
       const matchGolden = !goldenFilter || r.isGolden === goldenFilter
-      return matchSearch && matchRegion && matchEntity && matchGolden
+      const matchAmountMin = amountMin === null || r.amount >= amountMin
+      const matchAmountMax = amountMax === null || r.amount <= amountMax
+      return matchSearch && matchRegion && matchEntity && matchGolden && matchAmountMin && matchAmountMax
     })
-  }, [regionPool, search, regionFilter, entityFilter, goldenFilter])
+  }, [regionPool, search, regionFilter, entityFilter, goldenFilter, amountMin, amountMax])
 
   function getExpanded(caseId: string): CaseExpanded {
     return expandedData[caseId] ?? getDefaultExpanded(caseId)
@@ -387,9 +391,11 @@ export function CaseManagement({
     setRegionFilter(null)
     setEntityFilter(null)
     setGoldenFilter(null)
+    setAmountMin(null)
+    setAmountMax(null)
   }
 
-  const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter)
+  const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter || amountMin !== null || amountMax !== null)
 
   const columns: ColumnsType<TestCase> = [
     {
@@ -468,7 +474,7 @@ export function CaseManagement({
       sorter: (a, b) => a.updateTime.localeCompare(b.updateTime),
     },
     {
-      title: "Detail / Archive",
+      title: "Action",
       key: "action",
       width: 140,
       render: (_: unknown, record: TestCase) => (
@@ -587,6 +593,32 @@ export function CaseManagement({
           style={{ width: 130 }}
           allowClear
         />
+        <Space size={4} style={{ background: "#fafafa", border: "1px solid #d9d9d9", borderRadius: 6, padding: "0 8px", height: 32, display: "flex", alignItems: "center" }}>
+          <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>Amount</Text>
+          <InputNumber
+            placeholder="Min"
+            value={amountMin}
+            onChange={(v) => setAmountMin(v)}
+            min={0}
+            style={{ width: 90 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+          <Text type="secondary" style={{ fontSize: 12 }}>–</Text>
+          <InputNumber
+            placeholder="Max"
+            value={amountMax}
+            onChange={(v) => setAmountMax(v)}
+            min={0}
+            style={{ width: 90 }}
+            size="small"
+            controls={false}
+            formatter={(v) => v ? String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""}
+            parser={(v) => Number(v?.replace(/,/g, "") ?? 0) as unknown as 0}
+          />
+        </Space>
         {hasFilters && (
           <Button type="link" size="small" onClick={clearFilters} style={{ padding: 0 }}>
             Clear all

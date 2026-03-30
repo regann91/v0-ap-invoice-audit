@@ -165,6 +165,176 @@ function compareVersionConfigs(
   return rows
 }
 
+// ── Per-run report mock data ──────────────────────────────────────
+
+export interface RunReportCase {
+  caseId: string
+  invoiceNo: string
+  supplierName: string
+  groundTruth: string
+  agentPrediction: string
+  correct: boolean
+  confidence: string
+  latencyMs: number
+}
+
+export interface RunReport {
+  runId: string
+  agentId: string
+  agentName: string
+  version: string
+  runAt: string
+  passRate: number
+  status: "Passed" | "Failed"
+  totalCases: number
+  passedCases: number
+  failedCases: number
+  cases: RunReportCase[]
+}
+
+export const RUN_REPORTS: Record<string, RunReport> = {
+  "RUN-2043": {
+    runId: "RUN-2043", agentId: "AGT-001", agentName: "Invoice Review Agent",
+    version: "v1.4.0-beta", runAt: "2025-03-20 11:30", passRate: 89, status: "Passed",
+    totalCases: 9, passedCases: 8, failedCases: 1,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0041", supplierName: "Acme Corp",        groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "95%", latencyMs: 312 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0042", supplierName: "Globex Ltd",       groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "91%", latencyMs: 278 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0043", supplierName: "Initech Pte",      groundTruth: "Fail", agentPrediction: "Pass", correct: false, confidence: "61%", latencyMs: 445 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0044", supplierName: "Umbrella Inc",     groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "88%", latencyMs: 290 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0045", supplierName: "Hooli Pte Ltd",    groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "84%", latencyMs: 330 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0046", supplierName: "Pied Piper Sdn",   groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "93%", latencyMs: 261 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0047", supplierName: "Dunder Mifflin",   groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "97%", latencyMs: 244 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0048", supplierName: "Vandelay Ind",     groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "79%", latencyMs: 388 },
+      { caseId: "CASE-009", invoiceNo: "INV-2025-0049", supplierName: "Prestige Direct",  groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "90%", latencyMs: 305 },
+    ],
+  },
+  "RUN-2038": {
+    runId: "RUN-2038", agentId: "AGT-001", agentName: "Invoice Review Agent",
+    version: "v1.4.0-beta", runAt: "2025-03-19 16:15", passRate: 72, status: "Failed",
+    totalCases: 9, passedCases: 6, failedCases: 3,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0041", supplierName: "Acme Corp",        groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "90%", latencyMs: 320 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0042", supplierName: "Globex Ltd",       groundTruth: "Pass", agentPrediction: "Fail", correct: false, confidence: "55%", latencyMs: 410 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0043", supplierName: "Initech Pte",      groundTruth: "Fail", agentPrediction: "Pass", correct: false, confidence: "58%", latencyMs: 460 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0044", supplierName: "Umbrella Inc",     groundTruth: "Pass", agentPrediction: "Fail", correct: false, confidence: "48%", latencyMs: 395 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0045", supplierName: "Hooli Pte Ltd",    groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "82%", latencyMs: 340 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0046", supplierName: "Pied Piper Sdn",   groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "88%", latencyMs: 275 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0047", supplierName: "Dunder Mifflin",   groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "94%", latencyMs: 250 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0048", supplierName: "Vandelay Ind",     groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "76%", latencyMs: 370 },
+      { caseId: "CASE-009", invoiceNo: "INV-2025-0049", supplierName: "Prestige Direct",  groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "85%", latencyMs: 300 },
+    ],
+  },
+  "RUN-2042": {
+    runId: "RUN-2042", agentId: "AGT-001", agentName: "Invoice Review Agent",
+    version: "v1.5.0-beta", runAt: "2025-03-21 09:10", passRate: 65, status: "Failed",
+    totalCases: 9, passedCases: 5, failedCases: 4,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0041", supplierName: "Acme Corp",        groundTruth: "Pass", agentPrediction: "Fail", correct: false, confidence: "49%", latencyMs: 510 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0042", supplierName: "Globex Ltd",       groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "87%", latencyMs: 290 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0043", supplierName: "Initech Pte",      groundTruth: "Fail", agentPrediction: "Pass", correct: false, confidence: "52%", latencyMs: 440 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0044", supplierName: "Umbrella Inc",     groundTruth: "Pass", agentPrediction: "Fail", correct: false, confidence: "45%", latencyMs: 480 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0045", supplierName: "Hooli Pte Ltd",    groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "80%", latencyMs: 320 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0046", supplierName: "Pied Piper Sdn",   groundTruth: "Fail", agentPrediction: "Pass", correct: false, confidence: "47%", latencyMs: 465 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0047", supplierName: "Dunder Mifflin",   groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "92%", latencyMs: 255 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0048", supplierName: "Vandelay Ind",     groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "77%", latencyMs: 360 },
+      { caseId: "CASE-009", invoiceNo: "INV-2025-0049", supplierName: "Prestige Direct",  groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "83%", latencyMs: 310 },
+    ],
+  },
+  "RUN-2031": {
+    runId: "RUN-2031", agentId: "AGT-001", agentName: "Invoice Review Agent",
+    version: "v1.3.0", runAt: "2025-03-12 10:05", passRate: 88, status: "Passed",
+    totalCases: 9, passedCases: 8, failedCases: 1,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0041", supplierName: "Acme Corp",        groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "94%", latencyMs: 305 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0042", supplierName: "Globex Ltd",       groundTruth: "Pass", agentPrediction: "Fail", correct: false, confidence: "59%", latencyMs: 420 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0043", supplierName: "Initech Pte",      groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "83%", latencyMs: 340 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0044", supplierName: "Umbrella Inc",     groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "91%", latencyMs: 270 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0045", supplierName: "Hooli Pte Ltd",    groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "89%", latencyMs: 315 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0046", supplierName: "Pied Piper Sdn",   groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "80%", latencyMs: 355 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0047", supplierName: "Dunder Mifflin",   groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "96%", latencyMs: 240 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0048", supplierName: "Vandelay Ind",     groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "88%", latencyMs: 290 },
+      { caseId: "CASE-009", invoiceNo: "INV-2025-0049", supplierName: "Prestige Direct",  groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "75%", latencyMs: 375 },
+    ],
+  },
+  "RUN-2020": {
+    runId: "RUN-2020", agentId: "AGT-001", agentName: "Invoice Review Agent",
+    version: "v1.3.0", runAt: "2025-03-05 09:40", passRate: 76, status: "Failed",
+    totalCases: 9, passedCases: 6, failedCases: 3,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0041", supplierName: "Acme Corp",        groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "88%", latencyMs: 330 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0042", supplierName: "Globex Ltd",       groundTruth: "Pass", agentPrediction: "Fail", correct: false, confidence: "51%", latencyMs: 455 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0043", supplierName: "Initech Pte",      groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "79%", latencyMs: 360 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0044", supplierName: "Umbrella Inc",     groundTruth: "Pass", agentPrediction: "Fail", correct: false, confidence: "46%", latencyMs: 490 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0045", supplierName: "Hooli Pte Ltd",    groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "82%", latencyMs: 310 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0046", supplierName: "Pied Piper Sdn",   groundTruth: "Fail", agentPrediction: "Pass", correct: false, confidence: "54%", latencyMs: 430 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0047", supplierName: "Dunder Mifflin",   groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "93%", latencyMs: 250 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0048", supplierName: "Vandelay Ind",     groundTruth: "Pass", agentPrediction: "Pass", correct: true,  confidence: "85%", latencyMs: 280 },
+      { caseId: "CASE-009", invoiceNo: "INV-2025-0049", supplierName: "Prestige Direct",  groundTruth: "Fail", agentPrediction: "Fail", correct: true,  confidence: "74%", latencyMs: 390 },
+    ],
+  },
+  "RUN-2035": {
+    runId: "RUN-2035", agentId: "AGT-002", agentName: "PO Matching Agent",
+    version: "v1.2.0", runAt: "2025-03-15 13:00", passRate: 91, status: "Passed",
+    totalCases: 8, passedCases: 7, failedCases: 1,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0081", supplierName: "Acme Corp",       groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "96%", latencyMs: 280 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0082", supplierName: "Globex Ltd",      groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "90%", latencyMs: 295 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0083", supplierName: "Initech Pte",     groundTruth: "NA",      agentPrediction: "Matched", correct: false, confidence: "53%", latencyMs: 440 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0084", supplierName: "Umbrella Inc",    groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "88%", latencyMs: 310 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0085", supplierName: "Hooli Pte Ltd",   groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "81%", latencyMs: 355 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0086", supplierName: "Pied Piper Sdn",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "92%", latencyMs: 265 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0087", supplierName: "Dunder Mifflin",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "94%", latencyMs: 245 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0088", supplierName: "Vandelay Ind",    groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "78%", latencyMs: 370 },
+    ],
+  },
+  "RUN-2044": {
+    runId: "RUN-2044", agentId: "AGT-002", agentName: "PO Matching Agent",
+    version: "v1.3.0-beta", runAt: "2025-03-22 10:00", passRate: 84, status: "Failed",
+    totalCases: 8, passedCases: 6, failedCases: 2,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0081", supplierName: "Acme Corp",       groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "91%", latencyMs: 285 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0082", supplierName: "Globex Ltd",      groundTruth: "Matched", agentPrediction: "NA",      correct: false, confidence: "52%", latencyMs: 460 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0083", supplierName: "Initech Pte",     groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "83%", latencyMs: 340 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0084", supplierName: "Umbrella Inc",    groundTruth: "Matched", agentPrediction: "NA",      correct: false, confidence: "49%", latencyMs: 475 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0085", supplierName: "Hooli Pte Ltd",   groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "80%", latencyMs: 360 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0086", supplierName: "Pied Piper Sdn",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "89%", latencyMs: 270 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0087", supplierName: "Dunder Mifflin",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "95%", latencyMs: 250 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0088", supplierName: "Vandelay Ind",    groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "76%", latencyMs: 380 },
+    ],
+  },
+  "RUN-2040": {
+    runId: "RUN-2040", agentId: "AGT-002", agentName: "PO Matching Agent",
+    version: "v1.3.0-beta", runAt: "2025-03-20 14:30", passRate: 90, status: "Passed",
+    totalCases: 8, passedCases: 7, failedCases: 1,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0081", supplierName: "Acme Corp",       groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "94%", latencyMs: 270 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0082", supplierName: "Globex Ltd",      groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "89%", latencyMs: 285 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0083", supplierName: "Initech Pte",     groundTruth: "NA",      agentPrediction: "Matched", correct: false, confidence: "55%", latencyMs: 445 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0084", supplierName: "Umbrella Inc",    groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "92%", latencyMs: 295 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0085", supplierName: "Hooli Pte Ltd",   groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "84%", latencyMs: 345 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0086", supplierName: "Pied Piper Sdn",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "93%", latencyMs: 260 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0087", supplierName: "Dunder Mifflin",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "97%", latencyMs: 240 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0088", supplierName: "Vandelay Ind",    groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "79%", latencyMs: 365 },
+    ],
+  },
+  "RUN-2045": {
+    runId: "RUN-2045", agentId: "AGT-002", agentName: "PO Matching Agent",
+    version: "v1.4.0-beta", runAt: "2025-03-23 09:45", passRate: 78, status: "Failed",
+    totalCases: 8, passedCases: 5, failedCases: 3,
+    cases: [
+      { caseId: "CASE-001", invoiceNo: "INV-2025-0081", supplierName: "Acme Corp",       groundTruth: "Matched", agentPrediction: "NA",      correct: false, confidence: "48%", latencyMs: 490 },
+      { caseId: "CASE-002", invoiceNo: "INV-2025-0082", supplierName: "Globex Ltd",      groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "86%", latencyMs: 285 },
+      { caseId: "CASE-003", invoiceNo: "INV-2025-0083", supplierName: "Initech Pte",     groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "82%", latencyMs: 345 },
+      { caseId: "CASE-004", invoiceNo: "INV-2025-0084", supplierName: "Umbrella Inc",    groundTruth: "Matched", agentPrediction: "NA",      correct: false, confidence: "51%", latencyMs: 460 },
+      { caseId: "CASE-005", invoiceNo: "INV-2025-0085", supplierName: "Hooli Pte Ltd",   groundTruth: "NA",      agentPrediction: "Matched", correct: false, confidence: "47%", latencyMs: 480 },
+      { caseId: "CASE-006", invoiceNo: "INV-2025-0086", supplierName: "Pied Piper Sdn",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "90%", latencyMs: 265 },
+      { caseId: "CASE-007", invoiceNo: "INV-2025-0087", supplierName: "Dunder Mifflin",  groundTruth: "Matched", agentPrediction: "Matched", correct: true,  confidence: "94%", latencyMs: 248 },
+      { caseId: "CASE-008", invoiceNo: "INV-2025-0088", supplierName: "Vandelay Ind",    groundTruth: "NA",      agentPrediction: "NA",      correct: true,  confidence: "77%", latencyMs: 370 },
+    ],
+  },
+}
+
 // ── Regression run history mock data ─────────────────────────────
 
 interface RegressionRunRecord {
@@ -738,13 +908,15 @@ export function RegressionTest({
   goldenCases,
   onPublish,
   onPassedRun,
-}: {
+  onViewReport,
+  }: {
   preselectedAgentId?: string
   agents?: Agent[]
   goldenCases?: GoldenCasesState
   onPublish?: (agentId: string) => void
   onPassedRun?: (agentId: string) => void
-}) {
+  onViewReport?: (runId: string) => void
+  }) {
   const { region } = useRegion()
 
   // Entity selector (driven by region)
@@ -1070,7 +1242,7 @@ export function RegressionTest({
                         </Tag>
                       </td>
                       <td style={{ padding: "8px 0" }}>
-                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); msgApi.info(`Navigating to regression detail for ${r.runId}...`) }}>View Detail</Typography.Link>
+                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); onViewReport?.(r.runId) }}>View Detail</Typography.Link>
                       </td>
                     </tr>
                   ))}

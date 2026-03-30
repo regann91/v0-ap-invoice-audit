@@ -19,6 +19,7 @@ import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
 import { PatternLibrary } from "@/components/pattern-library"
 import { RegressionTest } from "@/components/regression-test"
+import { RegressionReport } from "@/components/regression-report"
 import { SystemArchitecture } from "@/components/system-architecture"
 import { PrdViewer } from "@/components/prd-viewer"
 import { agentListData, INITIAL_GOLDEN_CASES, INITIAL_ARCHIVED_CASES, type Agent, type AuditCase, type GoldenCasesState, type ArchivedCaseMock } from "@/lib/mock-data"
@@ -37,6 +38,7 @@ type Page =
   | "pattern-library"
   | "agent-detail"
   | "regression-test"
+  | "regression-report"
   | "system-architecture"
   | "prd"
 
@@ -51,6 +53,7 @@ const BREADCRUMBS: Record<Page, string[]> = {
   "pattern-library":       ["Case Management", "Pattern Library"],
   "agent-detail":          ["Agent Management", "Agent List", "Agent Detail"],
   "regression-test":       ["Regression Test"],
+  "regression-report":     ["Regression Test", "Run Report"],
   "system-architecture":   ["System Architecture"],
   "prd":                   ["Documentation", "PRD"],
 }
@@ -60,6 +63,7 @@ function AppShell() {
   const [selectedKey, setSelectedKey] = useState("knowledge-detail")
   const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base", "case-management-menu", "agent-management"])
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
+  const [viewReportRunId, setViewReportRunId] = useState<string>("")
   const [selectedCase, setSelectedCase] = useState<AuditCase | null>(null)
   const [agents, setAgents] = useState<Agent[]>(agentListData)
   const [goldenCases, setGoldenCases] = useState<GoldenCasesState>(INITIAL_GOLDEN_CASES)
@@ -135,6 +139,12 @@ function handleArchive(newly: ArchivedCaseMock[]) {
   function goToAgentList() {
     setPage("agent-list")
     setSelectedKey("agent-management")
+  }
+
+  function goToRegressionReport(runId: string) {
+    setViewReportRunId(runId)
+    setPage("regression-report")
+    setSelectedKey("regression-test")
   }
 
   function goToRegressionTest(agentId?: string) {
@@ -275,7 +285,8 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "archived-cases"          && <ArchiveCase archivedCases={archivedCases} onRestoreToList={handleRestore} />}
           {page === "golden-case-management"  && <GoldenCaseManagement goldenCases={goldenCases} setGoldenCases={setGoldenCases} />}
           {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
-          {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} onPassedRun={handlePassedRun} />}
+          {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} onPassedRun={handlePassedRun} onViewReport={goToRegressionReport} />}
+          {page === "regression-report"  && <RegressionReport runId={viewReportRunId} onBack={() => { setPage("regression-test"); setSelectedKey("regression-test") }} />}
           {page === "agent-list"         && <AgentList agents={agents} setAgents={setAgents} onView={goToAgentDetail} onTriggerTest={goToRegressionTest} />}
           {page === "pattern-library"    && <PatternLibrary />}
           {page === "agent-detail"       && <AgentDetail agentId="AGT-002" passedAgentIds={passedAgentIds} onBack={goToAgentList} onPublish={handlePublish} onGoToRegressionTest={goToRegressionTest} />}

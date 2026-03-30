@@ -303,8 +303,8 @@ export function CaseManagement({
   const isOps = role === "AI_OPS"
 
   // Entity selector (driven by region)
-  const entityOptions = getEntitiesForRegion(region)
-  const [selectedEntity, setSelectedEntity] = useState<EntityCode>(entityOptions[0] ?? "")
+  const globalEntityOptions = getEntitiesForRegion(region)
+  const [selectedEntity, setSelectedEntity] = useState<EntityCode>(globalEntityOptions[0] ?? "")
 
   // Reset entity when region changes
   React.useEffect(() => {
@@ -483,7 +483,7 @@ export function CaseManagement({
           onChange={setSelectedEntity}
           size="small"
           style={{ width: 110 }}
-          options={entityOptions.map((e) => ({ value: e, label: e }))}
+          options={globalEntityOptions.map((e) => ({ value: e, label: e }))}
         />
       </div>
 

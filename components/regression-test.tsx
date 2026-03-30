@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import {
   Select, Button, Table, Tag, Typography, Space, Progress,
-  Statistic, Card, Divider, Empty, Switch, Tooltip, Drawer,
+  Statistic, Card, Divider, Empty, Switch, Tooltip, Drawer, Modal,
   type EmptyProps,
 } from "antd"
 import {
@@ -44,6 +44,105 @@ interface CaseResult {
   reviewDate: string
   confidence: number
   modelVersion: string
+}
+
+// ── Version config mock data (for publish diff check) ────────────
+
+interface VersionConfig {
+  model: string
+  temperature: number
+  maxTokens: number
+  additionalParams: string
+  apiEndpoint: string
+  authMethod: string
+  systemPrompt: string
+  userPromptTemplate: string
+}
+
+const VERSION_CONFIGS: Record<string, VersionConfig> = {
+  // keyed by "agentId::version"
+  "AGT-001::v1.3.0": {
+    model: "gpt-4o",
+    temperature: 0.7,
+    maxTokens: 2048,
+    additionalParams: "top_p=0.9",
+    apiEndpoint: "https://api.openai.com/v1/chat/completions",
+    authMethod: "Bearer Token",
+    systemPrompt: "You are a helpful invoice review assistant...",
+    userPromptTemplate: "Review the following invoice: {{invoice_data}}",
+  },
+  "AGT-001::v1.4.0-beta": {
+    model: "gpt-4o-mini",  // DIFF: model changed
+    temperature: 0.7,
+    maxTokens: 2048,
+    additionalParams: "top_p=0.9",
+    apiEndpoint: "https://api.openai.com/v1/chat/completions",
+    authMethod: "Bearer Token",
+    systemPrompt: "You are a helpful invoice review assistant. Be concise and accurate...",  // DIFF: system prompt changed
+    userPromptTemplate: "Review the following invoice: {{invoice_data}}",
+  },
+  "AGT-001::v1.5.0-beta": {
+    model: "gpt-4o-mini",
+    temperature: 0.5,  // DIFF: temperature changed
+    maxTokens: 4096,   // DIFF: maxTokens changed
+    additionalParams: "top_p=0.95",  // DIFF: additionalParams changed
+    apiEndpoint: "https://api.openai.com/v1/chat/completions",
+    authMethod: "Bearer Token",
+    systemPrompt: "You are a helpful invoice review assistant. Be concise and accurate...",
+    userPromptTemplate: "Review the following invoice: {{invoice_data}}",
+  },
+  "AGT-002::v1.2.0": {
+    model: "claude-3-sonnet",
+    temperature: 0.6,
+    maxTokens: 1024,
+    additionalParams: "",
+    apiEndpoint: "https://api.anthropic.com/v1/messages",
+    authMethod: "API Key",
+    systemPrompt: "You are a PO matching assistant...",
+    userPromptTemplate: "Match the PO: {{po_data}}",
+  },
+  "AGT-002::v1.3.0-beta": {
+    model: "claude-3-sonnet",
+    temperature: 0.6,
+    maxTokens: 1024,
+    additionalParams: "",
+    apiEndpoint: "https://api.anthropic.com/v1/messages",
+    authMethod: "API Key",
+    systemPrompt: "You are a PO matching assistant. Follow strict matching rules...",  // DIFF
+    userPromptTemplate: "Match the PO: {{po_data}}",
+  },
+  "AGT-002::v1.4.0-beta": {
+    model: "claude-3-opus",  // DIFF
+    temperature: 0.4,        // DIFF
+    maxTokens: 2048,         // DIFF
+    additionalParams: "top_k=40",  // DIFF
+    apiEndpoint: "https://api.anthropic.com/v1/messages",
+    authMethod: "API Key",
+    systemPrompt: "You are a PO matching assistant...",
+    userPromptTemplate: "Match the PO with detailed analysis: {{po_data}}",  // DIFF
+  },
+}
+
+const CONFIG_FIELD_LABELS: Record<keyof VersionConfig, string> = {
+  model: "Model",
+  temperature: "Temperature",
+  maxTokens: "Max Tokens",
+  additionalParams: "Additional Params",
+  apiEndpoint: "API Endpoint",
+  authMethod: "Auth Method",
+  systemPrompt: "System Prompt",
+  userPromptTemplate: "User Prompt Template",
+}
+
+function compareVersionConfigs(testingConfig: VersionConfig | undefined, liveConfig: VersionConfig | undefined): string[] {
+  if (!testingConfig || !liveConfig) return []
+  const diffFields: string[] = []
+  for (const key of Object.keys(testingConfig) as (keyof VersionConfig)[]) {
+    if (testingConfig[key] !== liveConfig[key]) {
+      diffFields.push(CONFIG_FIELD_LABELS[key])
+    }
+  }
+  return diffFields
 }
 
 // ── Regression run history mock data ─────────────────────────────
@@ -658,6 +757,8 @@ export function RegressionTest({
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
   const [selectedCaseDetail, setSelectedCaseDetail] = useState<CaseResult | null>(null)
+  const [configMismatchModalOpen, setConfigMismatchModalOpen] = useState(false)
+  const [configDiffFields, setConfigDiffFields] = useState<string[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -853,8 +954,25 @@ export function RegressionTest({
                   }
                   onClick={() => {
                     if (!selectedId || published) return
-                    setPublished(true)
-                    onPublish?.(selectedId)
+                    // Get live version for the selected agent
+                    const agent = agentsWithTestingVersions.find(a => a.id === selectedId)
+                    const liveVersion = agent?.liveVersion
+                    // Compare configs
+                    const testingConfigKey = `${selectedId}::${selectedVersion}`
+                    const liveConfigKey = liveVersion ? `${selectedId}::${liveVersion}` : null
+                    const testingConfig = VERSION_CONFIGS[testingConfigKey]
+                    const liveConfig = liveConfigKey ? VERSION_CONFIGS[liveConfigKey] : undefined
+                    const diffFields = compareVersionConfigs(testingConfig, liveConfig)
+                    
+                    if (diffFields.length > 0) {
+                      // Show config mismatch modal
+                      setConfigDiffFields(diffFields)
+                      setConfigMismatchModalOpen(true)
+                    } else {
+                      // No diff, proceed directly
+                      setPublished(true)
+                      onPublish?.(selectedId)
+                    }
                   }}
                 >
                   {published ? "Published" : "Publish Version"}
@@ -1009,6 +1127,45 @@ export function RegressionTest({
           </div>
         </div>
       )}
+
+      {/* Configuration Mismatch Modal */}
+      <Modal
+        title="Configuration Mismatch Detected"
+        open={configMismatchModalOpen}
+        onCancel={() => setConfigMismatchModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setConfigMismatchModalOpen(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            onClick={() => {
+              setConfigMismatchModalOpen(false)
+              setPublished(true)
+              onPublish?.(selectedId)
+            }}
+          >
+            Confirm Publish
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text>The following configuration fields differ between the Testing version and the current Live version:</Text>
+        </div>
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          {configDiffFields.map((field) => (
+            <li key={field} style={{ marginBottom: 4 }}>
+              <Text strong>{field}</Text>
+            </li>
+          ))}
+        </ul>
+        <div style={{ marginTop: 16, padding: "8px 12px", background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 4 }}>
+          <Text style={{ fontSize: 12, color: "#874d00" }}>
+            Please confirm you want to publish this version with the configuration changes.
+          </Text>
+        </div>
+      </Modal>
 
       {/* AI Prediction Detail Drawer */}
       <Drawer

@@ -444,11 +444,22 @@ export function AgentList({
       dataIndex: "step",
       key: "step",
       width: 180,
-      render: (step: AgentStep) => (
-        <Tag style={{ fontFamily: "monospace", fontSize: 11, background: "#f0f0f0", border: "none", color: "#595959" }}>
-          {step}
-        </Tag>
-      ),
+      render: (step: AgentStep) => {
+        const STEP_LABELS: Record<AgentStep, string> = {
+          INVOICE_REVIEW: "Invoice Review",
+          MATCH: "Match",
+          AP_VOUCHER: "AP Voucher",
+          SUPPLIER_VERIFY: "Supplier Verify",
+          BANK_CHECK: "Bank Check",
+          BANK_RECON: "Bank Recon",
+          EXCEPTION_MGT: "Exception Mgt",
+        }
+        return (
+          <Tag style={{ fontSize: 11, background: "#f0f0f0", border: "none", color: "#595959" }}>
+            {STEP_LABELS[step] ?? step}
+          </Tag>
+        )
+      },
     },
     {
       title: "Live Version",

@@ -41,14 +41,15 @@ interface GoldenCase {
 interface AddableCase {
   key: string
   caseId: string
+  paymentRequestId: string
+  paymentGroupId: string
   invoiceNo: string
   supplier: string
   region: string
-  // INVOICE_REVIEW: "Pass" | "Fail"
-  // MATCH: "Matched" | "Rejected"
-  // AP_VOUCHER: "Voucher Submitted" | "Rejected"
+  amount: number
+  currency: string
   gtVerdict: string
-  gtDetail: string   // e.g. "3/3 line items matched" or "APV-2025-00312 · SGD 158,050" or ""
+  gtDetail: string
   patterns: string[]
 }
 
@@ -121,28 +122,28 @@ const GOLDEN_CASES: Record<StepType, GoldenCase[]> = {
 
 const ADDABLE_CASES: Record<StepType, AddableCase[]> = {
   INVOICE_REVIEW: [
-    { key: "a1", caseId: "CASE-003", invoiceNo: "INV-2025-0003", supplier: "Google Asia Pacific",   region: "SG", gtVerdict: "Pass", gtDetail: "", patterns: ["gst-calculation-error", "header-check"] },
-    { key: "a2", caseId: "CASE-005", invoiceNo: "INV-2025-0005", supplier: "Deloitte Advisory SEA", region: "VN", gtVerdict: "Pass", gtDetail: "", patterns: [] },
-    { key: "a3", caseId: "CASE-007", invoiceNo: "INV-2025-0007", supplier: "Tencent Cloud Intl",    region: "TW", gtVerdict: "Fail", gtDetail: "", patterns: ["supplier-name-mismatch"] },
-    { key: "a4", caseId: "CASE-009", invoiceNo: "INV-2025-0009", supplier: "Shopee Philippines",    region: "PH", gtVerdict: "Pass", gtDetail: "", patterns: ["amount-mismatch"] },
-    { key: "a5", caseId: "CASE-011", invoiceNo: "INV-2025-0011", supplier: "AWS Singapore Pte Ltd", region: "SG", gtVerdict: "Pass", gtDetail: "", patterns: [] },
-    { key: "a6", caseId: "CASE-013", invoiceNo: "INV-2025-0013", supplier: "Alibaba Cloud HK",      region: "TW", gtVerdict: "Fail", gtDetail: "", patterns: ["duplicate-invoice", "date-out-of-range"] },
+    { key: "a1", caseId: "CASE-003", paymentRequestId: "PR-2025-00161", paymentGroupId: "PG-2025-0023", invoiceNo: "INV-2025-0003", supplier: "Google Asia Pacific",   region: "SG", amount: 45600, currency: "SGD", gtVerdict: "Pass", gtDetail: "", patterns: ["gst-calculation-error", "header-check"] },
+    { key: "a2", caseId: "CASE-005", paymentRequestId: "PR-2025-00168", paymentGroupId: "PG-2025-0025", invoiceNo: "INV-2025-0005", supplier: "Deloitte Advisory SEA", region: "VN", amount: 72300, currency: "VND", gtVerdict: "Pass", gtDetail: "", patterns: [] },
+    { key: "a3", caseId: "CASE-007", paymentRequestId: "PR-2025-00175", paymentGroupId: "PG-2025-0027", invoiceNo: "INV-2025-0007", supplier: "Tencent Cloud Intl",    region: "TW", amount: 89200, currency: "TWD", gtVerdict: "Fail", gtDetail: "", patterns: ["supplier-name-mismatch"] },
+    { key: "a4", caseId: "CASE-009", paymentRequestId: "PR-2025-00211", paymentGroupId: "PG-2025-0034", invoiceNo: "INV-2025-0009", supplier: "Shopee Philippines",    region: "PH", amount: 56700, currency: "PHP", gtVerdict: "Pass", gtDetail: "", patterns: ["amount-mismatch"] },
+    { key: "a5", caseId: "CASE-011", paymentRequestId: "PR-2025-00193", paymentGroupId: "PG-2025-0030", invoiceNo: "INV-2025-0011", supplier: "AWS Singapore Pte Ltd", region: "SG", amount: 34500, currency: "SGD", gtVerdict: "Pass", gtDetail: "", patterns: [] },
+    { key: "a6", caseId: "CASE-013", paymentRequestId: "PR-2025-00401", paymentGroupId: "PG-2025-0069", invoiceNo: "INV-2025-0013", supplier: "Alibaba Cloud HK",      region: "TW", amount: 64800, currency: "TWD", gtVerdict: "Fail", gtDetail: "", patterns: ["duplicate-invoice", "date-out-of-range"] },
   ],
   MATCH: [
-    { key: "a1", caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", gtVerdict: "Matched",  gtDetail: "3/3 line items matched",                   patterns: [] },
-    { key: "a2", caseId: "CASE-002", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd", region: "SG", gtVerdict: "Rejected", gtDetail: "Unit price mismatch on line 002",           patterns: [] },
-    { key: "a3", caseId: "CASE-004", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",    region: "TH", gtVerdict: "Matched",  gtDetail: "2/2 line items matched",                   patterns: [] },
-    { key: "a4", caseId: "CASE-006", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",      region: "TW", gtVerdict: "Rejected", gtDetail: "PO line 001 quantity discrepancy",         patterns: [] },
-    { key: "a5", caseId: "CASE-008", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",   region: "BR", gtVerdict: "Matched",  gtDetail: "4/4 line items matched",                   patterns: [] },
-    { key: "a6", caseId: "CASE-010", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",      region: "ID", gtVerdict: "Rejected", gtDetail: "Supplier bank account not verified",       patterns: [] },
+    { key: "a1", caseId: "CASE-001", paymentRequestId: "PR-2025-00134", paymentGroupId: "PG-2025-0021", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", amount: 48500, currency: "SGD", gtVerdict: "Matched", gtDetail: "3/3 line items matched",                   patterns: [] },
+    { key: "a2", caseId: "CASE-002", paymentRequestId: "PR-2025-00157", paymentGroupId: "PG-2025-0022", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd", region: "SG", amount: 12300, currency: "SGD", gtVerdict: "NA",      gtDetail: "Unit price mismatch on line 002",           patterns: [] },
+    { key: "a3", caseId: "CASE-004", paymentRequestId: "PR-2025-00198", paymentGroupId: "PG-2025-0031", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",    region: "TH", amount: 76200, currency: "THB", gtVerdict: "Matched", gtDetail: "2/2 line items matched",                   patterns: [] },
+    { key: "a4", caseId: "CASE-006", paymentRequestId: "PR-2025-00203", paymentGroupId: "PG-2025-0033", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",      region: "TW", amount: 35600, currency: "TWD", gtVerdict: "NA",      gtDetail: "PO line 001 quantity discrepancy",         patterns: [] },
+    { key: "a5", caseId: "CASE-008", paymentRequestId: "PR-2025-00245", paymentGroupId: "PG-2025-0041", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",   region: "BR", amount: 89600, currency: "BRL", gtVerdict: "Matched", gtDetail: "4/4 line items matched",                   patterns: [] },
+    { key: "a6", caseId: "CASE-010", paymentRequestId: "PR-2025-00267", paymentGroupId: "PG-2025-0043", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",      region: "ID", amount: 24300, currency: "IDR", gtVerdict: "NA",      gtDetail: "Supplier bank account not verified",       patterns: [] },
   ],
   AP_VOUCHER: [
-    { key: "a1", caseId: "CASE-001", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00312 · SGD 158,050",   patterns: [] },
-    { key: "a2", caseId: "CASE-002", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd", region: "SG", gtVerdict: "Rejected",          gtDetail: "Incorrect GL account selected",  patterns: [] },
-    { key: "a3", caseId: "CASE-004", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",    region: "TH", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00318 · THB 215,000",   patterns: [] },
-    { key: "a4", caseId: "CASE-006", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",      region: "TW", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00325 · TWD 56,000",    patterns: [] },
-    { key: "a5", caseId: "CASE-008", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",   region: "BR", gtVerdict: "Rejected",          gtDetail: "Cost center does not match department", patterns: [] },
-    { key: "a6", caseId: "CASE-010", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",      region: "ID", gtVerdict: "Voucher Submitted", gtDetail: "APV-2025-00341 · IDR 185,000",   patterns: [] },
+    { key: "a1", caseId: "CASE-001", paymentRequestId: "PR-2025-00134", paymentGroupId: "PG-2025-0021", invoiceNo: "INV-2025-0001", supplier: "Accenture Pte Ltd",     region: "SG", amount: 48500, currency: "SGD", gtVerdict: "Submitted to EBS", gtDetail: "APV-2025-00312 · SGD 158,050",   patterns: [] },
+    { key: "a2", caseId: "CASE-002", paymentRequestId: "PR-2025-00157", paymentGroupId: "PG-2025-0022", invoiceNo: "INV-2025-0002", supplier: "AWS Singapore Pte Ltd", region: "SG", amount: 12300, currency: "SGD", gtVerdict: "Pending",           gtDetail: "Incorrect GL account selected",  patterns: [] },
+    { key: "a3", caseId: "CASE-004", paymentRequestId: "PR-2025-00198", paymentGroupId: "PG-2025-0031", invoiceNo: "INV-2025-0004", supplier: "Microsoft Thailand",    region: "TH", amount: 76200, currency: "THB", gtVerdict: "Submitted to EBS", gtDetail: "APV-2025-00318 · THB 215,000",   patterns: [] },
+    { key: "a4", caseId: "CASE-006", paymentRequestId: "PR-2025-00203", paymentGroupId: "PG-2025-0033", invoiceNo: "INV-2025-0006", supplier: "Alibaba Cloud HK",      region: "TW", amount: 35600, currency: "TWD", gtVerdict: "Submitted to EBS", gtDetail: "APV-2025-00325 · TWD 56,000",    patterns: [] },
+    { key: "a5", caseId: "CASE-008", paymentRequestId: "PR-2025-00245", paymentGroupId: "PG-2025-0041", invoiceNo: "INV-2025-0008", supplier: "Mercado Pago Brasil",   region: "BR", amount: 89600, currency: "BRL", gtVerdict: "Pending",           gtDetail: "Cost center does not match department", patterns: [] },
+    { key: "a6", caseId: "CASE-010", paymentRequestId: "PR-2025-00267", paymentGroupId: "PG-2025-0043", invoiceNo: "INV-2025-0010", supplier: "Shopee Indonesia",      region: "ID", amount: 24300, currency: "IDR", gtVerdict: "Submitted to EBS", gtDetail: "APV-2025-00341 · IDR 185,000",   patterns: [] },
   ],
 }
 
@@ -350,24 +351,48 @@ function AddCaseModal({
   const canAdd = selectedKeys.length > 0 && !wouldExceed
 
   const columns: ColumnsType<AddableCase> = [
-    { title: "Case ID",    dataIndex: "caseId",   width: 100, render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Invoice No", dataIndex: "invoiceNo", width: 130, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Supplier",   dataIndex: "supplier",  ellipsis: true, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Region",     dataIndex: "region",    width: 65,  render: (v: string) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text> },
+    { title: "Case ID", dataIndex: "caseId", width: 100, render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text> },
     {
-      title: "Ground Truth", key: "gt", width: 200,
-      render: (_: unknown, r: AddableCase) => <ModalGtCell verdict={r.gtVerdict} detail={r.gtDetail} />,
+      title: "Payment Request ID", dataIndex: "paymentRequestId", width: 150,
+      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
     },
     {
-      title: "Patterns", dataIndex: "patterns", key: "patterns",
-      render: (tags: string[]) =>
-        tags.length === 0
-          ? <Text type="secondary" style={{ fontSize: 12 }}>—</Text>
-          : <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-              {tags.map((t) => (
-                <Tag key={t} style={{ fontSize: 11, padding: "0 5px", margin: 0, color: "#595959", background: "#fafafa", borderColor: "#d9d9d9" }}>{t}</Tag>
-              ))}
-            </div>,
+      title: "Payment Group ID", dataIndex: "paymentGroupId", width: 140,
+      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+    },
+    { title: "Invoice No", dataIndex: "invoiceNo", width: 130, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
+    { title: "Supplier", dataIndex: "supplier", ellipsis: true, render: (v: string) => <Text style={{ fontSize: 12 }}>{v}</Text> },
+    {
+      title: "Invoice Amount (Including Tax)", dataIndex: "amount", width: 180,
+      render: (v: number, r: AddableCase) => (
+        <Text style={{ fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
+          {r.currency} {v.toLocaleString()}
+        </Text>
+      ),
+    },
+    {
+      title: "Ground Truth", key: "gt", width: 140,
+      render: (_: unknown, r: AddableCase) => {
+        let verdict = r.gtVerdict
+        if (step === "MATCH" && verdict === "NA") {
+          return <Tag style={{ color: "#666", background: "#f5f5f5", borderColor: "#d9d9d9", fontWeight: 500, fontSize: 11 }}>NA</Tag>
+        } else if (step === "AP_VOUCHER") {
+          if (verdict === "Submitted to EBS") {
+            return <Tag style={{ color: "#52c41a", background: "#f6ffed", borderColor: "#b7eb8f", fontWeight: 500, fontSize: 11 }}>Submitted to EBS</Tag>
+          } else if (verdict === "Pending") {
+            return <Tag style={{ color: "#faad14", background: "#fffbe6", borderColor: "#ffe58f", fontWeight: 500, fontSize: 11 }}>Pending</Tag>
+          }
+        } else if (step === "INVOICE_REVIEW") {
+          if (verdict === "Pass") {
+            return <Tag style={{ color: "#52c41a", background: "#f6ffed", borderColor: "#b7eb8f", fontWeight: 500, fontSize: 11 }}>Pass</Tag>
+          } else if (verdict === "Fail") {
+            return <Tag style={{ color: "#ff4d4f", background: "#fff1f0", borderColor: "#ffccc7", fontWeight: 500, fontSize: 11 }}>Fail</Tag>
+          }
+        } else if (step === "MATCH" && verdict === "Matched") {
+          return <Tag style={{ color: "#52c41a", background: "#f6ffed", borderColor: "#b7eb8f", fontWeight: 500, fontSize: 11 }}>Matched</Tag>
+        }
+        return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>
+      },
     },
   ]
 

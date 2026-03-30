@@ -13,7 +13,7 @@ import {
 import type { ColumnsType } from "antd/es/table"
 import {
   auditCaseData,
-  type AuditCase, type CaseGolden, type ArchivedCaseMock,
+  type AuditCase, type CaseGolden, type ArchivedCaseMock, type TestCase,
 } from "@/lib/mock-data"
 import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
 import { useRole } from "@/lib/role-context"
@@ -284,7 +284,7 @@ function CaseDrawer({ record, onClose }: { record: AuditCase | null; onClose: ()
 // ── Main Component ────────────────────────────────────────────────
 
 interface CaseManagementProps {
-  onViewDetail?: (record: AuditCase) => void
+  onViewDetail?: (record: TestCase) => void
   archivedCases: ArchivedCaseMock[]
   onArchive: (newly: ArchivedCaseMock[]) => void
   onGoToArchived: () => void
@@ -346,12 +346,12 @@ export function CaseManagement({
       const matchSearch =
         !q ||
         r.caseId.toLowerCase().includes(q) ||
-        r.invoiceNo.toLowerCase().includes(q) ||
+        r.paymentRequestId.toLowerCase().includes(q) ||
         r.supplierName.toLowerCase().includes(q)
       const matchRegion = !regionFilter || r.region === regionFilter
       const matchEntity = !entityFilter || r.entity === entityFilter
       const matchGolden = !goldenFilter || r.isGolden === goldenFilter
-        return matchSearch && matchRegion && matchEntity && matchGolden
+      return matchSearch && matchRegion && matchEntity && matchGolden
     })
   }, [regionPool, search, regionFilter, entityFilter, goldenFilter])
 
@@ -391,80 +391,141 @@ export function CaseManagement({
 
   const hasFilters = !!(search || regionFilter || entityFilter || goldenFilter)
 
-  const columns: ColumnsType<AuditCase> = [
+  const columns: ColumnsType<TestCase> = [
     {
       title: "Case ID",
       dataIndex: "caseId",
       key: "caseId",
-      width: 120,
-      render: (v: string) => <Text style={{ fontSize: 13, fontFamily: "monospace" }}>{v}</Text>,
+      width: 155,
+      render: (v: string, record: TestCase) => (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0, fontSize: 13, fontFamily: "monospace" }}
+          onClick={() => window.open(`https://billing.workatsea.com/sbc/br/apr/payment_request/${record.paymentRequestId}`, '_blank')}
+        >
+          {v}
+        </Button>
+      ),
+      sorter: (a, b) => a.caseId.localeCompare(b.caseId),
+    },
+    {
+      title: "Payment Request ID",
+      dataIndex: "paymentRequestId",
+      key: "paymentRequestId",
+      width: 150,
+      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.paymentRequestId.localeCompare(b.paymentRequestId),
+    },
+    {
+      title: "Payment Group ID",
+      dataIndex: "paymentGroupId",
+      key: "paymentGroupId",
+      width: 140,
+      render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.paymentGroupId.localeCompare(b.paymentGroupId),
     },
     {
       title: "Invoice No.",
       dataIndex: "invoiceNo",
       key: "invoiceNo",
-      width: 160,
+      width: 150,
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.invoiceNo.localeCompare(b.invoiceNo),
     },
     {
-      title: "Supplier",
+      title: "Supplier Name",
       dataIndex: "supplierName",
       key: "supplierName",
       ellipsis: true,
       render: (v: string) => <Text style={{ fontSize: 13 }}>{v}</Text>,
+      sorter: (a, b) => a.supplierName.localeCompare(b.supplierName),
     },
     {
-      title: "Region",
-      dataIndex: "region",
-      key: "region",
-      width: 80,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
-    },
-    {
-      title: "Entity",
-      dataIndex: "entity",
-      key: "entity",
-      width: 70,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
-    },
-    {
-      title: "Amount",
+      title: "Invoice Amount (Including Tax)",
       dataIndex: "amount",
       key: "amount",
-      width: 170,
-      render: (v: number, r: AuditCase) => <AmountCell amount={v} currency={r.currency} />,
+      width: 180,
+      render: (v: number, r: TestCase) => <AmountCell amount={v} currency={r.currency} />,
       sorter: (a, b) => a.amount - b.amount,
+      defaultSortOrder: "descend",
     },
     {
       title: "Invoice Date",
       dataIndex: "invoiceDate",
       key: "invoiceDate",
-      width: 115,
+      width: 120,
       sorter: (a, b) => a.invoiceDate.localeCompare(b.invoiceDate),
+      defaultSortOrder: "descend",
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
     },
     {
-      title: "Review Date",
-      dataIndex: "reviewDate",
-      key: "reviewDate",
-      width: 115,
-      sorter: (a, b) => a.reviewDate.localeCompare(b.reviewDate),
+      title: "Update Time",
+      dataIndex: "updateTime",
+      key: "updateTime",
+      width: 150,
       render: (v: string) => <Text style={{ fontSize: 13, color: "#595959" }}>{v}</Text>,
+      sorter: (a, b) => a.updateTime.localeCompare(b.updateTime),
     },
     {
-      title: "",
+      title: "Invoice Review",
+      dataIndex: "invoiceReviewGroundTruth",
+      key: "invoiceReviewGroundTruth",
+      width: 120,
+      render: (v: string) => (
+        <Tag color={v === 'Pass' ? 'green' : 'red'} style={{ fontSize: 11 }}>
+          {v}
+        </Tag>
+      ),
+      sorter: (a, b) => a.invoiceReviewGroundTruth.localeCompare(b.invoiceReviewGroundTruth),
+    },
+    {
+      title: "Match",
+      dataIndex: "matchGroundTruth",
+      key: "matchGroundTruth",
+      width: 110,
+      render: (v: string) => (
+        <Tag color={v === 'Matched' ? 'blue' : 'default'} style={{ fontSize: 11 }}>
+          {v}
+        </Tag>
+      ),
+      sorter: (a, b) => a.matchGroundTruth.localeCompare(b.matchGroundTruth),
+    },
+    {
+      title: "AP Voucher",
+      dataIndex: "apVoucherGroundTruth",
+      key: "apVoucherGroundTruth",
+      width: 130,
+      render: (v: string) => (
+        <Tag color={v === 'Submit to EBS' ? 'green' : 'red'} style={{ fontSize: 11 }}>
+          {v}
+        </Tag>
+      ),
+      sorter: (a, b) => a.apVoucherGroundTruth.localeCompare(b.apVoucherGroundTruth),
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 90,
+      render: (v: string) => (
+        <Tag color={v === 'Active' ? 'green' : 'default'} style={{ fontSize: 11 }}>
+          {v}
+        </Tag>
+      ),
+      sorter: (a, b) => a.status.localeCompare(b.status),
+    },
+    {
+      title: "Actions",
       key: "action",
-      width: 54,
-      render: (_: unknown, record: AuditCase) => (
-        <Tooltip title="View detail">
+      width: 80,
+      render: (_: unknown, record: TestCase) => (
+        <Tooltip title="Open Payment Request">
           <Button
-            type="text"
+            type="link"
             size="small"
             icon={<EyeOutlined />}
-            onClick={(e) => {
-              e.stopPropagation()
-              onViewDetail ? onViewDetail(record) : setDetail(record)
-            }}
+            onClick={() => window.open(`https://billing.workatsea.com/sbc/br/apr/payment_request/${record.paymentRequestId}`, '_blank')}
           />
         </Tooltip>
       ),
@@ -477,7 +538,7 @@ export function CaseManagement({
 
       {/* Page Title with Entity Selector */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Case Management</Title>
+        <Title level={4} style={{ margin: 0 }}>Test Case List</Title>
         <Select
           value={selectedEntity}
           onChange={setSelectedEntity}
@@ -526,10 +587,10 @@ export function CaseManagement({
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         <Input
           prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-          placeholder="Search Case ID / Invoice / Supplier"
+          placeholder="Search by Case ID / Payment Request ID / Supplier"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 280 }}
+          style={{ width: 300 }}
           allowClear
         />
         <Select

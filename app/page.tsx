@@ -12,9 +12,9 @@ import { RegionProvider, useRegion, REGIONS, type RegionCode } from "@/lib/regio
 import { KnowledgeDetail } from "@/components/knowledge-base"
 import { KnowledgeEndpoint } from "@/components/knowledge-endpoint"
 import { CaseManagement } from "@/components/case-management"
+import { ArchiveCase } from "@/components/archive-case"
 import { CaseDetail } from "@/components/case-detail"
 import { GoldenCaseManagement } from "@/components/golden-case-management"
-import { ArchivedCases } from "@/components/archived-cases"
 import { AgentList } from "@/components/agent-list"
 import { AgentDetail } from "@/components/agent-detail"
 import { PatternLibrary } from "@/components/pattern-library"
@@ -46,7 +46,7 @@ const BREADCRUMBS: Record<Page, string[]> = {
   "case-management":       ["Case Management", "Case List"],
   "case-detail":           ["Case Management", "Case List", "Case Detail"],
   "golden-case-management":["Case Management", "Golden Case Management"],
-  "archived-cases":        ["Case Management", "Archived Cases"],
+  "archived-cases":        ["Case Management", "Archive Case"],
   "agent-list":            ["Agent Management", "Agent List"],
   "pattern-library":       ["Case Management", "Pattern Library"],
   "agent-detail":          ["Agent Management", "Agent List", "Agent Detail"],
@@ -187,7 +187,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
               label: "Case Management",
               children: [
                 { key: "case-management",        icon: <TableOutlined />, label: "Case List" },
-                { key: "archived-cases",         icon: <InboxOutlined />, label: "Archived Cases" },
+                { key: "archived-cases",         icon: <InboxOutlined />, label: "Archive Case" },
                 { key: "golden-case-management", icon: <CodeOutlined />,  label: "Golden Case Management" },
                 { key: "pattern-library",        icon: <CodeOutlined />,  label: "Pattern Library" },
               ],
@@ -268,7 +268,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "knowledge-detail"   && <KnowledgeDetail />}
           {page === "knowledge-endpoint" && <KnowledgeEndpoint />}
           {page === "case-management"         && <CaseManagement onViewDetail={goToCaseDetail} archivedCases={archivedCases} onArchive={handleArchive} onGoToArchived={goToArchivedCases} goldenCaseIds={goldenCaseIdSet} />}
-          {page === "archived-cases"          && <ArchivedCases archivedCases={archivedCases} />}
+          {page === "archived-cases"          && <ArchiveCase archivedCases={archivedCases} />}
           {page === "golden-case-management"  && <GoldenCaseManagement goldenCases={goldenCases} setGoldenCases={setGoldenCases} />}
           {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
           {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} onPassedRun={handlePassedRun} />}

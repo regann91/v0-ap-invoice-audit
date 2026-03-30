@@ -65,11 +65,15 @@ export const supplierBankAccountData: SupplierBankAccount[] = [
 // ── Case Management ──────────────────────────────────────────────
 
 export type CaseGolden = 'Golden' | 'Non-Golden'
-export type CaseGroundTruth = 'Pass' | 'Fail' | 'Pending'
+export type InvoiceReviewGroundTruth = 'Pass' | 'Fail'
+export type MatchGroundTruth = 'Matched' | 'N/A'
+export type APVoucherGroundTruth = 'Submit to EBS' | 'Rejected'
 
-export interface AuditCase {
+export interface TestCase {
   key: string
   caseId: string
+  paymentRequestId: string
+  paymentGroupId: string
   invoiceNo: string
   supplierName: string
   region: string
@@ -77,27 +81,30 @@ export interface AuditCase {
   amount: number
   currency: string
   invoiceDate: string
-  /** Date the case was last reviewed / closed. Used for the 365-day active window. */
-  reviewDate: string
+  updateTime: string
+  invoiceReviewGroundTruth: InvoiceReviewGroundTruth
+  matchGroundTruth: MatchGroundTruth
+  apVoucherGroundTruth: APVoucherGroundTruth
+  status: 'Active' | 'Archived'
   isGolden: CaseGolden
-  groundTruth: CaseGroundTruth
   tags: string[]
 }
 
-export const auditCaseData: AuditCase[] = [
-  // ── Active cases (reviewDate within last 365 days from 2025-03-19) ──
-  { key: '1',  caseId: 'CASE-001', invoiceNo: 'INV-2025-0001', supplierName: 'Accenture Pte Ltd',              region: 'SEA',   entity: 'SG', amount: 145000, currency: 'SGD', invoiceDate: '2025-01-05', reviewDate: '2025-01-07', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['three-way-match', 'header-check'] },
-  { key: '2',  caseId: 'CASE-002', invoiceNo: 'INV-2025-0002', supplierName: 'AWS Singapore Pte Ltd',         region: 'SEA',   entity: 'SG', amount: 87200,  currency: 'SGD', invoiceDate: '2025-01-08', reviewDate: '2025-01-10', isGolden: 'Golden',     groundTruth: 'Fail',    tags: ['amount-mismatch'] },
-  { key: '3',  caseId: 'CASE-003', invoiceNo: 'INV-2025-0003', supplierName: 'Google Asia Pacific Pte Ltd',   region: 'SEA',   entity: 'TH', amount: 320000, currency: 'THB', invoiceDate: '2025-01-12', reviewDate: '2025-01-14', isGolden: 'Non-Golden', groundTruth: 'Pass',    tags: ['line-item', 'tax-check'] },
-  { key: '4',  caseId: 'CASE-004', invoiceNo: 'INV-2025-0004', supplierName: 'Microsoft Thailand Co Ltd',     region: 'SEA',   entity: 'TH', amount: 215000, currency: 'THB', invoiceDate: '2025-01-15', reviewDate: '2025-01-17', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['golden', 'three-way-match'] },
-  { key: '5',  caseId: 'CASE-005', invoiceNo: 'INV-2025-0005', supplierName: 'Deloitte Advisory Vietnam',     region: 'SEA',   entity: 'VN', amount: 98000,  currency: 'VND', invoiceDate: '2025-01-20', reviewDate: '2025-01-22', isGolden: 'Non-Golden', groundTruth: 'Pending', tags: ['under-review'] },
-  { key: '6',  caseId: 'CASE-006', invoiceNo: 'INV-2025-0006', supplierName: 'Alibaba Cloud (HK) Ltd',        region: 'EA',    entity: 'TW', amount: 56000,  currency: 'TWD', invoiceDate: '2025-02-01', reviewDate: '2025-02-03', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['header-check'] },
-  { key: '7',  caseId: 'CASE-007', invoiceNo: 'INV-2025-0007', supplierName: 'Tencent Cloud International',   region: 'EA',    entity: 'TW', amount: 134000, currency: 'TWD', invoiceDate: '2025-02-05', reviewDate: '2025-02-07', isGolden: 'Non-Golden', groundTruth: 'Fail',    tags: ['bank-mismatch', 'amount-mismatch'] },
-  { key: '8',  caseId: 'CASE-008', invoiceNo: 'INV-2025-0008', supplierName: 'Mercado Pago Brasil',           region: 'LATAM', entity: 'BR', amount: 47000,  currency: 'BRL', invoiceDate: '2025-02-10', reviewDate: '2025-02-12', isGolden: 'Golden',     groundTruth: 'Pass',    tags: ['golden', 'three-way-match'] },
-  { key: '9',  caseId: 'CASE-009', invoiceNo: 'INV-2025-0009', supplierName: 'Shopee Philippines Inc',        region: 'SEA',   entity: 'PH', amount: 290000, currency: 'PHP', invoiceDate: '2025-02-14', reviewDate: '2025-02-16', isGolden: 'Non-Golden', groundTruth: 'Pass',    tags: ['line-item'] },
-  { key: '10', caseId: 'CASE-010', invoiceNo: 'INV-2025-0010', supplierName: 'Shopee Indonesia PT',           region: 'SEA',   entity: 'ID', amount: 185000, currency: 'IDR', invoiceDate: '2025-02-20', reviewDate: '2025-02-22', isGolden: 'Golden',     groundTruth: 'Fail',    tags: ['golden', 'tax-check'] },
-  { key: '11', caseId: 'CASE-011', invoiceNo: 'INV-2025-0011', supplierName: 'AWS Singapore Pte Ltd',         region: 'SEA',   entity: 'MY', amount: 62000,  currency: 'MYR', invoiceDate: '2025-03-01', reviewDate: '2025-03-03', isGolden: 'Non-Golden', groundTruth: 'Pass',    tags: ['header-check'] },
-  { key: '12', caseId: 'CASE-012', invoiceNo: 'INV-2025-0012', supplierName: 'Accenture Pte Ltd',             region: 'SEA',   entity: 'SG', amount: 210000, currency: 'SGD', invoiceDate: '2025-03-05', reviewDate: '2025-03-07', isGolden: 'Golden',     groundTruth: 'Pending', tags: ['golden', 'under-review'] },
+export const auditCaseData: TestCase[] = [
+  // ── Active cases ──
+  { key: '1', caseId: 'Case-SG-20250105-000001', paymentRequestId: 'PR-001', paymentGroupId: 'PG-001', invoiceNo: 'INV-2025-0001', supplierName: 'Accenture Pte Ltd', region: 'SEA', entity: 'SG', amount: 145000, currency: 'SGD', invoiceDate: '2025-01-05', updateTime: '2025-03-15 14:30', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Golden', tags: ['three-way-match', 'header-check'] },
+  { key: '2', caseId: 'Case-SG-20250108-000002', paymentRequestId: 'PR-002', paymentGroupId: 'PG-001', invoiceNo: 'INV-2025-0002', supplierName: 'AWS Singapore Pte Ltd', region: 'SEA', entity: 'SG', amount: 87200, currency: 'SGD', invoiceDate: '2025-01-08', updateTime: '2025-03-15 13:45', invoiceReviewGroundTruth: 'Fail', matchGroundTruth: 'N/A', apVoucherGroundTruth: 'Rejected', status: 'Active', isGolden: 'Golden', tags: ['amount-mismatch'] },
+  { key: '3', caseId: 'Case-TH-20250112-000003', paymentRequestId: 'PR-003', paymentGroupId: 'PG-002', invoiceNo: 'INV-2025-0003', supplierName: 'Google Asia Pacific Pte Ltd', region: 'SEA', entity: 'TH', amount: 320000, currency: 'THB', invoiceDate: '2025-01-12', updateTime: '2025-03-14 09:15', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Non-Golden', tags: ['line-item', 'tax-check'] },
+  { key: '4', caseId: 'Case-TH-20250115-000004', paymentRequestId: 'PR-004', paymentGroupId: 'PG-002', invoiceNo: 'INV-2025-0004', supplierName: 'Microsoft Thailand Co Ltd', region: 'SEA', entity: 'TH', amount: 215000, currency: 'THB', invoiceDate: '2025-01-15', updateTime: '2025-03-13 16:20', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Golden', tags: ['golden', 'three-way-match'] },
+  { key: '5', caseId: 'Case-VN-20250120-000005', paymentRequestId: 'PR-005', paymentGroupId: 'PG-003', invoiceNo: 'INV-2025-0005', supplierName: 'Deloitte Advisory Vietnam', region: 'SEA', entity: 'VN', amount: 98000, currency: 'VND', invoiceDate: '2025-01-20', updateTime: '2025-03-12 11:00', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Non-Golden', tags: ['under-review'] },
+  { key: '6', caseId: 'Case-TW-20250201-000006', paymentRequestId: 'PR-006', paymentGroupId: 'PG-004', invoiceNo: 'INV-2025-0006', supplierName: 'Alibaba Cloud (HK) Ltd', region: 'EA', entity: 'TW', amount: 56000, currency: 'TWD', invoiceDate: '2025-02-01', updateTime: '2025-03-11 10:45', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Golden', tags: ['header-check'] },
+  { key: '7', caseId: 'Case-TW-20250205-000007', paymentRequestId: 'PR-007', paymentGroupId: 'PG-004', invoiceNo: 'INV-2025-0007', supplierName: 'Tencent Cloud International', region: 'EA', entity: 'TW', amount: 134000, currency: 'TWD', invoiceDate: '2025-02-05', updateTime: '2025-03-10 15:30', invoiceReviewGroundTruth: 'Fail', matchGroundTruth: 'N/A', apVoucherGroundTruth: 'Rejected', status: 'Active', isGolden: 'Non-Golden', tags: ['bank-mismatch', 'amount-mismatch'] },
+  { key: '8', caseId: 'Case-BR-20250210-000008', paymentRequestId: 'PR-008', paymentGroupId: 'PG-005', invoiceNo: 'INV-2025-0008', supplierName: 'Mercado Pago Brasil', region: 'LATAM', entity: 'BR', amount: 47000, currency: 'BRL', invoiceDate: '2025-02-10', updateTime: '2025-03-09 12:15', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Golden', tags: ['golden', 'three-way-match'] },
+  { key: '9', caseId: 'Case-PH-20250214-000009', paymentRequestId: 'PR-009', paymentGroupId: 'PG-006', invoiceNo: 'INV-2025-0009', supplierName: 'Shopee Philippines Inc', region: 'SEA', entity: 'PH', amount: 290000, currency: 'PHP', invoiceDate: '2025-02-14', updateTime: '2025-03-08 14:50', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Non-Golden', tags: ['line-item'] },
+  { key: '10', caseId: 'Case-ID-20250220-000010', paymentRequestId: 'PR-010', paymentGroupId: 'PG-007', invoiceNo: 'INV-2025-0010', supplierName: 'Shopee Indonesia PT', region: 'SEA', entity: 'ID', amount: 185000, currency: 'IDR', invoiceDate: '2025-02-20', updateTime: '2025-03-07 09:30', invoiceReviewGroundTruth: 'Fail', matchGroundTruth: 'N/A', apVoucherGroundTruth: 'Rejected', status: 'Active', isGolden: 'Golden', tags: ['golden', 'tax-check'] },
+  { key: '11', caseId: 'Case-MY-20250301-000011', paymentRequestId: 'PR-011', paymentGroupId: 'PG-008', invoiceNo: 'INV-2025-0011', supplierName: 'AWS Singapore Pte Ltd', region: 'SEA', entity: 'MY', amount: 62000, currency: 'MYR', invoiceDate: '2025-03-01', updateTime: '2025-03-06 16:00', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Non-Golden', tags: ['header-check'] },
+  { key: '12', caseId: 'Case-SG-20250305-000012', paymentRequestId: 'PR-012', paymentGroupId: 'PG-009', invoiceNo: 'INV-2025-0012', supplierName: 'Accenture Pte Ltd', region: 'SEA', entity: 'SG', amount: 210000, currency: 'SGD', invoiceDate: '2025-03-05', updateTime: '2025-03-15 11:20', invoiceReviewGroundTruth: 'Pass', matchGroundTruth: 'Matched', apVoucherGroundTruth: 'Submit to EBS', status: 'Active', isGolden: 'Golden', tags: ['golden', 'under-review'] },
+]
   // ── Older cases (reviewDate > 365 days ago, eligible for archiving) ──
   { key: '13', caseId: 'CASE-013', invoiceNo: 'INV-2024-0041', supplierName: 'Accenture Pte Ltd',             region: 'SEA',   entity: 'SG', amount: 132000, currency: 'SGD', invoiceDate: '2024-01-10', reviewDate: '2024-01-12', isGolden: 'Non-Golden', groundTruth: 'Pass',    tags: ['three-way-match'] },
   { key: '14', caseId: 'CASE-014', invoiceNo: 'INV-2024-0042', supplierName: 'AWS Singapore Pte Ltd',         region: 'SEA',   entity: 'SG', amount: 73400,  currency: 'SGD', invoiceDate: '2024-01-18', reviewDate: '2024-01-20', isGolden: 'Non-Golden', groundTruth: 'Fail',    tags: ['amount-mismatch'] },

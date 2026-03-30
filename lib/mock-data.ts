@@ -394,8 +394,8 @@ Please perform a complete line-item validation and return results in the specifi
   versions: {
     all: [
       { version: 'v1.3.0', state: 'LIVE', publishedAt: '2025-03-15 10:22', publishedBy: 'ops_user_01' },
-      { version: 'v1.4.0-beta', state: 'TESTING', createdAt: '2025-03-18 14:05', createdBy: 'ops_user_02', lastTestStatus: 'failed', lastTestRunId: 'RUN-2042' },
-      { version: 'v1.5.0-beta', state: 'TESTING', createdAt: '2025-03-20 09:10', createdBy: 'ops_user_02' },
+      { version: 'v1.4.0-beta', state: 'TESTING', createdAt: '2025-03-18 14:05', createdBy: 'ops_user_02', lastTestStatus: 'passed', lastTestRunId: 'RUN-2043' },
+      { version: 'v1.5.0-beta', state: 'TESTING', createdAt: '2025-03-20 09:10', createdBy: 'ops_user_02', lastTestStatus: 'failed', lastTestRunId: 'RUN-2042' },
       { version: 'v1.2.0', state: 'DEPRECATED', publishedAt: '2025-02-20 09:30', publishedBy: 'ops_user_01', hasRegressionHistory: true },
       { version: 'v1.1.0', state: 'DEPRECATED', publishedAt: '2025-01-15 14:15', publishedBy: 'ops_user_03', hasRegressionHistory: true },
       { version: 'v1.0.1', state: 'ARCHIVED', publishedAt: '2024-12-10 11:00', publishedBy: 'ops_user_01' },

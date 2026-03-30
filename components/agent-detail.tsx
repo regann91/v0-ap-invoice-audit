@@ -136,7 +136,7 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
 
   function handleReleaseToLive(version: string) {
     const versionData = versions.find(v => v.version === version)
-    if (!versionData?.regressionTestPassed) {
+    if (versionData?.lastTestStatus !== 'passed') {
       setSelectedReleaseVersion(version)
       setReleaseWarningOpen(true)
       return
@@ -173,7 +173,7 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
   function handleCreateVersion(copyFrom: string, newVersion: string) {
     const now = new Date()
     const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
-    setVersions(prev => [{ version: newVersion, state: 'TESTING', createdAt: timestamp, createdBy: 'current_user', regressionTestPassed: false }, ...prev])
+    setVersions(prev => [{ version: newVersion, state: 'TESTING', createdAt: timestamp, createdBy: 'current_user' }, ...prev])
     msgApi.success(`Version ${newVersion} created (copied from ${copyFrom})`)
   }
 
@@ -213,22 +213,35 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
         </Text>
         
         {/* Regression Test Status Row (TESTING only) */}
-        {isTesting && isOps && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffe58f', borderRadius: 4, marginBottom: 12, fontSize: 12 }}>
-            {versionInfo.regressionTestPassed ? (
-              <>
-                <span style={{ color: '#52c41a', fontSize: 14 }}>✓</span>
-                <Text style={{ fontSize: 12, color: '#52c41a', flex: 1 }}>Last test passed</Text>
-              </>
-            ) : (
-              <>
-                <span style={{ color: '#faad14', fontSize: 14 }}>⚠</span>
-                <Text style={{ fontSize: 12, color: '#faad14', flex: 1 }}>No passing test run</Text>
-                <Button type="link" size="small" style={{ padding: 0, height: 'auto', fontSize: 11, color: '#faad14' }} onClick={(e) => { e.stopPropagation(); msgApi.info('Navigating to Regression Test page...') }}>Run →</Button>
-              </>
-            )}
-          </div>
-        )}
+        {isTesting && isOps && (() => {
+          const status = versionInfo.lastTestStatus
+          if (status === 'passed') {
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: '#52c41a', lineHeight: 1 }}>&#10003;</Text>
+                <Text style={{ fontSize: 12, color: '#52c41a', flex: 1 }}>Regression Passed</Text>
+                <Typography.Link style={{ fontSize: 12, color: '#52c41a' }} onClick={(e) => { e.stopPropagation(); msgApi.info(`Viewing run ${versionInfo.lastTestRunId}`) }}>View</Typography.Link>
+              </div>
+            )
+          }
+          if (status === 'failed') {
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 4, marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: '#cf1322', lineHeight: 1 }}>&#10007;</Text>
+                <Text style={{ fontSize: 12, color: '#cf1322', flex: 1 }}>Regression Failed</Text>
+                <Typography.Link style={{ fontSize: 12, color: '#cf1322' }} onClick={(e) => { e.stopPropagation(); msgApi.info(`Viewing run ${versionInfo.lastTestRunId}`) }}>View</Typography.Link>
+              </div>
+            )
+          }
+          // no test run ever
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: '#faad14', lineHeight: 1 }}>&#9888;</Text>
+              <Text style={{ fontSize: 12, color: '#faad14', flex: 1 }}>No passing test run</Text>
+              <Button type="link" size="small" style={{ padding: 0, height: 'auto', fontSize: 12, color: '#faad14' }} onClick={(e) => { e.stopPropagation(); msgApi.info('Navigating to Regression Test page...') }}>Run &#8594;</Button>
+            </div>
+          )
+        })()}
         
         {/* Release to Live & Archive Buttons (TESTING only) */}
         {isTesting && isOps && (

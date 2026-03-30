@@ -89,6 +89,10 @@ function handleArchive(newly: ArchivedCaseMock[]) {
   setArchivedCases((prev) => [...prev, ...newly])
   }
 
+  function handleRestore(caseKey: string) {
+    setArchivedCases((prev) => prev.filter((c) => c.key !== caseKey))
+  }
+
   function goToArchivedCases() {
     setPage("archived-cases")
     setSelectedKey("archived-cases")
@@ -268,7 +272,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "knowledge-detail"   && <KnowledgeDetail />}
           {page === "knowledge-endpoint" && <KnowledgeEndpoint />}
           {page === "case-management"         && <CaseManagement onViewDetail={goToCaseDetail} archivedCases={archivedCases} onArchive={handleArchive} onGoToArchived={goToArchivedCases} goldenCaseIds={goldenCaseIdSet} />}
-          {page === "archived-cases"          && <ArchiveCase archivedCases={archivedCases} />}
+          {page === "archived-cases"          && <ArchiveCase archivedCases={archivedCases} onRestoreToList={handleRestore} />}
           {page === "golden-case-management"  && <GoldenCaseManagement goldenCases={goldenCases} setGoldenCases={setGoldenCases} />}
           {page === "case-detail"        && selectedCase && <CaseDetail record={selectedCase} onBack={goToCaseList} />}
           {page === "regression-test"    && <RegressionTest preselectedAgentId={regressionAgentId} agents={agents} goldenCases={goldenCases} onPublish={handlePublish} onPassedRun={handlePassedRun} />}

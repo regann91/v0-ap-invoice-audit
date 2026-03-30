@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Table, Input, Select, Button, Typography, Space, Tag, Tooltip, message, ColumnsType } from "antd"
+import { Table, Input, Select, Button, Typography, Space, Tag, Tooltip, Modal, message } from "antd"
+import type { ColumnsType } from "antd/es/table"
 import { SearchOutlined, FilterOutlined } from "@ant-design/icons"
 import { type ArchivedCaseMock } from "@/lib/mock-data"
 import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
@@ -12,6 +13,7 @@ const { Text, Title } = Typography
 interface ArchiveCaseProps {
   archivedCases: ArchivedCaseMock[]
   onBack?: () => void
+  onRestoreToList?: (caseKey: string) => void
 }
 
 function uniqueOptions(values: string[]) {
@@ -26,7 +28,7 @@ function AmountCell({ amount, currency }: { amount: number; currency: string }) 
   )
 }
 
-export function ArchiveCase({ archivedCases, onBack }: ArchiveCaseProps) {
+export function ArchiveCase({ archivedCases, onBack, onRestoreToList }: ArchiveCaseProps) {
   const { region } = useRegion()
 
   // Entity selector (driven by region)
@@ -43,6 +45,11 @@ export function ArchiveCase({ archivedCases, onBack }: ArchiveCaseProps) {
   const [regionFilter, setRegionFilter] = useState<string | null>(null)
   const [entityFilter, setEntityFilter] = useState<string | null>(null)
   const [goldenFilter, setGoldenFilter] = useState<string | null>(null)
+
+  // Restore modal state
+  const [restoreTarget, setRestoreTarget] = useState<ArchivedCaseMock | null>(null)
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false)
+  const [msgApi, contextHolder] = message.useMessage()
 
   // Filtered data
   const regionPool = useMemo(() => archivedCases, [archivedCases])
@@ -171,10 +178,40 @@ export function ArchiveCase({ archivedCases, onBack }: ArchiveCaseProps) {
       },
       sorter: (a, b) => (a.archivedBy || "System").localeCompare(b.archivedBy || "System"),
     },
+    {
+      title: "Action",
+      key: "action",
+      width: 140,
+      render: (_: unknown, record: ArchivedCaseMock) => {
+        // Only show action for manually archived cases
+        if (record.archiveReason !== "Manual Move") return null
+        return (
+          <Button
+            size="small"
+            type="link"
+            onClick={() => {
+              setRestoreTarget(record)
+              setRestoreModalOpen(true)
+            }}
+          >
+            Move to Case List
+          </Button>
+        )
+      },
+    },
   ]
+
+  function handleRestoreConfirm() {
+    if (!restoreTarget) return
+    onRestoreToList?.(restoreTarget.key)
+    msgApi.success(`Case ${restoreTarget.caseId} moved back to Case List`)
+    setRestoreModalOpen(false)
+    setRestoreTarget(null)
+  }
 
   return (
     <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
+      {contextHolder}
       {/* Page Title with Entity Selector */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Archive Case</Title>
@@ -236,9 +273,41 @@ export function ArchiveCase({ archivedCases, onBack }: ArchiveCaseProps) {
         dataSource={filtered.map((r) => ({ ...r, key: r.key }))}
         size="small"
         pagination={{ pageSize: 20, showSizeChanger: true }}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1600 }}
         bordered
       />
+
+      {/* Restore Confirmation Modal */}
+      <Modal
+        title="Move to Case List"
+        open={restoreModalOpen}
+        onCancel={() => {
+          setRestoreModalOpen(false)
+          setRestoreTarget(null)
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setRestoreModalOpen(false)
+              setRestoreTarget(null)
+            }}
+          >
+            Cancel
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            onClick={handleRestoreConfirm}
+          >
+            Confirm
+          </Button>,
+        ]}
+      >
+        <Text>
+          Are you sure you want to move this case back to the Case List?
+        </Text>
+      </Modal>
     </div>
   )
 }

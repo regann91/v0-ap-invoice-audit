@@ -207,7 +207,8 @@ export interface Agent {
   agentName: string
   flowId: string
   step: AgentStep
-  currentVersion: string
+  liveVersion?: string
+  testingVersions?: string[]
   status: AgentStatus
   lastUpdated: string
   description: string
@@ -220,7 +221,7 @@ export const agentListData: Agent[] = [
     key: '1', id: 'AGT-001',
     agentName: 'Invoice Header Extractor',
     flowId: 'FLOW-001', step: 'INVOICE_REVIEW',
-    currentVersion: 'v1.3.0', status: 'ACTIVE',
+    liveVersion: 'v1.3.0', testingVersions: [], status: 'ACTIVE',
     lastUpdated: '2025-03-15 10:22',
     description: 'Extracts header fields (vendor, date, amount) from raw invoice PDFs using vision model.',
     regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
@@ -229,7 +230,7 @@ export const agentListData: Agent[] = [
     key: '2', id: 'AGT-002',
     agentName: 'Line Item Validator',
     flowId: 'FLOW-001', step: 'INVOICE_REVIEW',
-    currentVersion: 'v1.4.0-beta', status: 'TESTING',
+    liveVersion: 'v1.2.0', testingVersions: ['v1.3.0-beta', 'v1.4.0-beta'], status: 'ACTIVE',
     lastUpdated: '2025-03-18 14:05',
     description: 'Validates each invoice line item against PO data and flags discrepancies.',
     regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
@@ -238,7 +239,7 @@ export const agentListData: Agent[] = [
     key: '3', id: 'AGT-003',
     agentName: 'PO Matching Agent',
     flowId: 'FLOW-001', step: 'MATCH',
-    currentVersion: 'v2.1.0', status: 'ACTIVE',
+    liveVersion: 'v2.1.0', testingVersions: ['v2.2.0-beta'], status: 'ACTIVE',
     lastUpdated: '2025-03-10 09:30',
     description: 'Matches invoices to purchase orders using fuzzy logic and embedding similarity.',
     regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
@@ -247,7 +248,7 @@ export const agentListData: Agent[] = [
     key: '4', id: 'AGT-004',
     agentName: 'Three-Way Match Auditor',
     flowId: 'FLOW-001', step: 'MATCH',
-    currentVersion: 'v1.0.2', status: 'DEPRECATED',
+    liveVersion: undefined, testingVersions: ['v1.1.0-beta'], status: 'TESTING',
     lastUpdated: '2025-02-28 16:45',
     description: 'Legacy three-way match logic. Superseded by PO Matching Agent v2.x.',
     regions: ['SG'],
@@ -256,7 +257,7 @@ export const agentListData: Agent[] = [
     key: '5', id: 'AGT-005',
     agentName: 'AP Voucher Generator',
     flowId: 'FLOW-001', step: 'AP_VOUCHER',
-    currentVersion: 'v1.2.0', status: 'ACTIVE',
+    liveVersion: 'v1.2.0', testingVersions: [], status: 'ACTIVE',
     lastUpdated: '2025-03-12 11:00',
     description: 'Generates AP voucher entries in SAP format from matched invoice data.',
     regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
@@ -265,7 +266,7 @@ export const agentListData: Agent[] = [
     key: '6', id: 'AGT-006',
     agentName: 'Voucher Approval Router',
     flowId: 'FLOW-001', step: 'AP_VOUCHER',
-    currentVersion: 'v0.9.1-beta', status: 'TESTING',
+    liveVersion: undefined, testingVersions: ['v0.9.1-beta'], status: 'TESTING',
     lastUpdated: '2025-03-19 08:15',
     description: 'Routes generated vouchers to the correct approval workflow based on amount and cost center.',
     regions: ['SG', 'TH', 'MY'],
@@ -273,8 +274,8 @@ export const agentListData: Agent[] = [
   {
     key: '7', id: 'AGT-007',
     agentName: 'Supplier Data Validator',
-    flowId: 'FLOW-002', step: 'SUPPLIER_VERIFY',
-    currentVersion: 'v1.0.0', status: 'ACTIVE',
+    flowId: '', step: 'SUPPLIER_VERIFY',
+    liveVersion: 'v1.0.0', testingVersions: ['v1.1.0-beta'], status: 'ACTIVE',
     lastUpdated: '2025-03-01 09:00',
     description: 'Validates supplier registration data against government registries and internal blacklists.',
     regions: ['SG', 'MY', 'VN', 'PH', 'ID'],
@@ -282,8 +283,8 @@ export const agentListData: Agent[] = [
   {
     key: '8', id: 'AGT-008',
     agentName: 'Bank Account Verifier',
-    flowId: 'FLOW-002', step: 'BANK_CHECK',
-    currentVersion: 'v1.1.0-beta', status: 'TESTING',
+    flowId: '', step: 'BANK_CHECK',
+    liveVersion: 'v1.1.0', testingVersions: [], status: 'ACTIVE',
     lastUpdated: '2025-03-17 13:40',
     description: 'Cross-checks supplier bank account details against known fraud patterns and SWIFT directory.',
     regions: ['SG', 'TW', 'BR'],
@@ -291,8 +292,8 @@ export const agentListData: Agent[] = [
   {
     key: '9', id: 'AGT-009',
     agentName: 'Bank Statement Reconciler',
-    flowId: 'FLOW-003', step: 'BANK_RECON',
-    currentVersion: 'v2.0.1', status: 'ACTIVE',
+    flowId: '', step: 'BANK_RECON',
+    liveVersion: 'v2.0.1', testingVersions: ['v2.1.0-beta', 'v2.2.0-beta', 'v2.3.0-beta'], status: 'ACTIVE',
     lastUpdated: '2025-03-08 10:15',
     description: 'Reconciles bank statements against AP ledger entries using transaction ID matching.',
     regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
@@ -300,8 +301,8 @@ export const agentListData: Agent[] = [
   {
     key: '10', id: 'AGT-010',
     agentName: 'Exception Classifier',
-    flowId: 'FLOW-003', step: 'EXCEPTION_MGT',
-    currentVersion: 'v1.0.0', status: 'ACTIVE',
+    flowId: '', step: 'EXCEPTION_MGT',
+    liveVersion: 'v1.0.0', testingVersions: [], status: 'ACTIVE',
     lastUpdated: '2025-03-05 15:30',
     description: 'Classifies unmatched transactions into exception categories and routes for manual review.',
     regions: ['SG', 'TH', 'VN', 'MY', 'PH', 'TW', 'ID', 'BR'],
@@ -310,13 +311,19 @@ export const agentListData: Agent[] = [
 
 // ── Agent Detail (AGT-002 as the selected agent) ─────────────────
 
-export interface AgentVersionInfo {
+  export interface AgentVersionInfo {
   version: string
+  state: 'LIVE' | 'TESTING' | 'ARCHIVED' | 'DEPRECATED'
   publishedAt?: string
   createdAt?: string
   publishedBy?: string
   createdBy?: string
-}
+  /** undefined = no test run ever; 'passed' | 'failed' = result of last run */
+  lastTestStatus?: 'passed' | 'failed'
+  lastTestRunId?: string
+  /** whether regression test history records exist for this version */
+  hasRegressionHistory?: boolean
+  }
 
 export interface AgentDetailData {
   id: string
@@ -334,9 +341,7 @@ export interface AgentDetailData {
   systemPrompt: string
   userPromptTemplate: string
   versions: {
-    current: AgentVersionInfo
-    testing: AgentVersionInfo | null
-    history: Array<{ version: string; date: string; publishedBy: string }>
+    all: AgentVersionInfo[]
   }
 }
 
@@ -387,21 +392,14 @@ Supplier Profile:
 
 Please perform a complete line-item validation and return results in the specified JSON format.`,
   versions: {
-    current: {
-      version: 'v1.3.0',
-      publishedAt: '2025-03-15 10:22',
-      publishedBy: 'ops_user_01',
-    },
-    testing: {
-      version: 'v1.4.0-beta',
-      createdAt: '2025-03-18 14:05',
-      createdBy: 'ops_user_02',
-    },
-    history: [
-      { version: 'v1.2.0', date: '2025-02-20', publishedBy: 'ops_user_01' },
-      { version: 'v1.1.0', date: '2025-01-15', publishedBy: 'ops_user_03' },
-      { version: 'v1.0.1', date: '2024-12-10', publishedBy: 'ops_user_01' },
-      { version: 'v1.0.0', date: '2024-11-01', publishedBy: 'ops_user_03' },
+    all: [
+      { version: 'v1.3.0', state: 'LIVE', publishedAt: '2025-03-15 10:22', publishedBy: 'ops_user_01' },
+      { version: 'v1.4.0-beta', state: 'TESTING', createdAt: '2025-03-18 14:05', createdBy: 'ops_user_02', lastTestStatus: 'passed', lastTestRunId: 'RUN-2043' },
+      { version: 'v1.5.0-beta', state: 'TESTING', createdAt: '2025-03-20 09:10', createdBy: 'ops_user_02', lastTestStatus: 'failed', lastTestRunId: 'RUN-2042' },
+      { version: 'v1.2.0', state: 'DEPRECATED', publishedAt: '2025-02-20 09:30', publishedBy: 'ops_user_01', hasRegressionHistory: true },
+      { version: 'v1.1.0', state: 'DEPRECATED', publishedAt: '2025-01-15 14:15', publishedBy: 'ops_user_03', hasRegressionHistory: true },
+      { version: 'v1.0.1', state: 'ARCHIVED', publishedAt: '2024-12-10 11:00', publishedBy: 'ops_user_01' },
+      { version: 'v1.0.0', state: 'DEPRECATED', publishedAt: '2024-11-01 08:45', publishedBy: 'ops_user_03', hasRegressionHistory: true },
     ],
   },
 }

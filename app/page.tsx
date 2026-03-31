@@ -76,7 +76,7 @@ function AppShell() {
   function handlePublish(agentId: string) {
     setAgents((prev) => prev.map((a) =>
       a.id === agentId
-        ? { ...a, status: "ACTIVE", currentVersion: a.currentVersion.replace(/-beta$/, "") }
+        ? { ...a, status: "ACTIVE", liveVersion: (a.liveVersion ?? "").replace(/-beta$/, "") }
         : a
     ))
   }
@@ -142,6 +142,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
     setPage("regression-test")
     setSelectedKey("regression-test")
   }
+
 
   const crumbs = BREADCRUMBS[page]
 

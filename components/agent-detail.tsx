@@ -121,88 +121,202 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
   const { role } = useRole()
   const isOps = role === "AI_OPS"
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [snapshotVersion, setSnapshotVersion] = useState<string | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [versions, setVersions] = useState(agentDetailData.versions)
+  const [versions, setVersions] = useState(agentDetailData.versions.all)
   const [msgApi, msgContextHolder] = message.useMessage()
+  const [releaseModalOpen, setReleaseModalOpen] = useState(false)
+  const [releaseWarningOpen, setReleaseWarningOpen] = useState(false)
+  const [selectedReleaseVersion, setSelectedReleaseVersion] = useState<string | null>(null)
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false)
+  const [selectedArchiveVersion, setSelectedArchiveVersion] = useState<string | null>(null)
 
-  const availableVersions = [
-    { version: versions.current.version, label: "Current" },
-    ...(versions.testing ? [{ version: versions.testing.version, label: "Testing" }] : []),
-    ...versions.history.map((h) => ({ version: h.version, label: "History" })),
-  ]
+  const liveVersion = versions.find(v => v.state === 'LIVE')
+  const testingVersions = versions.filter(v => v.state === 'TESTING')
+  const deprecatedArchived = versions.filter(v => v.state === 'DEPRECATED' || v.state === 'ARCHIVED')
+
+  function handleReleaseToLive(version: string) {
+    const versionData = versions.find(v => v.version === version)
+    if (versionData?.lastTestStatus !== 'passed') {
+      setSelectedReleaseVersion(version)
+      setReleaseWarningOpen(true)
+      return
+    }
+    setSelectedReleaseVersion(version)
+    setReleaseModalOpen(true)
+  }
+
+  function confirmReleaseToLive() {
+    if (!selectedReleaseVersion) return
+    setVersions(prev => prev.map(v => {
+      if (v.version === selectedReleaseVersion) return { ...v, state: 'LIVE' }
+      if (v.state === 'LIVE') return { ...v, state: 'DEPRECATED' }
+      return v
+    }))
+    msgApi.success(`${selectedReleaseVersion} released to Live`)
+    setReleaseModalOpen(false)
+    setSelectedReleaseVersion(null)
+  }
+
+  function handleArchive(version: string) {
+    setSelectedArchiveVersion(version)
+    setArchiveModalOpen(true)
+  }
+
+  function confirmArchive() {
+    if (!selectedArchiveVersion) return
+    setVersions(prev => prev.map(v => v.version === selectedArchiveVersion ? { ...v, state: 'ARCHIVED' } : v))
+    msgApi.success(`${selectedArchiveVersion} archived`)
+    setArchiveModalOpen(false)
+    setSelectedArchiveVersion(null)
+  }
 
   function handleCreateVersion(copyFrom: string, newVersion: string) {
     const now = new Date()
     const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
-    setVersions((prev) => ({ ...prev, testing: { version: newVersion, createdAt: timestamp, createdBy: "current_user" } }))
+    setVersions(prev => [{ version: newVersion, state: 'TESTING', createdAt: timestamp, createdBy: 'current_user' }, ...prev])
     msgApi.success(`Version ${newVersion} created (copied from ${copyFrom})`)
   }
 
-  const historyColumns: ColumnsType<{ version: string; date: string; publishedBy: string }> = [
-    { title: "Version", dataIndex: "version", key: "version", render: (v) => <Text code style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Date", dataIndex: "date", key: "date", render: (v) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "Published by", dataIndex: "publishedBy", key: "publishedBy", render: (v) => <Text style={{ fontSize: 12 }}>{v}</Text> },
-    { title: "", key: "action", render: (_, r) => <Typography.Link style={{ fontSize: 12 }} onClick={() => setSnapshotVersion(r.version)}>View Snapshot</Typography.Link> },
-  ]
+  const stateConfig: Record<string, { color: string; label: string }> = {
+    LIVE: { color: '#52c41a', label: 'LIVE' },
+    TESTING: { color: '#faad14', label: 'TESTING' },
+    ARCHIVED: { color: '#8c8c8c', label: 'ARCHIVED' },
+    DEPRECATED: { color: '#8c8c8c', label: 'DEPRECATED' },
+  }
+
+  function VersionCard({ versionInfo, onClick }: { versionInfo: typeof versions[0]; onClick: () => void }) {
+    const cfg = stateConfig[versionInfo.state]
+    const isTesting = versionInfo.state === 'TESTING'
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          borderLeft: `4px solid ${cfg.color}`,
+          background: selectedVersion === versionInfo.version ? (cfg.color === '#52c41a' ? '#f6ffed' : cfg.color === '#faad14' ? '#fff7e6' : '#fafafa') : '#fff',
+          border: `1px solid ${cfg.color}66`,
+          borderLeftColor: cfg.color,
+          borderRadius: 4,
+          padding: '14px 16px',
+          marginBottom: 12,
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <Text strong style={{ fontSize: 14 }}>{versionInfo.version}</Text>
+          <Tag style={{ color: cfg.color, background: cfg.color === '#52c41a' ? '#f6ffed' : cfg.color === '#faad14' ? '#fff7e6' : '#f5f5f5', borderColor: cfg.color, fontWeight: 600, fontSize: 11, margin: 0 }}>
+            {cfg.label}
+          </Tag>
+        </div>
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
+          {versionInfo.publishedAt ? `Published: ${versionInfo.publishedAt} by ${versionInfo.publishedBy}` : `Created: ${versionInfo.createdAt} by ${versionInfo.createdBy}`}
+        </Text>
+        
+        {/* Regression Test Status Row (TESTING only) */}
+        {isTesting && isOps && (() => {
+          const status = versionInfo.lastTestStatus
+          if (status === 'passed') {
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: '#52c41a', lineHeight: 1 }}>&#10003;</Text>
+                <Text style={{ fontSize: 12, color: '#52c41a', flex: 1 }}>Regression Passed</Text>
+                <Typography.Link style={{ fontSize: 12, color: '#52c41a' }} onClick={(e) => { e.stopPropagation(); msgApi.info(`Viewing run ${versionInfo.lastTestRunId}`) }}>View</Typography.Link>
+              </div>
+            )
+          }
+          if (status === 'failed') {
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 4, marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: '#cf1322', lineHeight: 1 }}>&#10007;</Text>
+                <Text style={{ fontSize: 12, color: '#cf1322', flex: 1 }}>Regression Failed</Text>
+                <Typography.Link style={{ fontSize: 12, color: '#cf1322' }} onClick={(e) => { e.stopPropagation(); msgApi.info(`Viewing run ${versionInfo.lastTestRunId}`) }}>View</Typography.Link>
+              </div>
+            )
+          }
+          // no test run ever
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: '#faad14', lineHeight: 1 }}>&#9888;</Text>
+              <Text style={{ fontSize: 12, color: '#faad14', flex: 1 }}>No passing test run</Text>
+              <Button type="link" size="small" style={{ padding: 0, height: 'auto', fontSize: 12, color: '#faad14' }} onClick={(e) => { e.stopPropagation(); msgApi.info('Navigating to Regression Test page...') }}>Run &#8594;</Button>
+            </div>
+          )
+        })()}
+        
+        {/* Release to Live & Archive Buttons (TESTING only) */}
+        {isTesting && isOps && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button type="primary" size="small" style={{ background: '#faad14', fontSize: 12 }} onClick={(e) => { e.stopPropagation(); handleReleaseToLive(versionInfo.version) }}>Release to Live</Button>
+            <Button size="small" style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); handleArchive(versionInfo.version) }}>Archive</Button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const availableVersions = [
+    liveVersion ? { version: liveVersion.version, label: 'Live' } : undefined,
+    ...testingVersions.map(v => ({ version: v.version, label: 'Testing' })),
+    ...deprecatedArchived.map(v => ({ version: v.version, label: v.state })),
+  ].filter(Boolean) as Array<{ version: string; label: string }>
 
   return (
     <div>
       {msgContextHolder}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <Title level={5} style={{ margin: 0 }}>Version History</Title>
-        {isOps && <Button type="primary" size="small" icon={<PlusOutlined />} style={{ background: "#1890ff", fontSize: 12 }} onClick={() => setCreateModalOpen(true)}>New Version</Button>}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <Title level={5} style={{ margin: 0 }}>Versions</Title>
+        {isOps && <Button type="primary" size="small" icon={<PlusOutlined />} style={{ background: '#1890ff', fontSize: 12 }} onClick={() => setCreateModalOpen(true)}>New Version</Button>}
       </div>
 
-      {/* Current Version Card */}
-      <div onClick={() => onViewConfig(versions.current.version)} style={{ borderLeft: "4px solid #52c41a", background: selectedVersion === versions.current.version ? "#f6ffed" : "#fff", border: "1px solid #b7eb8f", borderLeftColor: "#52c41a", borderRadius: 4, padding: "14px 16px", marginBottom: 12, cursor: "pointer", transition: "all 0.2s" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <Text strong style={{ fontSize: 14 }}>{versions.current.version}</Text>
-          <Tag color="success" style={{ fontWeight: 600, fontSize: 11 }}>CURRENT</Tag>
-        </div>
-        <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>Published: {versions.current.publishedAt} by {versions.current.publishedBy}</Text>
-        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => { e.stopPropagation(); setSnapshotVersion(versions.current.version) }}>View Snapshot</Typography.Link>
-      </div>
+      {/* LIVE Version */}
+      {liveVersion && <VersionCard versionInfo={liveVersion} onClick={() => onViewConfig(liveVersion.version)} />}
 
-      {/* Testing Version Cards */}
-      {versions.testing && (
-        <div onClick={() => onViewConfig(versions.testing.version)} style={{ borderLeft: "4px solid #fa8c16", background: selectedVersion === versions.testing.version ? "#fff7e6" : "#fff", border: "1px solid #ffd591", borderLeftColor: "#fa8c16", borderRadius: 4, padding: "14px 16px", marginBottom: 12, cursor: "pointer", transition: "all 0.2s" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <Text strong style={{ fontSize: 14 }}>{versions.testing.version}</Text>
-            <Tag color="orange" style={{ fontWeight: 600, fontSize: 11 }}>TESTING</Tag>
+      {/* TESTING Versions */}
+      {testingVersions.map(v => <VersionCard key={v.version} versionInfo={v} onClick={() => onViewConfig(v.version)} />)}
+
+      {/* Deprecated & Archived Section */}
+      {deprecatedArchived.length > 0 && (
+        <div style={{ border: '1px solid #f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+          <div onClick={() => setHistoryOpen(v => !v)} style={{ padding: '12px 16px', background: '#fafafa', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>Deprecated & Archived ({deprecatedArchived.length})</Text>
+            <Typography.Link style={{ fontSize: 12 }}>{historyOpen ? 'Hide' : 'Show'}</Typography.Link>
           </div>
-          <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>Created: {versions.testing.createdAt} by {versions.testing.createdBy}</Text>
-          <div style={{ marginBottom: 8 }}>
-            <Typography.Link style={{ fontSize: 12, marginRight: 12 }} onClick={(e) => { e.stopPropagation(); setSnapshotVersion(versions.testing!.version) }}>View Snapshot</Typography.Link>
-            {isOps && <Typography.Link style={{ fontSize: 12, color: "#faad14" }}>Run Regression Test →</Typography.Link>}
-          </div>
-          <Text style={{ fontSize: 11, color: "#faad14", display: "block" }}>No passing test run found for this version</Text>
+          {historyOpen && (
+            <div style={{ padding: '0 16px 12px' }}>
+              {deprecatedArchived.map((v, i) => (
+                <div key={i} onClick={() => onViewConfig(v.version)} style={{ padding: '10px 0', borderBottom: i < deprecatedArchived.length - 1 ? '1px solid #f0f0f0' : 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s' }}>
+                  <div>
+                    <Text code style={{ fontSize: 12, marginRight: 12 }}>{v.version}</Text>
+                    <Tag style={{ fontSize: 11, background: '#f5f5f5', borderColor: '#d9d9d9', color: '#8c8c8c', margin: 0 }}>{v.state}</Tag>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    {v.hasRegressionHistory ? (
+                      <Typography.Link style={{ fontSize: 12 }} onClick={() => msgApi.info(`Navigating to regression history for ${v.version}...`)}>View History</Typography.Link>
+                    ) : (
+                      <Text type="secondary" style={{ fontSize: 12, color: '#d9d9d9' }}>No report</Text>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Deprecated Versions */}
-      <div style={{ border: "1px solid #f0f0f0", borderRadius: 4, overflow: "hidden" }}>
-        <div onClick={() => setHistoryOpen((v) => !v)} style={{ padding: "12px 16px", background: "#fafafa", cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Text type="secondary" style={{ fontSize: 13 }}>Deprecated Versions ({versions.history.length})</Text>
-          <Typography.Link style={{ fontSize: 12 }}>{historyOpen ? "Hide" : "Show"}</Typography.Link>
-        </div>
-        {historyOpen && (
-          <div style={{ padding: "0 16px 12px" }}>
-            {versions.history.map((h, i) => (
-              <div key={i} onClick={() => onViewConfig(h.version)} style={{ padding: "10px 0", borderBottom: i < versions.history.length - 1 ? "1px solid #f0f0f0" : "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "all 0.2s" }}>
-                <div>
-                  <Text code style={{ fontSize: 12, marginRight: 12 }}>{h.version}</Text>
-                  <Text type="secondary" style={{ fontSize: 11 }}>{h.date}</Text>
-                </div>
-                <Typography.Link style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setSnapshotVersion(h.version) }}>View Snapshot</Typography.Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {snapshotVersion && <SnapshotModal version={snapshotVersion} open={!!snapshotVersion} onClose={() => setSnapshotVersion(null)} />}
+      {/* Modals */}
       <CreateVersionModal open={createModalOpen} onClose={() => setCreateModalOpen(false)} onConfirm={handleCreateVersion} availableVersions={availableVersions} />
+      
+      <Modal title="Release to Live?" open={releaseModalOpen} onCancel={() => setReleaseModalOpen(false)} onOk={confirmReleaseToLive} okText="Confirm" okButtonProps={{ danger: false }}>
+        <Text>Are you sure you want to release <Text code>{selectedReleaseVersion}</Text> to Live? The current LIVE version will be deprecated.</Text>
+      </Modal>
+
+      <Modal title="Cannot Release to Live" open={releaseWarningOpen} onCancel={() => setReleaseWarningOpen(false)} footer={[<Button key="close" onClick={() => setReleaseWarningOpen(false)}>Close</Button>, <Button key="test" type="primary" onClick={() => { setReleaseWarningOpen(false); msgApi.info('Navigating to Regression Test page...') }}>Go to Regression Test</Button>]}>
+        <Text>This version has not passed a Regression Test. Please run and pass a Regression Test before releasing.</Text>
+      </Modal>
+
+      <Modal title="Archive Version?" open={archiveModalOpen} onCancel={() => setArchiveModalOpen(false)} onOk={confirmArchive} okText="Archive" okButtonProps={{ danger: true }}>
+        <Text>Archive this version? It will no longer be available for release but will remain visible in history.</Text>
+      </Modal>
     </div>
   )
 }
@@ -219,9 +333,15 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
   const cfg = versionConfigs[selectedVersion] || versionConfigs["v1.3.0"]
 
   const getVersionBanner = () => {
-    if (selectedVersion === d.versions.current.version) return { color: "#52c41a", label: "Viewing: " + selectedVersion + " (Current)" }
-    if (selectedVersion === d.versions.testing?.version) return { color: "#fa8c16", label: "Viewing: " + selectedVersion + " (Testing)" }
-    return { color: "#bfbfbf", label: "Viewing: " + selectedVersion + " (Deprecated)" }
+    const versionInfo = agentDetailData.versions.all.find(v => v.version === selectedVersion)
+    if (!versionInfo) return { color: "#bfbfbf", label: "Viewing: " + selectedVersion }
+    const stateColors: Record<string, string> = {
+      LIVE: "#52c41a",
+      TESTING: "#faad14",
+      ARCHIVED: "#8c8c8c",
+      DEPRECATED: "#8c8c8c",
+    }
+    return { color: stateColors[versionInfo.state], label: "Viewing: " + selectedVersion + " (" + versionInfo.state + ")" }
   }
 
   const banner = getVersionBanner()

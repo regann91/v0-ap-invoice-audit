@@ -3,9 +3,9 @@
 import React, { useState } from "react"
 import {
   Table, Input, Button, Tag, Typography, Space, Drawer,
-  Form, Select, InputNumber, Divider, message, Empty,
+  Form, Select, InputNumber, Divider, message, Empty, Tooltip,
 } from "antd"
-import { SearchOutlined, PlusOutlined, ExperimentOutlined, DeleteOutlined } from "@ant-design/icons"
+import { SearchOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentListData, flowData, type Agent, type AgentStatus, type AgentStep } from "@/lib/mock-data"
 import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
@@ -49,6 +49,7 @@ interface NewAgentFormValues {
   description: string
   flowId: string
   step: AgentStep
+  initialVersion: string
   model: string
   temperature: number
   maxTokens: number
@@ -102,7 +103,8 @@ function NewAgentDrawer({
         agentName: values.agentName,
         flowId: values.flowId,
         step: values.step,
-        currentVersion: "v0.1.0-draft",
+        liveVersion: undefined,
+        testingVersions: [values.initialVersion],
         status: "TESTING",
         lastUpdated: timestamp,
         description: values.description,
@@ -226,6 +228,20 @@ function NewAgentDrawer({
               }))}
             />
           </Form.Item>
+          <Form.Item
+            label={<span style={labelStyle}>Initial Version</span>}
+            name="initialVersion"
+            initialValue="v0.1.0"
+            rules={[
+              { required: true, message: "Initial version is required" },
+              { pattern: /^v\d+\.\d+\.\d+/, message: "Format should be e.g. v0.1.0" },
+            ]}
+          >
+            <Input placeholder="e.g. v0.1.0" />
+          </Form.Item>
+          <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 4, padding: "8px 12px", marginBottom: 16, fontSize: 12, color: "#8c8c8c" }}>
+            New agents are created in Testing status. Promote to Live after regression testing passes.
+          </div>
 
           <Divider style={{ margin: "4px 0 16px" }} />
 
@@ -444,49 +460,68 @@ export function AgentList({
       dataIndex: "step",
       key: "step",
       width: 180,
-      render: (step: AgentStep) => (
-        <Tag style={{ fontFamily: "monospace", fontSize: 11, background: "#f0f0f0", border: "none", color: "#595959" }}>
-          {step}
-        </Tag>
-      ),
+      render: (step: AgentStep) => {
+        const STEP_LABELS: Record<AgentStep, string> = {
+          INVOICE_REVIEW: "Invoice Review",
+          MATCH: "Match",
+          AP_VOUCHER: "AP Voucher",
+          SUPPLIER_VERIFY: "Supplier Verify",
+          BANK_CHECK: "Bank Check",
+          BANK_RECON: "Bank Recon",
+          EXCEPTION_MGT: "Exception Mgt",
+        }
+        return (
+          <Tag style={{ fontSize: 11, background: "#f0f0f0", border: "none", color: "#595959" }}>
+            {STEP_LABELS[step] ?? step}
+          </Tag>
+        )
+      },
     },
     {
-      title: "Current Version",
-      dataIndex: "currentVersion",
-      key: "currentVersion",
-      width: 160,
-      render: (v: string) => <Text code>{v}</Text>,
+      title: "Live Version",
+      key: "liveVersion",
+      width: 120,
+      render: (_: unknown, record: Agent) =>
+        record.liveVersion
+          ? <Text code>{record.liveVersion}</Text>
+          : <Text type="secondary">—</Text>,
     },
     {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 140,
-      render: (status: AgentStatus) => <StatusTag status={status} />,
-    },
-    {
-      title: "Last Updated",
-      dataIndex: "lastUpdated",
-      key: "lastUpdated",
-      width: 170,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
+      title: "Testing Version",
+      key: "testingVersions",
+      width: 220,
+      render: (_: unknown, record: Agent) => {
+        const versions = record.testingVersions ?? []
+        if (versions.length === 0) {
+          return <Text type="secondary">—</Text>
+        }
+        const visible = versions.slice(0, 2)
+        const hidden = versions.slice(2)
+        const tagStyle = { margin: 0, fontSize: 12, background: "#fafafa", borderColor: "#d9d9d9", color: "#595959" }
+        return (
+          <Space size={4} wrap>
+            {visible.map((v) => (
+              <Tag key={v} style={tagStyle}>{v}</Tag>
+            ))}
+            {hidden.length > 0 && (
+              <Tooltip title={hidden.join(", ")}>
+                <Tag style={{ ...tagStyle, cursor: "default", color: "#8c8c8c", borderStyle: "dashed" }}>
+                  +{hidden.length} more
+                </Tag>
+              </Tooltip>
+            )}
+          </Space>
+        )
+      },
     },
     {
       title: "Actions",
       key: "actions",
-      width: 160,
+      width: 80,
       render: (_: unknown, record: Agent) => (
-        <Space size={12}>
-          <Link onClick={() => onView(record.id)} style={{ fontSize: 13 }}>
-            View
-          </Link>
-          {record.status === "TESTING" && onTriggerTest && (
-            <Link onClick={() => onTriggerTest(record.id)} style={{ fontSize: 13, color: "#d46b08" }}>
-              <ExperimentOutlined style={{ marginRight: 4 }} />
-              Run Test
-            </Link>
-          )}
-        </Space>
+        <Link onClick={() => onView(record.id)} style={{ fontSize: 13 }}>
+          View
+        </Link>
       ),
     },
   ]

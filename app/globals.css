@@ -43,3 +43,13 @@
   font-size: 12px !important;
   line-height: 1.6 !important;
 }
+
+/* Fix disabled Select placeholder text visibility */
+.ant-select-disabled .ant-select-selector {
+  background: #fafafa !important;
+}
+
+.ant-select-disabled .ant-select-selector::placeholder,
+.ant-select-disabled .ant-select-selection-placeholder {
+  color: #bfbfbf !important;
+}

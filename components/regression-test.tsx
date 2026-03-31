@@ -1182,19 +1182,29 @@ export function RegressionTest({
                       <td style={{ padding: "8px 0" }}>
                         <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {
                           e.stopPropagation()
-                          const histAgentStep = (allAgents.find(a => a.id === r.agentId)?.step ?? "INVOICE_REVIEW") as AgentStep
-                          const builtSuites: SuiteResult[] = (["golden", "random"] as SuiteType[]).map((type) => {
-                            const cases = buildSuiteCases(r.agentId, type, r.passRate, sharedGoldenCases, histAgentStep)
-                            const passed = cases.filter(c => c.correct).length
-                            return { type, label: type === "golden" ? "Golden Cases" : "Random Sample", total: cases.length, passed, failed: cases.length - passed, cases }
-                          })
-                          setSuites(builtSuites)
-                          setActiveSuite("golden")
-                          setRunStatus("done")
-                          setViewingHistoryRun(r)
-                          setHistoryPanelOpen(false)
-                          setDetailDrawerOpen(false)
-                          setSelectedCaseDetail(null)
+                          console.log("[v0] View Detail clicked for run:", r.runId)
+                          try {
+                            const histAgentStep = (allAgents.find(a => a.id === r.agentId)?.step ?? "INVOICE_REVIEW") as AgentStep
+                            console.log("[v0] histAgentStep:", histAgentStep)
+                            const builtSuites: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => {
+                              const passRate = r.passRate
+                              const cases = buildSuiteCases(r.agentId, type, passRate, sharedGoldenCases, histAgentStep)
+                              const passed = cases.filter(c => c.correct).length
+                              const label = type === "golden" ? "Golden Set" : type === "benchmark" ? "Benchmark Set" : "Full Set"
+                              return { type, label, total: cases.length, passed, failed: cases.length - passed, cases }
+                            })
+                            console.log("[v0] builtSuites:", builtSuites)
+                            setSuites(builtSuites)
+                            setActiveSuite("golden")
+                            setRunStatus("done")
+                            setViewingHistoryRun(r)
+                            setHistoryPanelOpen(false)
+                            setDetailDrawerOpen(false)
+                            setSelectedCaseDetail(null)
+                            console.log("[v0] View Detail loaded successfully")
+                          } catch (err) {
+                            console.error("[v0] Error loading history run:", err)
+                          }
                         }}>View Detail</Typography.Link>
                       </td>
                     </tr>

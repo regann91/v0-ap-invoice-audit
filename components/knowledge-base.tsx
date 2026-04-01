@@ -186,7 +186,7 @@ export function KnowledgeDetail() {
 
   const tabs = [
     { key: "buyer", label: "Buyer Info",           children: <BuyerInfoTab /> },
-    { key: "term",  label: "Supplier Term Date",    children: <SupplierTermDateTab /> },
+    { key: "term",  label: "Supplier Info",        children: <SupplierTermDateTab /> },
     { key: "bank",  label: "Supplier Bank Account", children: <SupplierBankAccountTab /> },
   ]
 

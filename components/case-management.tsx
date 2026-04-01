@@ -24,18 +24,32 @@ const { Text, Title } = Typography
 // ── Types ─────────────────────────────────────────────────────────
 
 type Step = "INVOICE_REVIEW" | "MATCH" | "AP_VOUCHER"
-type StepStatus = "Pass" | "Fail" | "Pending"
+type InvoiceReviewStatus = "Pass" | "Fail"
+type MatchStatus = "Matched" | "NA"
+type APVoucherStatus = "Submit to EBS" | "NA"
 
-interface StepState {
+interface InvoiceReviewState {
   golden: boolean
   patterns: string[]
-  status: StepStatus
+  status: InvoiceReviewStatus
+}
+
+interface MatchState {
+  golden: boolean
+  patterns: string[]
+  status: MatchStatus
+}
+
+interface APVoucherState {
+  golden: boolean
+  patterns: string[]
+  status: APVoucherStatus
 }
 
 interface CaseExpanded {
-  INVOICE_REVIEW: StepState
-  MATCH: StepState
-  AP_VOUCHER: StepState
+  INVOICE_REVIEW: InvoiceReviewState
+  MATCH: MatchState
+  AP_VOUCHER: APVoucherState
 }
 
 // ── Pattern options per step ──────────────────────────────────────
@@ -51,26 +65,26 @@ const PATTERNS_BY_STEP: Record<Step, string[]> = {
 const EXPANDED_DEFAULTS: Record<string, CaseExpanded> = {
   "CASE-001": {
     INVOICE_REVIEW: { golden: true,  patterns: ["amount-mismatch", "header-check"], status: "Pass" },
-    MATCH:          { golden: true,  patterns: ["three-way-match-fail"],            status: "Pass" },
-    AP_VOUCHER:     { golden: false, patterns: [],                                  status: "Pending" },
+    MATCH:          { golden: true,  patterns: ["three-way-match-fail"],            status: "Matched" },
+    AP_VOUCHER:     { golden: false, patterns: [],                                  status: "Submit to EBS" },
   },
   "CASE-002": {
     INVOICE_REVIEW: { golden: true,  patterns: ["supplier-name-mismatch"],          status: "Fail" },
-    MATCH:          { golden: false, patterns: ["line-item-qty-mismatch"],          status: "Pass" },
-    AP_VOUCHER:     { golden: false, patterns: [],                                  status: "Pending" },
+    MATCH:          { golden: false, patterns: ["line-item-qty-mismatch"],          status: "Matched" },
+    AP_VOUCHER:     { golden: false, patterns: [],                                  status: "NA" },
   },
   "CASE-003": {
     INVOICE_REVIEW: { golden: false, patterns: ["gst-calculation-error"],           status: "Pass" },
-    MATCH:          { golden: false, patterns: [],                                  status: "Pass" },
-    AP_VOUCHER:     { golden: false, patterns: ["gl-account-wrong"],               status: "Pending" },
+    MATCH:          { golden: false, patterns: [],                                  status: "NA" },
+    AP_VOUCHER:     { golden: false, patterns: ["gl-account-wrong"],               status: "Submit to EBS" },
   },
 }
 
 function getDefaultExpanded(caseId: string): CaseExpanded {
   return EXPANDED_DEFAULTS[caseId] ?? {
-    INVOICE_REVIEW: { golden: false, patterns: [], status: "Pending" },
-    MATCH:          { golden: false, patterns: [], status: "Pending" },
-    AP_VOUCHER:     { golden: false, patterns: [], status: "Pending" },
+    INVOICE_REVIEW: { golden: false, patterns: [], status: "Pass" },
+    MATCH:          { golden: false, patterns: [], status: "NA" },
+    AP_VOUCHER:     { golden: false, patterns: [], status: "NA" },
   }
 }
 
@@ -79,13 +93,26 @@ function getDefaultExpanded(caseId: string): CaseExpanded {
 function GroundTruthBadge({ value }: { value: CaseGroundTruth }) {
   if (value === "Pass")    return <Badge status="success"    text={<span style={{ fontSize: 13 }}>Pass</span>} />
   if (value === "Fail")    return <Badge status="error"      text={<span style={{ fontSize: 13 }}>Fail</span>} />
-  return                          <Badge status="processing" text={<span style={{ fontSize: 13, color: "#8c8c8c" }}>Pending</span>} />
+  return                          <Badge status="default" text={<span style={{ fontSize: 13, color: "#8c8c8c" }}>NA</span>} />
 }
 
-function StepStatusBadge({ status }: { status: StepStatus }) {
-  if (status === "Pass")    return <Badge status="success"    text={<span style={{ fontSize: 12 }}>Pass</span>} />
-  if (status === "Fail")    return <Badge status="error"      text={<span style={{ fontSize: 12 }}>Fail</span>} />
-  return                           <Badge status="processing" text={<span style={{ fontSize: 12, color: "#8c8c8c" }}>Pending</span>} />
+function StepStatusBadge({ status, step }: { status: string; step: Step }) {
+  // Invoice Review: Pass / Fail
+  if (step === "INVOICE_REVIEW") {
+    if (status === "Pass") return <Badge status="success" text={<span style={{ fontSize: 12 }}>Pass</span>} />
+    if (status === "Fail") return <Badge status="error" text={<span style={{ fontSize: 12 }}>Fail</span>} />
+  }
+  // Match: Matched / NA
+  if (step === "MATCH") {
+    if (status === "Matched") return <Badge status="success" text={<span style={{ fontSize: 12 }}>Matched</span>} />
+    if (status === "NA") return <Badge status="default" text={<span style={{ fontSize: 12, color: "#8c8c8c" }}>NA</span>} />
+  }
+  // AP Voucher: Submit to EBS / NA
+  if (step === "AP_VOUCHER") {
+    if (status === "Submit to EBS") return <Badge status="success" text={<span style={{ fontSize: 12 }}>Submit to EBS</span>} />
+    if (status === "NA") return <Badge status="default" text={<span style={{ fontSize: 12, color: "#8c8c8c" }}>NA</span>} />
+  }
+  return <Badge status="default" text={<span style={{ fontSize: 12, color: "#8c8c8c" }}>{status}</span>} />
 }
 
 function AmountCell({ amount, currency }: { amount: number; currency: string }) {
@@ -102,6 +129,22 @@ function uniqueOptions(items: string[]) {
 
 // ── Edit Step Modal ───────────────────────────────────────────────
 
+// Status options per step
+const STATUS_OPTIONS_BY_STEP: Record<Step, { value: string; label: string }[]> = {
+  INVOICE_REVIEW: [
+    { value: "Pass", label: "Pass" },
+    { value: "Fail", label: "Fail" },
+  ],
+  MATCH: [
+    { value: "Matched", label: "Matched" },
+    { value: "NA", label: "NA" },
+  ],
+  AP_VOUCHER: [
+    { value: "Submit to EBS", label: "Submit to EBS" },
+    { value: "NA", label: "NA" },
+  ],
+}
+
 function EditStepModal({
   open,
   caseId,
@@ -113,15 +156,15 @@ function EditStepModal({
   open: boolean
   caseId: string
   step: Step
-  state: StepState
+  state: InvoiceReviewState | MatchState | APVoucherState
   onCancel: () => void
-  onSave: (next: StepState) => void
+  onSave: (next: InvoiceReviewState | MatchState | APVoucherState) => void
 }) {
   const [form] = Form.useForm()
 
   function handleOk() {
     form.validateFields().then((vals) => {
-      onSave({ golden: vals.golden, patterns: vals.patterns ?? [], status: state.status })
+      onSave({ golden: vals.golden, patterns: vals.patterns ?? [], status: vals.status })
     })
   }
 
@@ -139,9 +182,15 @@ function EditStepModal({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ golden: state.golden, patterns: state.patterns }}
+        initialValues={{ golden: state.golden, patterns: state.patterns, status: state.status }}
         style={{ marginTop: 12 }}
       >
+        <Form.Item name="status" label="Status">
+          <Select
+            options={STATUS_OPTIONS_BY_STEP[step]}
+            style={{ width: "100%" }}
+          />
+        </Form.Item>
         <Form.Item name="golden" label="Golden Case" valuePropName="checked">
           <Switch />
         </Form.Item>
@@ -167,7 +216,7 @@ function ExpandedRow({
 }: {
   record: AuditCase
   expanded: CaseExpanded
-  onEdit: (step: Step, next: StepState) => void
+  onEdit: (step: Step, next: InvoiceReviewState | MatchState | APVoucherState) => void
 }) {
   const [editStep, setEditStep] = useState<Step | null>(null)
   const STEPS: Step[] = ["INVOICE_REVIEW", "MATCH", "AP_VOUCHER"]
@@ -192,7 +241,7 @@ function ExpandedRow({
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <Text strong style={{ fontSize: 12, color: STEP_LABEL_COLOR[step] }}>{step}</Text>
-              <StepStatusBadge status={s.status} />
+              <StepStatusBadge status={s.status} step={step} />
             </div>
 
             {/* Golden toggle */}

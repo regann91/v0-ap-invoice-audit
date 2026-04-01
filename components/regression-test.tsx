@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useRef } from "react"
 import {
   Select, Button, Table, Tag, Typography, Space, Progress,
-  Statistic, Card, Divider, Empty, Switch, Tooltip, Drawer, Modal,
+  Statistic, Card, Divider, Empty, Switch, Tooltip, Drawer, Modal, Input, Tabs,
   type EmptyProps,
 } from "antd"
+import { SearchOutlined, HistoryOutlined } from "@ant-design/icons"
 import {
   PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  ExperimentOutlined, TrophyOutlined, WarningOutlined,
+  ExperimentOutlined, TrophyOutlined, WarningOutlined, EyeOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentListData, auditCaseData, INITIAL_GOLDEN_CASES, type Agent, type AgentStatus, type GoldenCasesState } from "@/lib/mock-data"
@@ -49,92 +50,80 @@ interface CaseResult {
 // ── Version config mock data (for publish diff check) ────────────
 
 interface VersionConfig {
-  model: string
-  temperature: number
-  maxTokens: number
-  additionalParams: string
-  apiEndpoint: string
-  authMethod: string
-  systemPrompt: string
-  userPromptTemplate: string
+  // Platform Integration Info
+  agentPlatform: string
+  hashId: string
+  hashKey: string
+  agentLink: string
+  // Prompts
+  prompts: Array<{ name: string; content: string }>
 }
 
 const VERSION_CONFIGS: Record<string, VersionConfig> = {
   // keyed by "agentId::version"
   "AGT-001::v1.3.0": {
-    model: "gpt-4o",
-    temperature: 0.7,
-    maxTokens: 2048,
-    additionalParams: "top_p=0.9",
-    apiEndpoint: "https://api.openai.com/v1/chat/completions",
-    authMethod: "Bearer Token",
-    systemPrompt: "You are a helpful invoice review assistant...",
-    userPromptTemplate: "Review the following invoice: {{invoice_data}}",
+    agentPlatform: "Smart",
+    hashId: "HASH-A1B2C3D4",
+    hashKey: "sk-hash-xK8mN2pQrT5vW9zA",
+    agentLink: "https://agent.internal.shopee.com/invoice-review",
+    prompts: [
+      { name: "INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT", content: "You are a helpful invoice review assistant. Check document titles and formats..." },
+      { name: "INVOICE_KEY_INFO_CHECK_PROMPT", content: "Review the following invoice: {{invoice_data}}" },
+    ],
   },
   "AGT-001::v1.4.0-beta": {
-    model: "gpt-4o-mini",  // DIFF: model changed
-    temperature: 0.7,
-    maxTokens: 2048,
-    additionalParams: "top_p=0.9",
-    apiEndpoint: "https://api.openai.com/v1/chat/completions",
-    authMethod: "Bearer Token",
-    systemPrompt: "You are a helpful invoice review assistant. Be concise and accurate...",  // DIFF: system prompt changed
-    userPromptTemplate: "Review the following invoice: {{invoice_data}}",
+    agentPlatform: "Claude",
+    hashId: "HASH-E5F6G7H8",
+    hashKey: "sk-hash-yL9nO3qSu6wX0zB",
+    agentLink: "https://agent.internal.shopee.com/invoice-review-v2",
+    prompts: [
+      { name: "INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT", content: "You are a helpful invoice review assistant. Be concise and accurate. Check document titles..." },
+      { name: "INVOICE_KEY_INFO_CHECK_PROMPT", content: "Review the following invoice with detailed analysis: {{invoice_data}}" },
+    ],
   },
   "AGT-001::v1.5.0-beta": {
-    model: "gpt-4o-mini",
-    temperature: 0.5,  // DIFF: temperature changed
-    maxTokens: 4096,   // DIFF: maxTokens changed
-    additionalParams: "top_p=0.95",  // DIFF: additionalParams changed
-    apiEndpoint: "https://api.openai.com/v1/chat/completions",
-    authMethod: "Bearer Token",
-    systemPrompt: "You are a helpful invoice review assistant. Be concise and accurate...",
-    userPromptTemplate: "Review the following invoice: {{invoice_data}}",
+    agentPlatform: "GPT",
+    hashId: "HASH-I9J0K1L2",
+    hashKey: "sk-hash-zM0pP4rTv7xY1aC",
+    agentLink: "https://agent.internal.shopee.com/invoice-review-v3",
+    prompts: [
+      { name: "INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT", content: "You are a helpful invoice review assistant. Be concise and accurate..." },
+      { name: "INVOICE_KEY_INFO_CHECK_PROMPT", content: "Review the following invoice: {{invoice_data}}" },
+      { name: "INVOICE_AMOUNT_VALIDATION_PROMPT", content: "Validate the invoice amounts and calculations..." },
+    ],
   },
   "AGT-002::v1.2.0": {
-    model: "claude-3-sonnet",
-    temperature: 0.6,
-    maxTokens: 1024,
-    additionalParams: "",
-    apiEndpoint: "https://api.anthropic.com/v1/messages",
-    authMethod: "API Key",
-    systemPrompt: "You are a PO matching assistant...",
-    userPromptTemplate: "Match the PO: {{po_data}}",
+    agentPlatform: "Smart",
+    hashId: "HASH-M3N4O5P6",
+    hashKey: "sk-hash-aB1cD2eF3gH4iJ",
+    agentLink: "https://agent.internal.shopee.com/po-match",
+    prompts: [
+      { name: "PO_MATCHING_PROMPT", content: "You are a PO matching assistant. Match purchase orders accurately..." },
+      { name: "PO_VALIDATION_PROMPT", content: "Match the PO: {{po_data}}" },
+    ],
   },
   "AGT-002::v1.3.0-beta": {
-    model: "claude-3-sonnet",
-    temperature: 0.6,
-    maxTokens: 1024,
-    additionalParams: "",
-    apiEndpoint: "https://api.anthropic.com/v1/messages",
-    authMethod: "API Key",
-    systemPrompt: "You are a PO matching assistant. Follow strict matching rules...",  // DIFF
-    userPromptTemplate: "Match the PO: {{po_data}}",
+    agentPlatform: "Claude",
+    hashId: "HASH-Q7R8S9T0",
+    hashKey: "sk-hash-eF5gH6iJ7kL8mN",
+    agentLink: "https://agent.internal.shopee.com/po-match-v2",
+    prompts: [
+      { name: "PO_MATCHING_PROMPT", content: "You are a PO matching assistant. Follow strict matching rules..." },
+      { name: "PO_VALIDATION_PROMPT", content: "Match the PO: {{po_data}}" },
+    ],
   },
   "AGT-002::v1.4.0-beta": {
-    model: "claude-3-opus",  // DIFF
-    temperature: 0.4,        // DIFF
-    maxTokens: 2048,         // DIFF
-    additionalParams: "top_k=40",  // DIFF
-    apiEndpoint: "https://api.anthropic.com/v1/messages",
-    authMethod: "API Key",
-    systemPrompt: "You are a PO matching assistant...",
-    userPromptTemplate: "Match the PO with detailed analysis: {{po_data}}",  // DIFF
+    agentPlatform: "GPT",
+    hashId: "HASH-U1V2W3X4",
+    hashKey: "sk-hash-oP9qR0sT1uV2wX",
+    agentLink: "https://agent.internal.shopee.com/po-match-v3",
+    prompts: [
+      { name: "PO_MATCHING_PROMPT", content: "You are a PO matching assistant..." },
+      { name: "PO_VALIDATION_PROMPT", content: "Match the PO with detailed analysis: {{po_data}}" },
+      { name: "PO_DISCREPANCY_PROMPT", content: "Identify any discrepancies in the PO matching..." },
+    ],
   },
 }
-
-const CONFIG_FIELD_LABELS: Record<keyof VersionConfig, string> = {
-  model: "Model",
-  temperature: "Temperature",
-  maxTokens: "Max Tokens",
-  additionalParams: "Additional Params",
-  apiEndpoint: "API Endpoint",
-  authMethod: "Auth Method",
-  systemPrompt: "System Prompt",
-  userPromptTemplate: "User Prompt Template",
-}
-
-const LONG_TEXT_FIELDS: (keyof VersionConfig)[] = ["systemPrompt", "userPromptTemplate"]
 
 interface ConfigDiffRow {
   field: string
@@ -152,16 +141,42 @@ function compareVersionConfigs(
 ): ConfigDiffRow[] {
   if (!testingConfig || !liveConfig) return []
   const rows: ConfigDiffRow[] = []
-  for (const key of Object.keys(testingConfig) as (keyof VersionConfig)[]) {
-    if (String(testingConfig[key]) !== String(liveConfig[key])) {
-      const isLong = LONG_TEXT_FIELDS.includes(key)
-      rows.push({
-        field: CONFIG_FIELD_LABELS[key],
-        testingValue: isLong ? truncate(String(testingConfig[key])) : String(testingConfig[key]),
-        liveValue: isLong ? truncate(String(liveConfig[key])) : String(liveConfig[key]),
-      })
+  
+  // Compare platform fields
+  if (testingConfig.agentPlatform !== liveConfig.agentPlatform) {
+    rows.push({ field: "Agent Platform", testingValue: testingConfig.agentPlatform, liveValue: liveConfig.agentPlatform })
+  }
+  if (testingConfig.hashId !== liveConfig.hashId) {
+    rows.push({ field: "Hash ID", testingValue: testingConfig.hashId, liveValue: liveConfig.hashId })
+  }
+  if (testingConfig.agentLink !== liveConfig.agentLink) {
+    rows.push({ field: "Agent Link", testingValue: truncate(testingConfig.agentLink), liveValue: truncate(liveConfig.agentLink) })
+  }
+  
+  // Compare prompts count
+  if (testingConfig.prompts.length !== liveConfig.prompts.length) {
+    rows.push({ field: "Prompts Count", testingValue: String(testingConfig.prompts.length), liveValue: String(liveConfig.prompts.length) })
+  }
+  
+  // Compare individual prompts
+  const maxLen = Math.max(testingConfig.prompts.length, liveConfig.prompts.length)
+  for (let i = 0; i < maxLen; i++) {
+    const tp = testingConfig.prompts[i]
+    const lp = liveConfig.prompts[i]
+    if (tp && lp) {
+      if (tp.name !== lp.name) {
+        rows.push({ field: `Prompt #${i + 1} Name`, testingValue: tp.name, liveValue: lp.name })
+      }
+      if (tp.content !== lp.content) {
+        rows.push({ field: `Prompt #${i + 1} Content`, testingValue: truncate(tp.content), liveValue: truncate(lp.content) })
+      }
+    } else if (tp && !lp) {
+      rows.push({ field: `Prompt #${i + 1}`, testingValue: tp.name, liveValue: "(none)" })
+    } else if (!tp && lp) {
+      rows.push({ field: `Prompt #${i + 1}`, testingValue: "(none)", liveValue: lp.name })
     }
   }
+  
   return rows
 }
 
@@ -289,6 +304,76 @@ const REGRESSION_HISTORY: Record<string, RegressionRunRecord[]> = {
   "AGT-002::v1.4.0-beta": [
     { runId: "RUN-2045", runAt: "2025-03-23 09:45", passRate: 78, status: "Failed",  agentId: "AGT-002", version: "v1.4.0-beta" },
   ],
+}
+
+// ── PR Record mock data ───────────────────────────────────────────
+
+interface PRRunRecord {
+  runId: string
+  runAt: string
+  version: string
+  agentName: string
+  groundTruth: "Pass" | "Fail"
+  aiResult: "Pass" | "Fail"
+  correct: boolean
+  confidence: number
+  latencyMs: number
+  // AI Result detail
+  aiReason: string
+  aiRawOutput?: string
+  // Version snapshot data
+  snapshot: {
+    agentPlatform: string
+    hashId: string
+    hashKey: string
+    agentLink: string
+    prompts: Array<{ name: string; content: string }>
+  }
+}
+
+const defaultSnapshot = {
+  agentPlatform: "Smart",
+  hashId: "HASH-A1B2C3D4",
+  hashKey: "sk-hash-xK8mN2pQrT5vW9zA",
+  agentLink: "https://agent.internal.shopee.com/invoice-review",
+  prompts: [
+    { name: "INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT", content: "You are an invoice validation assistant. Check if the document title matches expected invoice format..." },
+    { name: "INVOICE_KEY_INFO_CHECK_PROMPT", content: "Validate the following key information in the invoice: supplier name, invoice number, amount, date..." },
+  ],
+}
+
+const PR_RUN_HISTORY: Record<string, Record<AgentStep, PRRunRecord[]>> = {
+  "PR-2025-0041": {
+    INVOICE_REVIEW: [
+      { runId: "RUN-2043", runAt: "2025-03-20 11:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.95, latencyMs: 312, aiReason: "Invoice document title matches expected format. All key fields (supplier name, invoice number, amount, date) are present and valid.", aiRawOutput: '{"result": "Pass", "confidence": 0.95, "checks": {"title_valid": true, "fields_present": true, "amount_valid": true}}', snapshot: { ...defaultSnapshot, agentPlatform: "Claude", hashId: "HASH-E5F6G7H8" } },
+      { runId: "RUN-2038", runAt: "2025-03-19 16:15", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.92, latencyMs: 287, aiReason: "Document verified successfully. Supplier information matches database records.", aiRawOutput: '{"result": "Pass", "confidence": 0.92, "supplier_match": true}', snapshot: defaultSnapshot },
+      { runId: "RUN-2031", runAt: "2025-03-12 10:05", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Fail", correct: false, confidence: 0.61, latencyMs: 445, aiReason: "Unable to verify invoice amount. Calculation discrepancy detected between line items and total.", aiRawOutput: '{"result": "Fail", "confidence": 0.61, "error": "amount_mismatch", "expected": 1500.00, "found": 1450.00}', snapshot: defaultSnapshot },
+    ],
+    MATCH: [
+      { runId: "RUN-2044", runAt: "2025-03-21 09:00", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.88, latencyMs: 256, aiReason: "PO number matched successfully. All line items correspond to purchase order.", aiRawOutput: '{"result": "Pass", "po_matched": true, "line_items_matched": 5}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
+      { runId: "RUN-2039", runAt: "2025-03-19 14:20", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.91, latencyMs: 234, aiReason: "Three-way match completed. Invoice, PO, and GR all verified.", aiRawOutput: '{"result": "Pass", "three_way_match": true}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
+    ],
+    AP_VOUCHER: [
+      { runId: "RUN-2045", runAt: "2025-03-22 08:30", version: "v1.1.0", agentName: "AP Voucher Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.93, latencyMs: 198, aiReason: "Voucher created successfully. GL account mapping verified.", aiRawOutput: '{"result": "Pass", "voucher_id": "VCH-2025-0891", "gl_verified": true}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/ap-voucher" } },
+    ],
+  },
+  "PR-2025-0042": {
+    INVOICE_REVIEW: [
+      { runId: "RUN-2042", runAt: "2025-03-21 09:10", version: "v1.5.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.91, latencyMs: 298, aiReason: "Invoice rejected. Supplier not found in approved vendor list.", aiRawOutput: '{"result": "Fail", "confidence": 0.91, "error": "supplier_not_approved"}', snapshot: { ...defaultSnapshot, agentPlatform: "GPT", hashId: "HASH-I9J0K1L2" } },
+      { runId: "RUN-2035", runAt: "2025-03-15 13:00", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.58, latencyMs: 412, aiReason: "Invoice appears valid based on format checks. (Note: Missed supplier validation)", aiRawOutput: '{"result": "Pass", "confidence": 0.58, "format_valid": true}', snapshot: defaultSnapshot },
+    ],
+    MATCH: [],
+    AP_VOUCHER: [],
+  },
+  "PR-2025-0043": {
+    INVOICE_REVIEW: [
+      { runId: "RUN-2040", runAt: "2025-03-20 14:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.61, latencyMs: 445, aiReason: "Invoice format validated. Document structure appears correct.", aiRawOutput: '{"result": "Pass", "confidence": 0.61, "note": "low_confidence_warning"}', snapshot: { ...defaultSnapshot, agentPlatform: "Claude" } },
+    ],
+    MATCH: [
+      { runId: "RUN-2041", runAt: "2025-03-20 15:00", version: "v1.3.0-beta", agentName: "PO Matching Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.85, latencyMs: 267, aiReason: "PO matching failed. Line item quantity mismatch detected.", aiRawOutput: '{"result": "Fail", "confidence": 0.85, "error": "qty_mismatch", "line": 3}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
+    ],
+    AP_VOUCHER: [],
+  },
 }
 
 // ── Fixed per-case mock data (Invoice Review step) ───────────────
@@ -479,7 +564,7 @@ function PredictionTag({ value }: { value: string }) {
   )
 }
 
-// ── Verdict Banner ───────────────────────────────────────────────
+// ── Verdict Banner ───────────────────���───────────────────────────
 
 interface SuiteSummary {
   label: string
@@ -595,22 +680,16 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
     { label: "Accuracy",        value: suite.accuracy,       suffix: "%" },
     { label: "Precision",       value: suite.precision,      suffix: "%" },
     { label: "Recall",          value: suite.recall,         suffix: "%" },
-    { label: "Golden Pass Rate",value: suite.goldenPassRate, suffix: "%", highlight: true },
   ]
-  const gprPass = suite.goldenPassRate >= 85
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
       {metrics.map((m) => (
         <Card
           key={m.label}
           size="small"
           style={{
-            border: m.highlight
-              ? gprPass ? "1px solid #b7eb8f" : "1px solid #ffa39e"
-              : "1px solid #f0f0f0",
-            background: m.highlight
-              ? gprPass ? "#f6ffed" : "#fff1f0"
-              : "#fafafa",
+            border: "1px solid #f0f0f0",
+            background: "#fafafa",
           }}
         >
           <Statistic
@@ -620,9 +699,7 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
             valueStyle={{
               fontSize: 22,
               fontWeight: 700,
-              color: m.highlight
-                ? gprPass ? "#389e0d" : "#cf1322"
-                : "#1d1d1d",
+              color: "#1d1d1d",
             }}
           />
         </Card>
@@ -708,7 +785,7 @@ function ExpandedRowPanel({ record }: { record: CaseResult }) {
   )
 }
 
-// ── Case Result Table ─────────────────────────────────────────────
+// ── Case Result Table ──��─������───────────────────────────────────────
 
 function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewDetail?: (c: CaseResult) => void }) {
   const [expandedKeys, setExpandedKeys] = useState<string[]>([])
@@ -838,6 +915,313 @@ function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewD
   )
 }
 
+// ── PR Record Panel ──────────────────────────────────────────────
+
+function PRRecordPanel() {
+  const [prNumber, setPrNumber] = useState("PR-2025-0041")
+  const [selectedStep, setSelectedStep] = useState<AgentStep>("INVOICE_REVIEW")
+  const [searchedPR, setSearchedPR] = useState<string | null>("PR-2025-0041")
+  const [snapshotRecord, setSnapshotRecord] = useState<PRRunRecord | null>(null)
+  const [aiDetailRecord, setAiDetailRecord] = useState<PRRunRecord | null>(null)
+
+  const stepOptions: { value: AgentStep; label: string }[] = [
+    { value: "INVOICE_REVIEW", label: "Invoice Review" },
+    { value: "MATCH", label: "Match" },
+    { value: "AP_VOUCHER", label: "AP Voucher" },
+  ]
+
+  function handleSearch() {
+    if (!prNumber.trim()) return
+    // Normalize PR number format
+    const normalizedPR = prNumber.startsWith("PR-") ? prNumber : `PR-${prNumber}`
+    setSearchedPR(normalizedPR)
+  }
+
+  const records = searchedPR ? (PR_RUN_HISTORY[searchedPR]?.[selectedStep] ?? []) : []
+
+  const columns: ColumnsType<PRRunRecord> = [
+    {
+      title: "Run ID",
+      dataIndex: "runId",
+      key: "runId",
+      width: 120,
+      render: (val) => <Text code style={{ fontSize: 12 }}>{val}</Text>,
+    },
+    {
+      title: "Run Time",
+      dataIndex: "runAt",
+      key: "runAt",
+      width: 160,
+      render: (val) => <Text type="secondary" style={{ fontSize: 12 }}>{val}</Text>,
+    },
+    {
+      title: "Version",
+      dataIndex: "version",
+      key: "version",
+      width: 120,
+      render: (val) => <Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{val}</Tag>,
+    },
+    {
+      title: "Agent",
+      dataIndex: "agentName",
+      key: "agentName",
+      width: 180,
+    },
+    {
+      title: "Ground Truth",
+      dataIndex: "groundTruth",
+      key: "groundTruth",
+      width: 120,
+      render: (val) => <PredictionTag value={val} />,
+    },
+    {
+      title: "AI Result",
+      dataIndex: "aiResult",
+      key: "aiResult",
+      width: 120,
+      render: (val, record) => (
+        <Space size={8}>
+          <PredictionTag value={val} />
+          <Typography.Link style={{ fontSize: 11 }} onClick={() => setAiDetailRecord(record)}>Detail</Typography.Link>
+        </Space>
+      ),
+    },
+    {
+      title: "Match",
+      dataIndex: "correct",
+      key: "correct",
+      width: 80,
+      render: (val) => val 
+        ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
+        : <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />,
+    },
+    {
+      title: "Confidence",
+      dataIndex: "confidence",
+      key: "confidence",
+      width: 100,
+      render: (val) => (
+        <Text style={{ fontSize: 12, color: val >= 0.8 ? "#52c41a" : val >= 0.6 ? "#faad14" : "#ff4d4f" }}>
+          {(val * 100).toFixed(0)}%
+        </Text>
+      ),
+    },
+    {
+      title: "Latency",
+      dataIndex: "latencyMs",
+      key: "latencyMs",
+      width: 100,
+      render: (val) => <Text type="secondary" style={{ fontSize: 12 }}>{val}ms</Text>,
+    },
+    {
+      title: "Version Snapshot",
+      key: "snapshot",
+      width: 130,
+      render: (_, record) => (
+        <Typography.Link style={{ fontSize: 12 }} onClick={() => setSnapshotRecord(record)}>
+          View Snapshot
+        </Typography.Link>
+      ),
+    },
+  ]
+
+  return (
+    <div>
+      {/* Search bar */}
+      <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
+          <div style={{ flex: 1, maxWidth: 300 }}>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>PR Number</Text>
+            <Input
+              placeholder="Enter PR Number (e.g. PR-2025-0041 or 2025-0041)"
+              value={prNumber}
+              onChange={(e) => setPrNumber(e.target.value)}
+              onPressEnter={handleSearch}
+              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            />
+          </div>
+          <div>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>Step</Text>
+            <Select
+              value={selectedStep}
+              onChange={setSelectedStep}
+              options={stepOptions}
+              style={{ width: 160 }}
+            />
+          </div>
+          <Button type="primary" onClick={handleSearch} style={{ background: "#1890ff" }}>
+            Search
+          </Button>
+        </div>
+      </div>
+
+      {/* Results */}
+      <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px" }}>
+        {!searchedPR ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<Text type="secondary">Enter a PR number to view run history</Text>}
+          />
+        ) : records.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <div>
+                <Text type="secondary" style={{ display: "block" }}>No run records found for</Text>
+                <Text code style={{ fontSize: 13 }}>{searchedPR}</Text>
+                <Text type="secondary"> in </Text>
+                <Text strong>{stepOptions.find(s => s.value === selectedStep)?.label}</Text>
+              </div>
+            }
+          />
+        ) : (
+          <>
+            <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <Text strong style={{ fontSize: 14 }}>Run History for </Text>
+                <Text code style={{ fontSize: 13 }}>{searchedPR}</Text>
+                <Text type="secondary" style={{ marginLeft: 12 }}>Step: {stepOptions.find(s => s.value === selectedStep)?.label}</Text>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>{records.length} record(s)</Text>
+            </div>
+            <Table
+              dataSource={records}
+              columns={columns}
+              rowKey="runId"
+              size="small"
+              pagination={false}
+              style={{ fontSize: 13 }}
+            />
+          </>
+        )}
+      </div>
+
+      {/* AI Result Detail Modal */}
+      <Modal
+        open={!!aiDetailRecord}
+        onCancel={() => setAiDetailRecord(null)}
+        title={
+          <Space>
+            <Text strong>AI Result Detail</Text>
+            {aiDetailRecord && <Text code style={{ fontSize: 12 }}>{aiDetailRecord.runId}</Text>}
+          </Space>
+        }
+        footer={<Button onClick={() => setAiDetailRecord(null)}>Close</Button>}
+        width={640}
+      >
+        {aiDetailRecord && (
+          <div style={{ marginTop: 8 }}>
+            {/* Summary */}
+            <div style={{ display: "flex", gap: 20, marginBottom: 20, padding: "12px 16px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0" }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Ground Truth</Text>
+                <PredictionTag value={aiDetailRecord.groundTruth} />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>AI Result</Text>
+                <PredictionTag value={aiDetailRecord.aiResult} />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Match</Text>
+                {aiDetailRecord.correct 
+                  ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
+                  : <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />
+                }
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Confidence</Text>
+                <Text strong style={{ color: aiDetailRecord.confidence >= 0.8 ? "#52c41a" : aiDetailRecord.confidence >= 0.6 ? "#faad14" : "#ff4d4f" }}>
+                  {(aiDetailRecord.confidence * 100).toFixed(0)}%
+                </Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Latency</Text>
+                <Text>{aiDetailRecord.latencyMs}ms</Text>
+              </div>
+            </div>
+
+            {/* AI Reason */}
+            <div style={{ marginBottom: 16 }}>
+              <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>AI Reasoning</Text>
+              <div style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "#262626" }}>
+                {aiDetailRecord.aiReason}
+              </div>
+            </div>
+
+            {/* Raw Output */}
+            {aiDetailRecord.aiRawOutput && (
+              <div>
+                <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>Raw Output</Text>
+                <pre style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 4, padding: "12px 14px", fontSize: 12, lineHeight: 1.5, color: "#a8a8a8", margin: 0, overflowX: "auto", fontFamily: "monospace" }}>
+                  {JSON.stringify(JSON.parse(aiDetailRecord.aiRawOutput), null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Version Snapshot Modal */}
+      <Modal
+        open={!!snapshotRecord}
+        onCancel={() => setSnapshotRecord(null)}
+        title={
+          <Space>
+            <Text strong>Version Snapshot</Text>
+            {snapshotRecord && <Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{snapshotRecord.version}</Tag>}
+          </Space>
+        }
+        footer={<Button onClick={() => setSnapshotRecord(null)}>Close</Button>}
+        width={680}
+      >
+        {snapshotRecord && (
+          <div style={{ marginTop: 8 }}>
+            {/* Run Info */}
+            <div style={{ display: "flex", gap: 24, marginBottom: 20, padding: "12px 16px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0" }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Run ID</Text>
+                <Text code style={{ fontSize: 12 }}>{snapshotRecord.runId}</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Run Time</Text>
+                <Text style={{ fontSize: 12 }}>{snapshotRecord.runAt}</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Agent</Text>
+                <Text style={{ fontSize: 12 }}>{snapshotRecord.agentName}</Text>
+              </div>
+            </div>
+
+            {/* Platform Integration Info */}
+            <Title level={5} style={{ marginBottom: 12 }}>Platform Integration Info</Title>
+            <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginBottom: 20 }}>
+              <tbody>
+                <tr><td style={{ padding: "6px 0", color: "#8c8c8c", width: 140 }}>Agent Platform</td><td>{snapshotRecord.snapshot.agentPlatform}</td></tr>
+                <tr><td style={{ padding: "6px 0", color: "#8c8c8c" }}>Hash ID</td><td><Text code style={{ fontSize: 12 }}>{snapshotRecord.snapshot.hashId}</Text></td></tr>
+                <tr><td style={{ padding: "6px 0", color: "#8c8c8c" }}>Hash Key</td><td><Text code style={{ fontSize: 12 }}>••••••••••••••••</Text></td></tr>
+                <tr><td style={{ padding: "6px 0", color: "#8c8c8c" }}>Agent Link</td><td style={{ wordBreak: "break-all", fontSize: 12 }}>{snapshotRecord.snapshot.agentLink}</td></tr>
+              </tbody>
+            </table>
+
+            {/* Prompt Config */}
+            <Title level={5} style={{ marginBottom: 12 }}>Prompt Config</Title>
+            {snapshotRecord.snapshot.prompts.map((p, idx) => (
+              <div key={idx} style={{ marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>
+                  #{idx + 1}{"  "}{p.name}
+                </Text>
+                <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "10px 12px", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
+                  {p.content}
+                </pre>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
+}
+
 // ── Main component ───────────────────────────────────────────────
 
 export function RegressionTest({
@@ -854,6 +1238,7 @@ export function RegressionTest({
   onPassedRun?: (agentId: string) => void
   }) {
   const { region } = useRegion()
+  const [activeTab, setActiveTab] = useState<"runTest" | "prRecord">("runTest")
 
   // Entity selector (driven by region)
   const entityOptions = getEntitiesForRegion(region)
@@ -885,6 +1270,8 @@ export function RegressionTest({
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
   const [selectedHistoryRunId, setSelectedHistoryRunId] = useState<string | null>(null)
   const [viewingHistoryRun, setViewingHistoryRun] = useState<RegressionRunRecord | null>(null)
+  const [aiResultDrawerRun, setAiResultDrawerRun] = useState<RegressionRunRecord | null>(null)
+  const [versionConfigModalOpen, setVersionConfigModalOpen] = useState(false)
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
   const [selectedCaseDetail, setSelectedCaseDetail] = useState<CaseResult | null>(null)
   const [configMismatchModalOpen, setConfigMismatchModalOpen] = useState(false)
@@ -909,8 +1296,8 @@ export function RegressionTest({
   useEffect(() => {
     if (runStatus === "done" && selectedId) {
       const metrics = simulateFailure ? SUITE_METRICS_FAILURE : SUITE_METRICS_NORMAL
-      const rebuilt: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => ({
-        label: type === "golden" ? "Golden Set" : type === "benchmark" ? "Benchmark Set" : "Full Set",
+  const rebuilt: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => ({
+    label: type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case",
         type,
         ...metrics[type],
         cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep),
@@ -933,8 +1320,8 @@ export function RegressionTest({
       if (pct >= 100) {
         clearInterval(timerRef.current!)
         const metrics = simulateFailure ? SUITE_METRICS_FAILURE : SUITE_METRICS_NORMAL
-        const results: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => ({
-          label: type === "golden" ? "Golden Set" : type === "benchmark" ? "Benchmark Set" : "Full Set",
+  const results: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => ({
+    label: type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case",
           type,
           ...metrics[type],
           cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep),
@@ -1008,6 +1395,23 @@ export function RegressionTest({
         />
       </div>
 
+      {/* Tab Navigation */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as "runTest" | "prRecord")}
+        style={{ marginBottom: 16 }}
+        items={[
+          { key: "runTest", label: "Run Test" },
+          { key: "prRecord", label: "PR Record" },
+        ]}
+      />
+
+      {/* PR Record Tab */}
+      {activeTab === "prRecord" && <PRRecordPanel />}
+
+      {/* Run Test Tab - Original Content */}
+      {activeTab === "runTest" && (
+      <>
       {/* Selector + Run bar */}
       <div
         style={{
@@ -1069,6 +1473,16 @@ export function RegressionTest({
             </Button>
           </div>
 
+          <div style={{ paddingTop: 20 }}>
+            <Button
+              disabled={!selectedId || !selectedVersion}
+              onClick={() => setVersionConfigModalOpen(true)}
+              icon={<EyeOutlined />}
+            >
+              View Version Config
+            </Button>
+          </div>
+
           {runStatus === "done" && (
             <div style={{ paddingTop: 20 }}>
               <Tooltip title={!canPublish ? "Publishing thresholds not met" : published ? "Already published" : ""}>
@@ -1120,7 +1534,7 @@ export function RegressionTest({
         {runStatus === "running" && (
           <div style={{ marginTop: 16 }}>
             <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
-              Running test sets: Golden Set → Benchmark Set → Full Set...
+              Running test sets: Golden Case → Benchmark Case → Original Source Case...
             </Text>
             <Progress
               percent={progress}
@@ -1150,6 +1564,7 @@ export function RegressionTest({
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Date / Time</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Pass Rate</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Status</th>
+                    <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>AI Result</th>
                     <th style={{ textAlign: "left", padding: "6px 0", color: "#8c8c8c", fontWeight: 500 }}>Action</th>
                   </tr>
                 </thead>
@@ -1179,6 +1594,12 @@ export function RegressionTest({
                           {r.status}
                         </Tag>
                       </td>
+                      <td style={{ padding: "8px 12px 8px 0" }}>
+                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {
+                          e.stopPropagation()
+                          setAiResultDrawerRun(r)
+                        }}>View</Typography.Link>
+                      </td>
                       <td style={{ padding: "8px 0" }}>
                         <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {
                           e.stopPropagation()
@@ -1190,7 +1611,7 @@ export function RegressionTest({
                               const passRate = r.passRate
                               const cases = buildSuiteCases(r.agentId, type, passRate, sharedGoldenCases, histAgentStep)
                               const passed = cases.filter(c => c.correct).length
-                              const label = type === "golden" ? "Golden Set" : type === "benchmark" ? "Benchmark Set" : "Full Set"
+                              const label = type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case"
                               return { type, label, total: cases.length, passed, failed: cases.length - passed, cases }
                             })
                             console.log("[v0] builtSuites:", builtSuites)
@@ -1213,6 +1634,137 @@ export function RegressionTest({
               </table>
             )}
           </div>
+        )
+      })()}
+
+      {/* AI Result Detail Drawer */}
+      {(() => {
+        const r = aiResultDrawerRun
+        if (!r) return null
+        const histAgentStep = (allAgents.find(a => a.id === r.agentId)?.step ?? "INVOICE_REVIEW") as AgentStep
+        const cases = buildSuiteCases(r.agentId, "golden", r.passRate, sharedGoldenCases, histAgentStep)
+        const passCount = cases.filter(c => c.correct).length
+
+        const aiResultColumns: ColumnsType<CaseResult> = [
+          {
+            title: "Case ID",
+            dataIndex: "caseId",
+            key: "caseId",
+            width: 110,
+            render: (v) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
+          },
+          {
+            title: "PR No.",
+            dataIndex: "prNo",
+            key: "prNo",
+            width: 130,
+            render: (v) => <Text style={{ fontSize: 12 }}>{v}</Text>,
+          },
+          {
+            title: "Supplier",
+            dataIndex: "supplierName",
+            key: "supplierName",
+            ellipsis: true,
+            render: (v) => <Text style={{ fontSize: 12 }}>{v}</Text>,
+          },
+          {
+            title: "Ground Truth",
+            dataIndex: "groundTruth",
+            key: "groundTruth",
+            width: 120,
+            render: (v) => <PredictionTag value={v} />,
+          },
+          {
+            title: "AI Result",
+            dataIndex: "agentPrediction",
+            key: "agentPrediction",
+            width: 110,
+            render: (v) => <PredictionTag value={v} />,
+          },
+          {
+            title: "Match",
+            dataIndex: "correct",
+            key: "correct",
+            width: 70,
+            render: (v) => v
+              ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 15 }} />
+              : <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 15 }} />,
+          },
+          {
+            title: "Confidence",
+            dataIndex: "confidence",
+            key: "confidence",
+            width: 100,
+            render: (v) => (
+              <Text style={{ fontSize: 12, color: v >= 0.8 ? "#52c41a" : v >= 0.6 ? "#faad14" : "#ff4d4f" }}>
+                {(v * 100).toFixed(0)}%
+              </Text>
+            ),
+          },
+          {
+            title: "AI Reason",
+            dataIndex: "agentPredictionReason",
+            key: "agentPredictionReason",
+            ellipsis: true,
+            render: (v) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text>,
+          },
+        ]
+
+        return (
+          <Drawer
+            open={!!aiResultDrawerRun}
+            onClose={() => setAiResultDrawerRun(null)}
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Text strong>AI Result Detail</Text>
+                <Text code style={{ fontSize: 12 }}>{r.runId}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{r.runAt}</Text>
+              </div>
+            }
+            width={900}
+            styles={{ body: { padding: "16px 20px" } }}
+          >
+            {/* Summary strip */}
+            <div style={{ display: "flex", gap: 24, marginBottom: 20, padding: "12px 16px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0" }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Run ID</Text>
+                <Text code style={{ fontSize: 13 }}>{r.runId}</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Version</Text>
+                <Tag style={{ fontFamily: "monospace", fontSize: 11, margin: 0 }}>{r.version}</Tag>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Pass Rate</Text>
+                <Text strong style={{ color: r.passRate >= 85 ? "#52c41a" : "#cf1322", fontSize: 14 }}>{r.passRate}%</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Correct / Total</Text>
+                <Text strong style={{ fontSize: 14 }}>{passCount} / {cases.length}</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Status</Text>
+                <Tag style={{
+                  margin: 0, fontWeight: 500, fontSize: 11,
+                  color: r.status === "Passed" ? "#389e0d" : "#cf1322",
+                  background: r.status === "Passed" ? "#f6ffed" : "#fff1f0",
+                  borderColor: r.status === "Passed" ? "#b7eb8f" : "#ffa39e",
+                }}>{r.status}</Tag>
+              </div>
+            </div>
+
+            {/* Case-level AI result table */}
+            <Table
+              dataSource={cases}
+              columns={aiResultColumns}
+              rowKey="caseId"
+              size="small"
+              pagination={false}
+              rowClassName={(rec) => rec.correct ? "" : "ant-table-row-error"}
+              style={{ fontSize: 12 }}
+              scroll={{ x: 900 }}
+            />
+          </Drawer>
         )
       })()}
 
@@ -1596,6 +2148,76 @@ export function RegressionTest({
           )
         })()}
       </Drawer>
+
+      {/* Version Config Modal */}
+      <Modal
+        open={versionConfigModalOpen}
+        onCancel={() => setVersionConfigModalOpen(false)}
+        title={
+          <Space>
+            <Text strong>Version Configuration</Text>
+            {selectedVersion && <Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{selectedVersion}</Tag>}
+          </Space>
+        }
+        footer={<Button onClick={() => setVersionConfigModalOpen(false)}>Close</Button>}
+        width={680}
+      >
+        {(() => {
+          const configKey = `${selectedId}::${selectedVersion}`
+          const config = VERSION_CONFIGS[configKey]
+          const agent = agentsWithTestingVersions.find(a => a.id === selectedId)
+          
+          if (!config) {
+            return <Empty description="No configuration found for this version" />
+          }
+          
+          return (
+            <div style={{ marginTop: 8 }}>
+              {/* Agent Info */}
+              <div style={{ display: "flex", gap: 24, marginBottom: 20, padding: "12px 16px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0" }}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Agent</Text>
+                  <Text style={{ fontSize: 13 }}>{agent?.agentName ?? selectedId}</Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Version</Text>
+                  <Tag style={{ fontFamily: "monospace", fontSize: 11, margin: 0 }}>{selectedVersion}</Tag>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Step</Text>
+                  <Text style={{ fontSize: 13 }}>{agent?.step}</Text>
+                </div>
+              </div>
+
+              {/* Platform Integration Info */}
+              <Title level={5} style={{ marginBottom: 12 }}>Platform Integration Info</Title>
+              <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginBottom: 20 }}>
+                <tbody>
+                  <tr><td style={{ padding: "6px 0", color: "#8c8c8c", width: 140 }}>Agent Platform</td><td>{config.agentPlatform}</td></tr>
+                  <tr><td style={{ padding: "6px 0", color: "#8c8c8c" }}>Hash ID</td><td><Text code style={{ fontSize: 12 }}>{config.hashId}</Text></td></tr>
+                  <tr><td style={{ padding: "6px 0", color: "#8c8c8c" }}>Hash Key</td><td><Text code style={{ fontSize: 12 }}>••••••••••••••••</Text></td></tr>
+                  <tr><td style={{ padding: "6px 0", color: "#8c8c8c" }}>Agent Link</td><td style={{ wordBreak: "break-all", fontSize: 12 }}>{config.agentLink}</td></tr>
+                </tbody>
+              </table>
+
+              {/* Prompt Config */}
+              <Title level={5} style={{ marginBottom: 12 }}>Prompt Config</Title>
+              {config.prompts.map((p: { name: string; content: string }, idx: number) => (
+                <div key={idx} style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>
+                    #{idx + 1}{"  "}{p.name}
+                  </Text>
+                  <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "10px 12px", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
+                    {p.content}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+      </Modal>
+      </>
+      )}
     </div>
   )
 }

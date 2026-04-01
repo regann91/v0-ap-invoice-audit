@@ -7,23 +7,31 @@ import {
 import {
   ArrowLeftOutlined, EyeOutlined, EyeInvisibleOutlined,
   PlusOutlined, DeleteOutlined, InfoCircleOutlined, HistoryOutlined,
-  DownOutlined, UpOutlined,
+  DownOutlined, UpOutlined, EditOutlined, CheckOutlined, CloseOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentDetailData, flowData, getFlowByStep } from "@/lib/mock-data"
 import { useRole } from "@/lib/role-context"
 
 const { Text, Title } = Typography
+const { TextArea } = Input
 
-// Version config by version string
-const versionConfigs: Record<string, any> = {
-  "v1.3.0": { agentPlatform: "Smart", hashId: "HASH-A1B2C3D4", hashKey: "sk-hash-xK8mN2pQrT5vW9zA", agentLink: "https://agent.internal.shopee.com/line-item-validator" },
-  "v1.4.0-beta": { agentPlatform: "Claude", hashId: "HASH-E5F6G7H8", hashKey: "sk-hash-yL9nO3qSu6wX0zB", agentLink: "https://agent.internal.shopee.com/line-item-validator-beta" },
-  "v1.5.0-beta": { agentPlatform: "GPT", hashId: "HASH-I9J0K1L2", hashKey: "sk-hash-zM0pP4rTv7xY1aC", agentLink: "https://agent.internal.shopee.com/line-item-validator-v2" },
-  "v1.2.0": { agentPlatform: "Smart", hashId: "HASH-M3N4O5P6", hashKey: "sk-hash-aB1cD2eF3gH4iJ", agentLink: "https://agent.internal.shopee.com/line-item-validator-old" },
+// ── Per-version mutable config ───────────────────────────────────
+interface VersionConfig {
+  agentPlatform: string
+  hashId: string
+  hashKey: string
+  agentLink: string
 }
 
-// Read-only label-value display component
+const initialVersionConfigs: Record<string, VersionConfig> = {
+  "v1.3.0":     { agentPlatform: "Smart",  hashId: "HASH-A1B2C3D4", hashKey: "sk-hash-xK8mN2pQrT5vW9zA", agentLink: "https://agent.internal.shopee.com/line-item-validator" },
+  "v1.4.0-beta":{ agentPlatform: "Claude", hashId: "HASH-E5F6G7H8", hashKey: "sk-hash-yL9nO3qSu6wX0zB", agentLink: "https://agent.internal.shopee.com/line-item-validator-beta" },
+  "v1.5.0-beta":{ agentPlatform: "GPT",    hashId: "HASH-I9J0K1L2", hashKey: "sk-hash-zM0pP4rTv7xY1aC", agentLink: "https://agent.internal.shopee.com/line-item-validator-v2" },
+  "v1.2.0":     { agentPlatform: "Smart",  hashId: "HASH-M3N4O5P6", hashKey: "sk-hash-aB1cD2eF3gH4iJ", agentLink: "https://agent.internal.shopee.com/line-item-validator-old" },
+}
+
+// ── Shared helpers ───────────────────────────────────────────────
 function ReadOnlyField({ label, value, monospace = false }: { label: string; value: React.ReactNode; monospace?: boolean }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -37,17 +45,48 @@ function ReadOnlyField({ label, value, monospace = false }: { label: string; val
   )
 }
 
-// Collapsible section
-function CollapsibleSection({ title, defaultOpen = true, children }: { title: React.ReactNode; defaultOpen?: boolean; children: React.ReactNode }) {
+// Section wrapper with optional Edit/Save/Cancel header controls
+function SectionCard({
+  title,
+  canEdit,
+  editing,
+  onEdit,
+  onSave,
+  onCancel,
+  defaultOpen = true,
+  children,
+}: {
+  title: React.ReactNode
+  canEdit?: boolean
+  editing?: boolean
+  onEdit?: () => void
+  onSave?: () => void
+  onCancel?: () => void
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div style={{ marginBottom: 12, background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4 }}>
-      <div
-        onClick={() => setOpen((v) => !v)}
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", cursor: "pointer", userSelect: "none", borderBottom: open ? "1px solid #f0f0f0" : "none" }}
-      >
-        <span>{title}</span>
-        {open ? <UpOutlined style={{ fontSize: 11, color: "#8c8c8c" }} /> : <DownOutlined style={{ fontSize: 11, color: "#8c8c8c" }} />}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: open ? "1px solid #f0f0f0" : "none", userSelect: "none" }}>
+        {/* Left: title + collapse toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flex: 1 }} onClick={() => setOpen((v) => !v)}>
+          <span>{title}</span>
+          {open ? <UpOutlined style={{ fontSize: 11, color: "#8c8c8c" }} /> : <DownOutlined style={{ fontSize: 11, color: "#8c8c8c" }} />}
+        </div>
+        {/* Right: edit controls */}
+        {canEdit && open && (
+          <div style={{ display: "flex", gap: 6, marginLeft: 12 }} onClick={(e) => e.stopPropagation()}>
+            {editing ? (
+              <>
+                <Button size="small" type="primary" icon={<CheckOutlined />} style={{ background: "#1890ff", fontSize: 12 }} onClick={onSave}>Save</Button>
+                <Button size="small" icon={<CloseOutlined />} style={{ fontSize: 12 }} onClick={onCancel}>Cancel</Button>
+              </>
+            ) : (
+              <Button size="small" icon={<EditOutlined />} style={{ fontSize: 12 }} onClick={onEdit}>Edit</Button>
+            )}
+          </div>
+        )}
       </div>
       {open && <div style={{ padding: "14px 16px" }}>{children}</div>}
     </div>
@@ -320,10 +359,27 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
   const isOps = role === "AI_OPS"
   const [msgApi, contextHolder] = message.useMessage()
   const [selectedVersion, setSelectedVersion] = useState("v1.3.0")
-  const [apiKeyVisible, setApiKeyVisible] = useState(false)
+  const [versionConfigs, setVersionConfigs] = useState(initialVersionConfigs)
+
+  // Per-version mutable basic info and prompts
+  const [basicInfoMap, setBasicInfoMap] = useState<Record<string, { agentName: string; description: string }>>({})
+  const [promptMap, setPromptMap] = useState<Record<string, { prompt1: string; prompt2: string }>>({})
+
+  // Which section is currently being edited
+  const [editingSection, setEditingSection] = useState<"basic" | "platform" | "prompt" | null>(null)
+
+  // Draft states
+  const [draftBasic, setDraftBasic] = useState({ agentName: "", description: "" })
+  const [draftPlatform, setDraftPlatform] = useState<VersionConfig>({ agentPlatform: "", hashId: "", hashKey: "", agentLink: "" })
+  const [draftPrompt, setDraftPrompt] = useState({ prompt1: "", prompt2: "" })
 
   const d = agentDetailData
-  const cfg = versionConfigs[selectedVersion] || versionConfigs["v1.3.0"]
+  const cfg = versionConfigs[selectedVersion] || initialVersionConfigs["v1.3.0"]
+  const basicInfo = basicInfoMap[selectedVersion] ?? { agentName: d.agentName, description: d.description }
+  const prompts = promptMap[selectedVersion] ?? { prompt1: d.systemPrompt, prompt2: d.userPromptTemplate }
+
+  // Is the currently viewed version in TESTING state?
+  const isTesting = agentDetailData.versions.all.find(v => v.version === selectedVersion)?.state === "TESTING"
 
   const getVersionBanner = () => {
     const versionInfo = agentDetailData.versions.all.find(v => v.version === selectedVersion)
@@ -338,6 +394,43 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
   }
 
   const banner = getVersionBanner()
+
+  // ── Basic Info handlers ──────────────────────────────────────
+  function startEditBasic() {
+    setDraftBasic({ agentName: basicInfo.agentName, description: basicInfo.description })
+    setEditingSection("basic")
+  }
+  function saveBasic() {
+    setBasicInfoMap(prev => ({ ...prev, [selectedVersion]: { ...draftBasic } }))
+    setEditingSection(null)
+    msgApi.success("Basic info saved")
+  }
+
+  // ── Platform Integration handlers ───────────────────────────
+  function startEditPlatform() {
+    setDraftPlatform({ ...cfg })
+    setEditingSection("platform")
+  }
+  function savePlatform() {
+    setVersionConfigs(prev => ({ ...prev, [selectedVersion]: { ...draftPlatform } }))
+    setEditingSection(null)
+    msgApi.success("Platform Integration Info saved")
+  }
+
+  // ── Prompt Config handlers ──────────────────────────────────
+  function startEditPrompt() {
+    setDraftPrompt({ prompt1: prompts.prompt1, prompt2: prompts.prompt2 })
+    setEditingSection("prompt")
+  }
+  function savePrompt() {
+    setPromptMap(prev => ({ ...prev, [selectedVersion]: { ...draftPrompt } }))
+    setEditingSection(null)
+    msgApi.success("Prompt Config saved")
+  }
+
+  function cancelEdit() {
+    setEditingSection(null)
+  }
 
   return (
     <div>
@@ -360,60 +453,165 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
       })()}
 
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        {/* Left column: Read-only Config */}
+        {/* Left column: Config (editable when TESTING) */}
         <div style={{ flex: "0 0 60%", minWidth: 0 }}>
           {/* Version Banner */}
-          <div style={{ borderLeft: "4px solid " + banner.color, background: banner.color === "#52c41a" ? "#f6ffed" : banner.color === "#fa8c16" ? "#fff7e6" : "#fafafa", border: "1px solid #f0f0f0", borderLeftColor: banner.color, borderRadius: 4, padding: "8px 16px", marginBottom: 16, fontSize: 12, color: "#595959" }}>
+          <div style={{ borderLeft: "4px solid " + banner.color, background: banner.color === "#52c41a" ? "#f6ffed" : banner.color === "#faad14" ? "#fff7e6" : "#fafafa", border: "1px solid #f0f0f0", borderLeftColor: banner.color, borderRadius: 4, padding: "8px 16px", marginBottom: 16, fontSize: 12, color: "#595959" }}>
             {banner.label}
+            {isTesting && <Text style={{ marginLeft: 12, fontSize: 12, color: "#faad14" }}>— Click <EditOutlined /> to edit each section</Text>}
           </div>
 
-          {/* Basic Info — Read-only */}
-          <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px", marginBottom: 12 }}>
-            <Title level={5} style={{ margin: "0 0 16px 0" }}>Basic Info</Title>
-            <ReadOnlyField label="AGENT NAME" value={d.agentName} />
-            <ReadOnlyField label="DESCRIPTION" value={d.description} />
-            <div style={{ display: "flex", gap: 16, marginBottom: 0 }}>
-              <div style={{ flex: 1 }}>
-                <ReadOnlyField label="BELONGS TO FLOW" value={<Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>{flowData.find((f) => f.id === d.flowId)?.name ?? d.flowId}</Tag>} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <ReadOnlyField label="BELONGS TO STEP" value={<Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag>} monospace />
-              </div>
-            </div>
-          </div>
+          {/* ── Basic Info ─────────────────────────────────── */}
+          <SectionCard
+            title={<Text strong style={{ fontSize: 13 }}>Basic Info</Text>}
+            canEdit={isTesting}
+            editing={editingSection === "basic"}
+            onEdit={startEditBasic}
+            onSave={saveBasic}
+            onCancel={cancelEdit}
+          >
+            {editingSection === "basic" ? (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>AGENT NAME</Text>
+                  <Input value={draftBasic.agentName} onChange={e => setDraftBasic(p => ({ ...p, agentName: e.target.value }))} />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>DESCRIPTION</Text>
+                  <TextArea rows={3} value={draftBasic.description} onChange={e => setDraftBasic(p => ({ ...p, description: e.target.value }))} />
+                </div>
+                {/* Flow & Step always read-only */}
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <ReadOnlyField label="BELONGS TO FLOW" value={<Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>{flowData.find((f) => f.id === d.flowId)?.name ?? d.flowId}</Tag>} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <ReadOnlyField label="BELONGS TO STEP" value={<Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag>} />
+                  </div>
+                </div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Flow and Step cannot be changed.</Text>
+              </>
+            ) : (
+              <>
+                <ReadOnlyField label="AGENT NAME" value={basicInfo.agentName} />
+                <ReadOnlyField label="DESCRIPTION" value={basicInfo.description} />
+                <div style={{ display: "flex", gap: 16, marginBottom: 0 }}>
+                  <div style={{ flex: 1 }}>
+                    <ReadOnlyField label="BELONGS TO FLOW" value={<Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>{flowData.find((f) => f.id === d.flowId)?.name ?? d.flowId}</Tag>} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <ReadOnlyField label="BELONGS TO STEP" value={<Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag>} monospace />
+                  </div>
+                </div>
+              </>
+            )}
+          </SectionCard>
 
-          {/* Platform Integration Info — Read-only */}
-          <CollapsibleSection title={<Text strong style={{ fontSize: 13 }}>Platform Integration Info</Text>}>
-            <ReadOnlyField label="AGENT PLATFORM" value={cfg.agentPlatform} />
-            <ReadOnlyField label="HASH ID" value={cfg.hashId} monospace />
-            <ReadOnlyField label="HASH KEY" value={<span>••••••••••••••••••••••</span>} monospace />
-            <ReadOnlyField label="AGENT LINK" value={cfg.agentLink} monospace />
-          </CollapsibleSection>
+          {/* ── Platform Integration Info ──────────────────── */}
+          <SectionCard
+            title={<Text strong style={{ fontSize: 13 }}>Platform Integration Info</Text>}
+            canEdit={isTesting}
+            editing={editingSection === "platform"}
+            onEdit={startEditPlatform}
+            onSave={savePlatform}
+            onCancel={cancelEdit}
+          >
+            {editingSection === "platform" ? (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>AGENT PLATFORM</Text>
+                  <Select
+                    value={draftPlatform.agentPlatform}
+                    onChange={val => setDraftPlatform(p => ({ ...p, agentPlatform: val }))}
+                    style={{ width: "100%" }}
+                    options={[
+                      { value: "Smart",  label: "Smart" },
+                      { value: "Claude", label: "Claude" },
+                      { value: "GPT",    label: "GPT" },
+                      { value: "Custom", label: "Custom" },
+                    ]}
+                  />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>HASH ID</Text>
+                  <Input value={draftPlatform.hashId} onChange={e => setDraftPlatform(p => ({ ...p, hashId: e.target.value }))} style={{ fontFamily: "monospace" }} />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>HASH KEY</Text>
+                  <Input.Password value={draftPlatform.hashKey} onChange={e => setDraftPlatform(p => ({ ...p, hashKey: e.target.value }))} style={{ fontFamily: "monospace" }} />
+                </div>
+                <div style={{ marginBottom: 0 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 6, fontWeight: 500 }}>AGENT LINK</Text>
+                  <Input value={draftPlatform.agentLink} onChange={e => setDraftPlatform(p => ({ ...p, agentLink: e.target.value }))} style={{ fontFamily: "monospace" }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <ReadOnlyField label="AGENT PLATFORM" value={cfg.agentPlatform} />
+                <ReadOnlyField label="HASH ID" value={cfg.hashId} monospace />
+                <ReadOnlyField label="HASH KEY" value={<span>••••••••••••••••••••••</span>} monospace />
+                <ReadOnlyField label="AGENT LINK" value={cfg.agentLink} monospace />
+              </>
+            )}
+          </SectionCard>
 
-          {/* Prompt Config — Read-only */}
-          <CollapsibleSection title={<Text strong style={{ fontSize: 13 }}>Prompt Config</Text>}>
+          {/* ── Prompt Config ──────────────────────────────── */}
+          <SectionCard
+            title={<Text strong style={{ fontSize: 13 }}>Prompt Config</Text>}
+            canEdit={isTesting}
+            editing={editingSection === "prompt"}
+            onEdit={startEditPrompt}
+            onSave={savePrompt}
+            onCancel={cancelEdit}
+          >
             <div style={{ background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 4, padding: "10px 14px", marginBottom: 16 }}>
               <Space><InfoCircleOutlined style={{ color: "#1890ff" }} /><Text style={{ fontSize: 13, color: "#0050b3" }}>These prompts are injected as variables into the AI workflow platform.</Text></Space>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#1  INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT</Text>
-              <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
-                {d.systemPrompt}
-              </pre>
-            </div>
-            <div>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#2  INVOICE_KEY_INFO_CHECK_PROMPT</Text>
-              <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
-                {d.userPromptTemplate}
-              </pre>
-            </div>
-          </CollapsibleSection>
+
+            {editingSection === "prompt" ? (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#1  INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT</Text>
+                  <TextArea
+                    rows={6}
+                    value={draftPrompt.prompt1}
+                    onChange={e => setDraftPrompt(p => ({ ...p, prompt1: e.target.value }))}
+                    style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 }}
+                  />
+                </div>
+                <div>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#2  INVOICE_KEY_INFO_CHECK_PROMPT</Text>
+                  <TextArea
+                    rows={6}
+                    value={draftPrompt.prompt2}
+                    onChange={e => setDraftPrompt(p => ({ ...p, prompt2: e.target.value }))}
+                    style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#1  INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT</Text>
+                  <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
+                    {prompts.prompt1}
+                  </pre>
+                </div>
+                <div>
+                  <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#2  INVOICE_KEY_INFO_CHECK_PROMPT</Text>
+                  <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
+                    {prompts.prompt2}
+                  </pre>
+                </div>
+              </>
+            )}
+          </SectionCard>
         </div>
 
         {/* Right column: Version Management */}
         <div style={{ flex: "0 0 38%", minWidth: 0 }}>
           <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px", position: "sticky", top: 16 }}>
-            <VersionManagement agentId={agentId} passedAgentIds={passedAgentIds} onViewConfig={setSelectedVersion} selectedVersion={selectedVersion} />
+            <VersionManagement agentId={agentId} passedAgentIds={passedAgentIds} onViewConfig={(v) => { setSelectedVersion(v); setEditingSection(null) }} selectedVersion={selectedVersion} />
           </div>
         </div>
       </div>

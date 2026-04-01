@@ -749,7 +749,7 @@ function ExpandedRowPanel({ record }: { record: CaseResult }) {
   )
 }
 
-// ── Case Result Table ─────���───────────────────────────────────────
+// ── Case Result Table ──��──���───────────────────────────────────────
 
 function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewDetail?: (c: CaseResult) => void }) {
   const [expandedKeys, setExpandedKeys] = useState<string[]>([])
@@ -1094,6 +1094,7 @@ export function RegressionTest({
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
   const [selectedHistoryRunId, setSelectedHistoryRunId] = useState<string | null>(null)
   const [viewingHistoryRun, setViewingHistoryRun] = useState<RegressionRunRecord | null>(null)
+  const [aiResultDrawerRun, setAiResultDrawerRun] = useState<RegressionRunRecord | null>(null)
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false)
   const [selectedCaseDetail, setSelectedCaseDetail] = useState<CaseResult | null>(null)
   const [configMismatchModalOpen, setConfigMismatchModalOpen] = useState(false)
@@ -1376,6 +1377,7 @@ export function RegressionTest({
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Date / Time</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Pass Rate</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Status</th>
+                    <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>AI Result</th>
                     <th style={{ textAlign: "left", padding: "6px 0", color: "#8c8c8c", fontWeight: 500 }}>Action</th>
                   </tr>
                 </thead>
@@ -1404,6 +1406,12 @@ export function RegressionTest({
                         }}>
                           {r.status}
                         </Tag>
+                      </td>
+                      <td style={{ padding: "8px 12px 8px 0" }}>
+                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {
+                          e.stopPropagation()
+                          setAiResultDrawerRun(r)
+                        }}>View</Typography.Link>
                       </td>
                       <td style={{ padding: "8px 0" }}>
                         <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {
@@ -1439,6 +1447,137 @@ export function RegressionTest({
               </table>
             )}
           </div>
+        )
+      })()}
+
+      {/* AI Result Detail Drawer */}
+      {(() => {
+        const r = aiResultDrawerRun
+        if (!r) return null
+        const histAgentStep = (allAgents.find(a => a.id === r.agentId)?.step ?? "INVOICE_REVIEW") as AgentStep
+        const cases = buildSuiteCases(r.agentId, "golden", r.passRate, sharedGoldenCases, histAgentStep)
+        const passCount = cases.filter(c => c.correct).length
+
+        const aiResultColumns: ColumnsType<CaseResult> = [
+          {
+            title: "Case ID",
+            dataIndex: "caseId",
+            key: "caseId",
+            width: 110,
+            render: (v) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
+          },
+          {
+            title: "PR No.",
+            dataIndex: "prNo",
+            key: "prNo",
+            width: 130,
+            render: (v) => <Text style={{ fontSize: 12 }}>{v}</Text>,
+          },
+          {
+            title: "Supplier",
+            dataIndex: "supplierName",
+            key: "supplierName",
+            ellipsis: true,
+            render: (v) => <Text style={{ fontSize: 12 }}>{v}</Text>,
+          },
+          {
+            title: "Ground Truth",
+            dataIndex: "groundTruth",
+            key: "groundTruth",
+            width: 120,
+            render: (v) => <PredictionTag value={v} />,
+          },
+          {
+            title: "AI Result",
+            dataIndex: "agentPrediction",
+            key: "agentPrediction",
+            width: 110,
+            render: (v) => <PredictionTag value={v} />,
+          },
+          {
+            title: "Match",
+            dataIndex: "correct",
+            key: "correct",
+            width: 70,
+            render: (v) => v
+              ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 15 }} />
+              : <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 15 }} />,
+          },
+          {
+            title: "Confidence",
+            dataIndex: "confidence",
+            key: "confidence",
+            width: 100,
+            render: (v) => (
+              <Text style={{ fontSize: 12, color: v >= 0.8 ? "#52c41a" : v >= 0.6 ? "#faad14" : "#ff4d4f" }}>
+                {(v * 100).toFixed(0)}%
+              </Text>
+            ),
+          },
+          {
+            title: "AI Reason",
+            dataIndex: "agentPredictionReason",
+            key: "agentPredictionReason",
+            ellipsis: true,
+            render: (v) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text>,
+          },
+        ]
+
+        return (
+          <Drawer
+            open={!!aiResultDrawerRun}
+            onClose={() => setAiResultDrawerRun(null)}
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Text strong>AI Result Detail</Text>
+                <Text code style={{ fontSize: 12 }}>{r.runId}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{r.runAt}</Text>
+              </div>
+            }
+            width={900}
+            styles={{ body: { padding: "16px 20px" } }}
+          >
+            {/* Summary strip */}
+            <div style={{ display: "flex", gap: 24, marginBottom: 20, padding: "12px 16px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0" }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Run ID</Text>
+                <Text code style={{ fontSize: 13 }}>{r.runId}</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Version</Text>
+                <Tag style={{ fontFamily: "monospace", fontSize: 11, margin: 0 }}>{r.version}</Tag>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Pass Rate</Text>
+                <Text strong style={{ color: r.passRate >= 85 ? "#52c41a" : "#cf1322", fontSize: 14 }}>{r.passRate}%</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Correct / Total</Text>
+                <Text strong style={{ fontSize: 14 }}>{passCount} / {cases.length}</Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Status</Text>
+                <Tag style={{
+                  margin: 0, fontWeight: 500, fontSize: 11,
+                  color: r.status === "Passed" ? "#389e0d" : "#cf1322",
+                  background: r.status === "Passed" ? "#f6ffed" : "#fff1f0",
+                  borderColor: r.status === "Passed" ? "#b7eb8f" : "#ffa39e",
+                }}>{r.status}</Tag>
+              </div>
+            </div>
+
+            {/* Case-level AI result table */}
+            <Table
+              dataSource={cases}
+              columns={aiResultColumns}
+              rowKey="caseId"
+              size="small"
+              pagination={false}
+              rowClassName={(rec) => rec.correct ? "" : "ant-table-row-error"}
+              style={{ fontSize: 12 }}
+              scroll={{ x: 900 }}
+            />
+          </Drawer>
         )
       })()}
 

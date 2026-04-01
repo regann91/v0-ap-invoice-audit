@@ -433,6 +433,11 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
   const [draftPlatform, setDraftPlatform] = useState<VersionConfig>({ agentPlatform: "", hashId: "", hashKey: "", agentLink: "" })
   const [draftPrompts, setDraftPrompts] = useState<PromptItem[]>([])
 
+  // Debug Console state
+  const [debugPRNumber, setDebugPRNumber] = useState("")
+  const [debugOutput, setDebugOutput] = useState<string>("")
+  const [debugRunning, setDebugRunning] = useState(false)
+
   const d = agentDetailData
   const cfg = versionConfigs[selectedVersion] || initialVersionConfigs["v1.3.0"]
   const prompts = promptMap[selectedVersion] ?? defaultPrompts
@@ -488,6 +493,33 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
 
   function cancelEdit() {
     setEditingSection(null)
+  }
+
+  // ── Debug Console handlers ──────────────────────────────────
+  async function runDebugSession(type: "run" | "step" | "flow") {
+    if (!debugPRNumber.trim()) {
+      msgApi.error("Please enter a PR number")
+      return
+    }
+    
+    setDebugRunning(true)
+    setDebugOutput(`[${new Date().toLocaleTimeString()}] Starting ${type} session for PR #${debugPRNumber}...\n`)
+    
+    // Simulate async debug execution
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    const simulatedOutput = `[${new Date().toLocaleTimeString()}] Starting ${type} session for PR #${debugPRNumber}...
+[${new Date().toLocaleTimeString()}] Loading agent configuration: ${selectedVersion}
+[${new Date().toLocaleTimeString()}] Platform: ${cfg.agentPlatform}
+[${new Date().toLocaleTimeString()}] Hash ID: ${cfg.hashId}
+${type === "step" ? `[${new Date().toLocaleTimeString()}] Running step: INVOICE_REVIEW\n[${new Date().toLocaleTimeString()}] Step completed successfully` : ""}
+${type === "flow" ? `[${new Date().toLocaleTimeString()}] Running flow: INVOICE_REVIEW → MATCH → AP_VOUCHER\n[${new Date().toLocaleTimeString()}] All steps completed successfully` : ""}
+${type === "run" ? `[${new Date().toLocaleTimeString()}] Executing full workflow...\n[${new Date().toLocaleTimeString()}] Workflow execution completed` : ""}
+[${new Date().toLocaleTimeString()}] Debug session finished`
+    
+    setDebugOutput(simulatedOutput)
+    setDebugRunning(false)
+    msgApi.success(`Debug ${type} completed`)
   }
 
   return (
@@ -655,6 +687,73 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
               </>
             )}
           </SectionCard>
+
+          {/* ── Debug Console ──────────────────────────────── */}
+          <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #f0f0f0" }}>
+              <Text strong style={{ fontSize: 15, color: "#1d1d1d" }}>Debug Console</Text>
+              <Button
+                type="text"
+                size="small"
+                icon={<HistoryOutlined />}
+                onClick={() => { setDebugPRNumber(""); setDebugOutput("") }}
+                style={{ fontSize: 12 }}
+              />
+            </div>
+            
+            <div style={{ padding: "16px 20px" }}>
+              {/* Input and action buttons */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <Input
+                  placeholder="Enter PR Number"
+                  value={debugPRNumber}
+                  onChange={e => setDebugPRNumber(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  type="primary"
+                  onClick={() => runDebugSession("run")}
+                  loading={debugRunning}
+                  style={{ background: "#1890ff", fontSize: 13, paddingLeft: 24, paddingRight: 24 }}
+                >
+                  Run
+                </Button>
+                <Button
+                  onClick={() => runDebugSession("step")}
+                  loading={debugRunning}
+                  style={{ fontSize: 13 }}
+                >
+                  Run Step
+                </Button>
+                <Button
+                  onClick={() => runDebugSession("flow")}
+                  loading={debugRunning}
+                  style={{ fontSize: 13 }}
+                >
+                  Run Flow
+                </Button>
+              </div>
+              
+              {/* Debug output console */}
+              <div style={{
+                background: "#1a1a1a",
+                border: "1px solid #333",
+                borderRadius: 6,
+                padding: 16,
+                fontFamily: "monospace",
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: "#a8a8a8",
+                minHeight: 300,
+                maxHeight: 400,
+                overflowY: "auto",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word"
+              }}>
+                {debugOutput || <Text style={{ color: "#666" }}>Run a debug session to see results here</Text>}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right column: Version Management */}

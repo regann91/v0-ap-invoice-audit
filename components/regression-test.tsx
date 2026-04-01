@@ -318,6 +318,9 @@ interface PRRunRecord {
   correct: boolean
   confidence: number
   latencyMs: number
+  // AI Result detail
+  aiReason: string
+  aiRawOutput?: string
   // Version snapshot data
   snapshot: {
     agentPlatform: string
@@ -342,32 +345,32 @@ const defaultSnapshot = {
 const PR_RUN_HISTORY: Record<string, Record<AgentStep, PRRunRecord[]>> = {
   "PR-2025-0041": {
     INVOICE_REVIEW: [
-      { runId: "RUN-2043", runAt: "2025-03-20 11:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.95, latencyMs: 312, snapshot: { ...defaultSnapshot, agentPlatform: "Claude", hashId: "HASH-E5F6G7H8" } },
-      { runId: "RUN-2038", runAt: "2025-03-19 16:15", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.92, latencyMs: 287, snapshot: defaultSnapshot },
-      { runId: "RUN-2031", runAt: "2025-03-12 10:05", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Fail", correct: false, confidence: 0.61, latencyMs: 445, snapshot: defaultSnapshot },
+      { runId: "RUN-2043", runAt: "2025-03-20 11:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.95, latencyMs: 312, aiReason: "Invoice document title matches expected format. All key fields (supplier name, invoice number, amount, date) are present and valid.", aiRawOutput: '{"result": "Pass", "confidence": 0.95, "checks": {"title_valid": true, "fields_present": true, "amount_valid": true}}', snapshot: { ...defaultSnapshot, agentPlatform: "Claude", hashId: "HASH-E5F6G7H8" } },
+      { runId: "RUN-2038", runAt: "2025-03-19 16:15", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.92, latencyMs: 287, aiReason: "Document verified successfully. Supplier information matches database records.", aiRawOutput: '{"result": "Pass", "confidence": 0.92, "supplier_match": true}', snapshot: defaultSnapshot },
+      { runId: "RUN-2031", runAt: "2025-03-12 10:05", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Fail", correct: false, confidence: 0.61, latencyMs: 445, aiReason: "Unable to verify invoice amount. Calculation discrepancy detected between line items and total.", aiRawOutput: '{"result": "Fail", "confidence": 0.61, "error": "amount_mismatch", "expected": 1500.00, "found": 1450.00}', snapshot: defaultSnapshot },
     ],
     MATCH: [
-      { runId: "RUN-2044", runAt: "2025-03-21 09:00", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.88, latencyMs: 256, snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
-      { runId: "RUN-2039", runAt: "2025-03-19 14:20", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.91, latencyMs: 234, snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
+      { runId: "RUN-2044", runAt: "2025-03-21 09:00", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.88, latencyMs: 256, aiReason: "PO number matched successfully. All line items correspond to purchase order.", aiRawOutput: '{"result": "Pass", "po_matched": true, "line_items_matched": 5}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
+      { runId: "RUN-2039", runAt: "2025-03-19 14:20", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.91, latencyMs: 234, aiReason: "Three-way match completed. Invoice, PO, and GR all verified.", aiRawOutput: '{"result": "Pass", "three_way_match": true}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
     ],
     AP_VOUCHER: [
-      { runId: "RUN-2045", runAt: "2025-03-22 08:30", version: "v1.1.0", agentName: "AP Voucher Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.93, latencyMs: 198, snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/ap-voucher" } },
+      { runId: "RUN-2045", runAt: "2025-03-22 08:30", version: "v1.1.0", agentName: "AP Voucher Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.93, latencyMs: 198, aiReason: "Voucher created successfully. GL account mapping verified.", aiRawOutput: '{"result": "Pass", "voucher_id": "VCH-2025-0891", "gl_verified": true}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/ap-voucher" } },
     ],
   },
   "PR-2025-0042": {
     INVOICE_REVIEW: [
-      { runId: "RUN-2042", runAt: "2025-03-21 09:10", version: "v1.5.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.91, latencyMs: 298, snapshot: { ...defaultSnapshot, agentPlatform: "GPT", hashId: "HASH-I9J0K1L2" } },
-      { runId: "RUN-2035", runAt: "2025-03-15 13:00", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.58, latencyMs: 412, snapshot: defaultSnapshot },
+      { runId: "RUN-2042", runAt: "2025-03-21 09:10", version: "v1.5.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.91, latencyMs: 298, aiReason: "Invoice rejected. Supplier not found in approved vendor list.", aiRawOutput: '{"result": "Fail", "confidence": 0.91, "error": "supplier_not_approved"}', snapshot: { ...defaultSnapshot, agentPlatform: "GPT", hashId: "HASH-I9J0K1L2" } },
+      { runId: "RUN-2035", runAt: "2025-03-15 13:00", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.58, latencyMs: 412, aiReason: "Invoice appears valid based on format checks. (Note: Missed supplier validation)", aiRawOutput: '{"result": "Pass", "confidence": 0.58, "format_valid": true}', snapshot: defaultSnapshot },
     ],
     MATCH: [],
     AP_VOUCHER: [],
   },
   "PR-2025-0043": {
     INVOICE_REVIEW: [
-      { runId: "RUN-2040", runAt: "2025-03-20 14:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.61, latencyMs: 445, snapshot: { ...defaultSnapshot, agentPlatform: "Claude" } },
+      { runId: "RUN-2040", runAt: "2025-03-20 14:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.61, latencyMs: 445, aiReason: "Invoice format validated. Document structure appears correct.", aiRawOutput: '{"result": "Pass", "confidence": 0.61, "note": "low_confidence_warning"}', snapshot: { ...defaultSnapshot, agentPlatform: "Claude" } },
     ],
     MATCH: [
-      { runId: "RUN-2041", runAt: "2025-03-20 15:00", version: "v1.3.0-beta", agentName: "PO Matching Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.85, latencyMs: 267, snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
+      { runId: "RUN-2041", runAt: "2025-03-20 15:00", version: "v1.3.0-beta", agentName: "PO Matching Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.85, latencyMs: 267, aiReason: "PO matching failed. Line item quantity mismatch detected.", aiRawOutput: '{"result": "Fail", "confidence": 0.85, "error": "qty_mismatch", "line": 3}', snapshot: { ...defaultSnapshot, agentLink: "https://agent.internal.shopee.com/po-match" } },
     ],
     AP_VOUCHER: [],
   },
@@ -919,6 +922,7 @@ function PRRecordPanel() {
   const [selectedStep, setSelectedStep] = useState<AgentStep>("INVOICE_REVIEW")
   const [searchedPR, setSearchedPR] = useState<string | null>("PR-2025-0041")
   const [snapshotRecord, setSnapshotRecord] = useState<PRRunRecord | null>(null)
+  const [aiDetailRecord, setAiDetailRecord] = useState<PRRunRecord | null>(null)
 
   const stepOptions: { value: AgentStep; label: string }[] = [
     { value: "INVOICE_REVIEW", label: "Invoice Review" },
@@ -975,7 +979,12 @@ function PRRecordPanel() {
       dataIndex: "aiResult",
       key: "aiResult",
       width: 120,
-      render: (val) => <PredictionTag value={val} />,
+      render: (val, record) => (
+        <Space size={8}>
+          <PredictionTag value={val} />
+          <Typography.Link style={{ fontSize: 11 }} onClick={() => setAiDetailRecord(record)}>Detail</Typography.Link>
+        </Space>
+      ),
     },
     {
       title: "Match",
@@ -1086,6 +1095,71 @@ function PRRecordPanel() {
           </>
         )}
       </div>
+
+      {/* AI Result Detail Modal */}
+      <Modal
+        open={!!aiDetailRecord}
+        onCancel={() => setAiDetailRecord(null)}
+        title={
+          <Space>
+            <Text strong>AI Result Detail</Text>
+            {aiDetailRecord && <Text code style={{ fontSize: 12 }}>{aiDetailRecord.runId}</Text>}
+          </Space>
+        }
+        footer={<Button onClick={() => setAiDetailRecord(null)}>Close</Button>}
+        width={640}
+      >
+        {aiDetailRecord && (
+          <div style={{ marginTop: 8 }}>
+            {/* Summary */}
+            <div style={{ display: "flex", gap: 20, marginBottom: 20, padding: "12px 16px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0" }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Ground Truth</Text>
+                <PredictionTag value={aiDetailRecord.groundTruth} />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>AI Result</Text>
+                <PredictionTag value={aiDetailRecord.aiResult} />
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Match</Text>
+                {aiDetailRecord.correct 
+                  ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
+                  : <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />
+                }
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Confidence</Text>
+                <Text strong style={{ color: aiDetailRecord.confidence >= 0.8 ? "#52c41a" : aiDetailRecord.confidence >= 0.6 ? "#faad14" : "#ff4d4f" }}>
+                  {(aiDetailRecord.confidence * 100).toFixed(0)}%
+                </Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block" }}>Latency</Text>
+                <Text>{aiDetailRecord.latencyMs}ms</Text>
+              </div>
+            </div>
+
+            {/* AI Reason */}
+            <div style={{ marginBottom: 16 }}>
+              <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>AI Reasoning</Text>
+              <div style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "#262626" }}>
+                {aiDetailRecord.aiReason}
+              </div>
+            </div>
+
+            {/* Raw Output */}
+            {aiDetailRecord.aiRawOutput && (
+              <div>
+                <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>Raw Output</Text>
+                <pre style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 4, padding: "12px 14px", fontSize: 12, lineHeight: 1.5, color: "#a8a8a8", margin: 0, overflowX: "auto", fontFamily: "monospace" }}>
+                  {JSON.stringify(JSON.parse(aiDetailRecord.aiRawOutput), null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
 
       {/* Version Snapshot Modal */}
       <Modal

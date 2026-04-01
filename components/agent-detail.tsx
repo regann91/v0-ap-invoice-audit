@@ -90,6 +90,176 @@ function SnapshotModal({ version, open, onClose }: { version: string; open: bool
   )
 }
 
+// Prompt Editor Component (Left Panel)
+function PromptEditor({ selectedVersion, onSave }: { selectedVersion: string; onSave: () => void }) {
+  const [agentPlatform, setAgentPlatform] = useState("Smart")
+  const [hashId, setHashId] = useState("")
+  const [hashKey, setHashKey] = useState("")
+  const [agentLink, setAgentLink] = useState("")
+  const [prompts, setPrompts] = useState<Array<{ id: number; title: string; content: string; expanded: boolean }>>([
+    { id: 1, title: "Untitled Prompt", content: "", expanded: true }
+  ])
+
+  function addPrompt() {
+    const newId = Math.max(...prompts.map(p => p.id), 0) + 1
+    setPrompts([...prompts, { id: newId, title: "Untitled Prompt", content: "", expanded: true }])
+  }
+
+  function removePrompt(id: number) {
+    if (prompts.length <= 1) return
+    setPrompts(prompts.filter(p => p.id !== id))
+  }
+
+  function updatePromptContent(id: number, content: string) {
+    setPrompts(prompts.map(p => p.id === id ? { ...p, content } : p))
+  }
+
+  function togglePromptExpand(id: number) {
+    setPrompts(prompts.map(p => p.id === id ? { ...p, expanded: !p.expanded } : p))
+  }
+
+  return (
+    <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 8, padding: "20px 24px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Prompt Editor</Title>
+        <Button type="primary" style={{ background: "#1890ff", borderRadius: 6 }} onClick={onSave}>
+          Save Version
+        </Button>
+      </div>
+
+      {/* Config Fields Row */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        <div style={{ flex: 1 }}>
+          <Text style={{ fontSize: 12, color: "#8c8c8c", display: "block", marginBottom: 6 }}>Agent Platform</Text>
+          <Select
+            value={agentPlatform}
+            onChange={setAgentPlatform}
+            style={{ width: "100%" }}
+            options={[
+              { value: "Smart", label: "Smart" },
+              { value: "Coze", label: "Coze" },
+              { value: "Dify", label: "Dify" },
+              { value: "Custom", label: "Custom" },
+            ]}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Text style={{ fontSize: 12, color: "#8c8c8c", display: "block", marginBottom: 6 }}>Hash ID</Text>
+          <Input 
+            placeholder="Enter Hash ID" 
+            value={hashId} 
+            onChange={(e) => setHashId(e.target.value)} 
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Text style={{ fontSize: 12, color: "#8c8c8c", display: "block", marginBottom: 6 }}>Hash Key</Text>
+          <Input 
+            placeholder="Enter Hash ID" 
+            value={hashKey} 
+            onChange={(e) => setHashKey(e.target.value)} 
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Text style={{ fontSize: 12, color: "#8c8c8c", display: "block", marginBottom: 6 }}>Agent Link</Text>
+          <Input 
+            placeholder="Enter Agent Link" 
+            value={agentLink} 
+            onChange={(e) => setAgentLink(e.target.value)} 
+          />
+        </div>
+      </div>
+
+      {/* Prompts List */}
+      <div style={{ marginBottom: 16 }}>
+        {prompts.map((prompt, index) => (
+          <div 
+            key={prompt.id} 
+            style={{ 
+              border: "1px solid #e8e8e8", 
+              borderRadius: 6, 
+              marginBottom: 12,
+              overflow: "hidden"
+            }}
+          >
+            {/* Prompt Header */}
+            <div 
+              style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: 8, 
+                padding: "10px 12px",
+                background: "#fafafa",
+                borderBottom: prompt.expanded ? "1px solid #e8e8e8" : "none"
+              }}
+            >
+              <span style={{ cursor: "grab", color: "#bfbfbf" }}>&#8942;&#8942;</span>
+              <Text style={{ fontSize: 13, color: "#595959" }}>#{index + 1}</Text>
+              <Text style={{ fontSize: 13, fontWeight: 500 }}>{prompt.title}</Text>
+              <span 
+                onClick={() => togglePromptExpand(prompt.id)} 
+                style={{ cursor: "pointer", marginLeft: 4, color: "#8c8c8c", fontSize: 12 }}
+              >
+                {prompt.expanded ? <UpOutlined /> : <DownOutlined />}
+              </span>
+              <div style={{ flex: 1 }} />
+              {prompts.length > 1 && (
+                <Popconfirm 
+                  title="Delete this prompt?" 
+                  onConfirm={() => removePrompt(prompt.id)}
+                  okText="Delete"
+                  cancelText="Cancel"
+                >
+                  <DeleteOutlined style={{ color: "#8c8c8c", cursor: "pointer", fontSize: 13 }} />
+                </Popconfirm>
+              )}
+            </div>
+            
+            {/* Prompt Content */}
+            {prompt.expanded && (
+              <div style={{ padding: 12 }}>
+                <Input.TextArea
+                  placeholder="Type your prompt here... Use @ to insert variables"
+                  value={prompt.content}
+                  onChange={(e) => updatePromptContent(prompt.id, e.target.value)}
+                  autoSize={{ minRows: 3, maxRows: 8 }}
+                  style={{ fontSize: 13, border: "none", resize: "none", padding: 0 }}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add Prompt Button */}
+      <div 
+        onClick={addPrompt}
+        style={{ 
+          border: "1px dashed #d9d9d9", 
+          borderRadius: 6, 
+          padding: "10px 0", 
+          textAlign: "center", 
+          cursor: "pointer",
+          color: "#1890ff",
+          fontSize: 13,
+          transition: "all 0.2s"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "#1890ff"
+          e.currentTarget.style.background = "#f0f8ff"
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "#d9d9d9"
+          e.currentTarget.style.background = "transparent"
+        }}
+      >
+        <PlusOutlined style={{ marginRight: 6 }} />
+        Add Prompt
+      </div>
+    </div>
+  )
+}
+
 // Create New Version Modal
 function CreateVersionModal({ open, onClose, onConfirm, availableVersions }: { open: boolean; onClose: () => void; onConfirm: (copyFrom: string, newVersion: string) => void; availableVersions: Array<{ version: string; label: string }> }) {
   const [form] = Form.useForm()
@@ -367,71 +537,9 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
       })()}
 
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        {/* Left column: Read-only Config */}
+        {/* Left column: Prompt Editor */}
         <div style={{ flex: "0 0 60%", minWidth: 0 }}>
-          {/* Version Banner */}
-          <div style={{ borderLeft: "4px solid " + banner.color, background: banner.color === "#52c41a" ? "#f6ffed" : banner.color === "#fa8c16" ? "#fff7e6" : "#fafafa", border: "1px solid #f0f0f0", borderLeftColor: banner.color, borderRadius: 4, padding: "8px 16px", marginBottom: 16, fontSize: 12, color: "#595959" }}>
-            {banner.label}
-          </div>
-
-          {/* Basic Info — Read-only */}
-          <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px", marginBottom: 12 }}>
-            <Title level={5} style={{ margin: "0 0 16px 0" }}>Basic Info</Title>
-            <ReadOnlyField label="AGENT NAME" value={d.agentName} />
-            <ReadOnlyField label="DESCRIPTION" value={d.description} />
-            <div style={{ display: "flex", gap: 16, marginBottom: 0 }}>
-              <div style={{ flex: 1 }}>
-                <ReadOnlyField label="BELONGS TO FLOW" value={<Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>{flowData.find((f) => f.id === d.flowId)?.name ?? d.flowId}</Tag>} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <ReadOnlyField label="BELONGS TO STEP" value={<Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag>} monospace />
-              </div>
-            </div>
-          </div>
-
-          {/* Platform Input Config — Read-only */}
-          <CollapsibleSection title={<Text strong style={{ fontSize: 13 }}>Platform Input Config</Text>}>
-            <ReadOnlyField label="MODEL" value={cfg.model} monospace />
-            <ReadOnlyField label="TEMPERATURE" value={cfg.temperature} />
-            <ReadOnlyField label="MAX TOKENS" value={d.maxTokens} />
-            <div>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>ADDITIONAL PARAMS</Text>
-              <div style={{ border: "1px solid #f0f0f0", borderRadius: 4, padding: 8 }}>
-                {cfg.additionalParams?.map((p: any, i: number) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", borderBottom: i < cfg.additionalParams.length - 1 ? "1px solid #f8f8f8" : "none", fontSize: 13 }}>
-                    <Text code style={{ fontSize: 12 }}>{p.key}</Text>
-                    <Text code style={{ fontSize: 12 }}>{p.value}</Text>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* Platform Integration Info — Read-only */}
-          <CollapsibleSection title={<Text strong style={{ fontSize: 13 }}>Platform Integration Info</Text>}>
-            <ReadOnlyField label="API ENDPOINT" value={d.apiEndpoint} monospace />
-            <ReadOnlyField label="API KEY" value={<span>••••••••••••••••••••••</span>} monospace />
-            <ReadOnlyField label="AUTH METHOD" value={d.authMethod} />
-          </CollapsibleSection>
-
-          {/* Prompt Config — Read-only */}
-          <CollapsibleSection title={<Text strong style={{ fontSize: 13 }}>Prompt Config</Text>}>
-            <div style={{ background: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: 4, padding: "10px 14px", marginBottom: 16 }}>
-              <Space><InfoCircleOutlined style={{ color: "#1890ff" }} /><Text style={{ fontSize: 13, color: "#0050b3" }}>These prompts are injected as variables into the AI workflow platform.</Text></Space>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>SYSTEM PROMPT</Text>
-              <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
-                {d.systemPrompt}
-              </pre>
-            </div>
-            <div>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>USER PROMPT TEMPLATE</Text>
-              <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
-                {d.userPromptTemplate}
-              </pre>
-            </div>
-          </CollapsibleSection>
+          <PromptEditor selectedVersion={selectedVersion} onSave={() => msgApi.success('Version saved successfully')} />
         </div>
 
         {/* Right column: Version Management */}

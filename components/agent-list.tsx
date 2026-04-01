@@ -3,9 +3,9 @@
 import React, { useState } from "react"
 import {
   Table, Input, Button, Tag, Typography, Space, Drawer,
-  Form, Select, InputNumber, Divider, message, Empty, Tooltip,
+  Form, Select, Divider, message, Empty, Tooltip,
 } from "antd"
-import { SearchOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons"
+import { SearchOutlined, PlusOutlined, DeleteOutlined, HolderOutlined, FullscreenOutlined } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import { agentListData, flowData, type Agent, type AgentStatus, type AgentStep } from "@/lib/mock-data"
 import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
@@ -44,20 +44,22 @@ function StatusTag({ status }: { status: AgentStatus }) {
 }
 
 // ── New Agent Drawer ─────────────────────────────────────────────
+interface PromptItem {
+  id: string
+  title: string
+  content: string
+}
+
 interface NewAgentFormValues {
   agentName: string
   description: string
   flowId: string
   step: AgentStep
   initialVersion: string
-  model: string
-  temperature: number
-  maxTokens: number
-  apiEndpoint: string
-  apiKey: string
-  authMethod: string
-  systemPrompt: string
-  userPromptTemplate: string
+  agentPlatform: string
+  hashId: string
+  hashKey: string
+  agentLink: string
 }
 
 function NewAgentDrawer({
@@ -70,7 +72,9 @@ function NewAgentDrawer({
   onCreated: (agent: Agent) => void
 }) {
   const [form] = Form.useForm<NewAgentFormValues>()
-  const [extraParams, setExtraParams] = useState<Array<{ key: string; value: string }>>([])
+  const [prompts, setPrompts] = useState<PromptItem[]>([
+    { id: "1", title: "Untitled Prompt", content: "" }
+  ])
   const [submitting, setSubmitting] = useState(false)
   const [selectedFlowId, setSelectedFlowId] = useState<string | undefined>(undefined)
   const [msgApi, contextHolder] = message.useMessage()
@@ -79,14 +83,16 @@ function NewAgentDrawer({
     ? (flowData.find((f) => f.id === selectedFlowId)?.steps ?? [])
     : []
 
-  function addParam() {
-    setExtraParams((prev) => [...prev, { key: "", value: "" }])
+  // Prompt management functions
+  function addPrompt() {
+    const newId = String(Date.now())
+    setPrompts((prev) => [...prev, { id: newId, title: "Untitled Prompt", content: "" }])
   }
-  function removeParam(idx: number) {
-    setExtraParams((prev) => prev.filter((_, i) => i !== idx))
+  function removePrompt(id: string) {
+    setPrompts((prev) => prev.filter((p) => p.id !== id))
   }
-  function updateParam(idx: number, field: "key" | "value", val: string) {
-    setExtraParams((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: val } : p)))
+  function updatePrompt(id: string, field: "title" | "content", value: string) {
+    setPrompts((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
   }
 
   async function handleSubmit() {
@@ -113,7 +119,7 @@ function NewAgentDrawer({
       onCreated(newAgent)
       msgApi.success(`Agent "${values.agentName}" created successfully`)
       form.resetFields()
-      setExtraParams([])
+      setPrompts([{ id: "1", title: "Untitled Prompt", content: "" }])
       setSubmitting(false)
       onClose()
     } catch {
@@ -123,7 +129,7 @@ function NewAgentDrawer({
 
   function handleCancel() {
     form.resetFields()
-    setExtraParams([])
+    setPrompts([{ id: "1", title: "Untitled Prompt", content: "" }])
     setSelectedFlowId(undefined)
     onClose()
   }
@@ -245,141 +251,120 @@ function NewAgentDrawer({
 
           <Divider style={{ margin: "4px 0 16px" }} />
 
-          {/* Platform Input Config */}
-          {sectionTitle("Platform Input Config")}
-          <Form.Item
-            label={<span style={labelStyle}>Model</span>}
-            name="model"
-            rules={[{ required: true, message: "Model is required" }]}
-          >
-            <Input placeholder="e.g. claude-sonnet-4-20250514" style={{ fontFamily: "monospace" }} />
-          </Form.Item>
-          <div className="flex gap-4">
-            <Form.Item
-              label={<span style={labelStyle}>Temperature</span>}
-              name="temperature"
-              initialValue={0.1}
-              style={{ flex: 1, marginBottom: 16 }}
-            >
-              <InputNumber min={0} max={1} step={0.05} style={{ width: "100%" }} />
-            </Form.Item>
-            <Form.Item
-              label={<span style={labelStyle}>Max Tokens</span>}
-              name="maxTokens"
-              initialValue={4096}
-              style={{ flex: 1, marginBottom: 16 }}
-            >
-              <InputNumber min={256} step={256} style={{ width: "100%" }} />
-            </Form.Item>
-          </div>
-
-          {/* Additional Params */}
+          {/* Prompt Editor - Agent Detail style */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ ...labelStyle, marginBottom: 8 }}>Additional Params</div>
-            <div style={{ border: "1px solid #f0f0f0", borderRadius: 4, overflow: "hidden" }}>
-              {extraParams.length > 0 && (
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: "#fafafa" }}>
-                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, color: "#8c8c8c", fontWeight: 500, borderBottom: "1px solid #f0f0f0" }}>Key</th>
-                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, color: "#8c8c8c", fontWeight: 500, borderBottom: "1px solid #f0f0f0" }}>Value</th>
-                      <th style={{ width: 40, borderBottom: "1px solid #f0f0f0" }} />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {extraParams.map((p, i) => (
-                      <tr key={i}>
-                        <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8" }}>
-                          <Input
-                            value={p.key}
-                            size="small"
-                            placeholder="key"
-                            onChange={(e) => updateParam(i, "key", e.target.value)}
-                            style={{ fontFamily: "monospace", fontSize: 12 }}
-                          />
-                        </td>
-                        <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8" }}>
-                          <Input
-                            value={p.value}
-                            size="small"
-                            placeholder="value"
-                            onChange={(e) => updateParam(i, "value", e.target.value)}
-                            style={{ fontFamily: "monospace", fontSize: 12 }}
-                          />
-                        </td>
-                        <td style={{ padding: "6px 10px", borderBottom: "1px solid #f8f8f8", textAlign: "center" }}>
-                          <Button type="text" icon={<DeleteOutlined />} size="small" danger onClick={() => removeParam(i)} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              <div style={{ padding: "8px 10px" }}>
-                <Button type="dashed" icon={<PlusOutlined />} size="small" onClick={addParam} style={{ fontSize: 12 }}>
-                  Add Param
-                </Button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#1d1d1d" }}>Prompt Editor</div>
+              <Button type="primary" size="small" style={{ background: "#1890ff", fontSize: 12 }}>
+                Save Version
+              </Button>
+            </div>
+
+            {/* Agent Platform / Hash ID / Hash Key / Agent Link */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+              <Form.Item
+                label={<span style={{ fontSize: 12, color: "#595959" }}>Agent Platform</span>}
+                name="agentPlatform"
+                initialValue="Smart"
+                style={{ marginBottom: 0 }}
+              >
+                <Select
+                  options={[
+                    { value: "Smart", label: "Smart" },
+                    { value: "Claude", label: "Claude" },
+                    { value: "GPT", label: "GPT" },
+                    { value: "Custom", label: "Custom" },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item
+                label={<span style={{ fontSize: 12, color: "#595959" }}>Hash ID</span>}
+                name="hashId"
+                style={{ marginBottom: 0 }}
+              >
+                <Input placeholder="Enter Hash ID" />
+              </Form.Item>
+              <Form.Item
+                label={<span style={{ fontSize: 12, color: "#595959" }}>Hash Key</span>}
+                name="hashKey"
+                style={{ marginBottom: 0 }}
+              >
+                <Input placeholder="Enter Hash ID" />
+              </Form.Item>
+              <Form.Item
+                label={<span style={{ fontSize: 12, color: "#595959" }}>Agent Link</span>}
+                name="agentLink"
+                style={{ marginBottom: 0 }}
+              >
+                <Input placeholder="Enter Agent Link" />
+              </Form.Item>
+            </div>
+
+            {/* Prompt List */}
+            <div style={{ border: "1px solid #e8e8e8", borderRadius: 6, overflow: "hidden" }}>
+              {prompts.map((prompt, index) => (
+                <div key={prompt.id} style={{ borderBottom: index < prompts.length - 1 ? "1px solid #e8e8e8" : "none" }}>
+                  {/* Prompt Header */}
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 8, 
+                    padding: "10px 12px", 
+                    background: "#fafafa",
+                    borderBottom: "1px solid #e8e8e8"
+                  }}>
+                    <HolderOutlined style={{ color: "#bfbfbf", cursor: "grab" }} />
+                    <span style={{ fontSize: 13, color: "#8c8c8c", fontWeight: 500 }}>#{index + 1}</span>
+                    <Input
+                      value={prompt.title}
+                      onChange={(e) => updatePrompt(prompt.id, "title", e.target.value)}
+                      variant="borderless"
+                      style={{ flex: 1, fontSize: 13, fontWeight: 500, padding: "0 4px" }}
+                    />
+                    <FullscreenOutlined style={{ color: "#8c8c8c", cursor: "pointer" }} />
+                    {prompts.length > 1 && (
+                      <DeleteOutlined 
+                        style={{ color: "#ff4d4f", cursor: "pointer" }} 
+                        onClick={() => removePrompt(prompt.id)}
+                      />
+                    )}
+                  </div>
+                  {/* Prompt Content */}
+                  <div style={{ padding: "12px" }}>
+                    <TextArea
+                      value={prompt.content}
+                      onChange={(e) => updatePrompt(prompt.id, "content", e.target.value)}
+                      placeholder="Type your prompt here... Use @ to insert variables"
+                      rows={4}
+                      style={{ 
+                        border: "1px solid #d9d9d9", 
+                        borderRadius: 4,
+                        fontSize: 13,
+                        lineHeight: 1.6
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Add Prompt Button */}
+              <div 
+                onClick={addPrompt}
+                style={{ 
+                  padding: "12px", 
+                  textAlign: "center", 
+                  cursor: "pointer",
+                  border: "1px dashed #d9d9d9",
+                  borderRadius: 4,
+                  margin: 12,
+                  color: "#1890ff",
+                  fontSize: 13
+                }}
+              >
+                + Add Prompt
               </div>
             </div>
           </div>
-
-          <Divider style={{ margin: "4px 0 16px" }} />
-
-          {/* Platform Integration Info */}
-          {sectionTitle("Platform Integration Info")}
-          <Form.Item
-            label={<span style={labelStyle}>API Endpoint</span>}
-            name="apiEndpoint"
-            rules={[{ required: true, message: "API endpoint is required" }]}
-          >
-            <Input placeholder="https://api.example.com/agent/invoke" />
-          </Form.Item>
-          <Form.Item
-            label={<span style={labelStyle}>API Key</span>}
-            name="apiKey"
-          >
-            <Input.Password placeholder="sk-..." />
-          </Form.Item>
-          <Form.Item
-            label={<span style={labelStyle}>Auth Method</span>}
-            name="authMethod"
-            initialValue="Bearer Token"
-          >
-            <Select
-              options={[
-                { value: "Bearer Token",    label: "Bearer Token" },
-                { value: "API Key Header",  label: "API Key Header" },
-                { value: "None",            label: "None" },
-              ]}
-            />
-          </Form.Item>
-
-          <Divider style={{ margin: "4px 0 16px" }} />
-
-          {/* Prompt Config */}
-          {sectionTitle("Prompt Config")}
-          <Form.Item
-            label={<span style={labelStyle}>System Prompt</span>}
-            name="systemPrompt"
-            rules={[{ required: true, message: "System prompt is required" }]}
-          >
-            <TextArea
-              rows={8}
-              placeholder="You are an AP invoice validation assistant..."
-              style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 }}
-            />
-          </Form.Item>
-          <Form.Item
-            label={<span style={labelStyle}>User Prompt Template</span>}
-            name="userPromptTemplate"
-            rules={[{ required: true, message: "User prompt template is required" }]}
-          >
-            <TextArea
-              rows={6}
-              placeholder="Validate the following invoice: {{invoice_json}}"
-              style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 }}
-            />
-          </Form.Item>
 
         </Form>
       </Drawer>

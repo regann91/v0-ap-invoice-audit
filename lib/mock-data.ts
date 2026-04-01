@@ -331,13 +331,10 @@ export interface AgentDetailData {
   description: string
   flowId: string
   step: AgentStep
-  model: string
-  temperature: number
-  maxTokens: number
-  additionalParams: Array<{ key: string; value: string }>
-  apiEndpoint: string
-  apiKey: string
-  authMethod: string
+  agentPlatform: string
+  hashId: string
+  hashKey: string
+  agentLink: string
   systemPrompt: string
   userPromptTemplate: string
   versions: {
@@ -351,16 +348,10 @@ export const agentDetailData: AgentDetailData = {
   description: 'Validates each invoice line item against PO data and flags discrepancies. Supports multi-currency comparison and tolerance thresholds.',
   flowId: 'FLOW-001',
   step: 'INVOICE_REVIEW',
-  model: 'claude-sonnet-4-20250514',
-  temperature: 0.1,
-  maxTokens: 4096,
-  additionalParams: [
-    { key: 'top_p', value: '0.95' },
-    { key: 'stop_sequences', value: '["END_VALIDATION"]' },
-  ],
-  apiEndpoint: 'https://api.internal.shopee.com/ai/agent/invoke',
-  apiKey: 'sk-shopee-prod-xK8mN2pQrT5vW9zA',
-  authMethod: 'Bearer Token',
+  agentPlatform: 'Smart',
+  hashId: 'HASH-A1B2C3D4',
+  hashKey: 'sk-hash-xK8mN2pQrT5vW9zA',
+  agentLink: 'https://agent.internal.shopee.com/line-item-validator',
   systemPrompt: `You are an AP invoice validation assistant for Shopee's finance team.
 
 Your task is to validate invoice line items against the provided Purchase Order (PO) data.

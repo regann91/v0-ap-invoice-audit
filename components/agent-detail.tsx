@@ -396,13 +396,13 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
               <Space><InfoCircleOutlined style={{ color: "#1890ff" }} /><Text style={{ fontSize: 13, color: "#0050b3" }}>These prompts are injected as variables into the AI workflow platform.</Text></Space>
             </div>
             <div style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#1  invoice_document_title_checker_prompt</Text>
+              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#1  INVOICE_DOCUMENT_TITLE_CHECKER_PROMPT</Text>
               <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
                 {d.systemPrompt}
               </pre>
             </div>
             <div>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#2  INVOICE KEY INFO CHECK PROMPT</Text>
+              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>#2  INVOICE_KEY_INFO_CHECK_PROMPT</Text>
               <pre style={{ background: "#f5f5f5", border: "1px solid #e8e8e8", borderRadius: 4, padding: "12px", fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: "monospace", color: "#262626", margin: 0 }}>
                 {d.userPromptTemplate}
               </pre>

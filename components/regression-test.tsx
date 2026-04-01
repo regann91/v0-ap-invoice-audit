@@ -644,22 +644,16 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
     { label: "Accuracy",        value: suite.accuracy,       suffix: "%" },
     { label: "Precision",       value: suite.precision,      suffix: "%" },
     { label: "Recall",          value: suite.recall,         suffix: "%" },
-    { label: "Golden Pass Rate",value: suite.goldenPassRate, suffix: "%", highlight: true },
   ]
-  const gprPass = suite.goldenPassRate >= 85
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
       {metrics.map((m) => (
         <Card
           key={m.label}
           size="small"
           style={{
-            border: m.highlight
-              ? gprPass ? "1px solid #b7eb8f" : "1px solid #ffa39e"
-              : "1px solid #f0f0f0",
-            background: m.highlight
-              ? gprPass ? "#f6ffed" : "#fff1f0"
-              : "#fafafa",
+            border: "1px solid #f0f0f0",
+            background: "#fafafa",
           }}
         >
           <Statistic
@@ -669,9 +663,7 @@ function MetricCards({ suite }: { suite: SuiteResult }) {
             valueStyle={{
               fontSize: 22,
               fontWeight: 700,
-              color: m.highlight
-                ? gprPass ? "#389e0d" : "#cf1322"
-                : "#1d1d1d",
+              color: "#1d1d1d",
             }}
           />
         </Card>

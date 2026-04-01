@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from "react"
 import {
   Select, Button, Table, Tag, Typography, Space, Progress,
-  Statistic, Card, Divider, Empty, Switch, Tooltip, Drawer, Modal,
+  Statistic, Card, Divider, Empty, Switch, Tooltip, Drawer, Modal, Input, Tabs,
   type EmptyProps,
 } from "antd"
+import { SearchOutlined, HistoryOutlined } from "@ant-design/icons"
 import {
   PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
   ExperimentOutlined, TrophyOutlined, WarningOutlined,
@@ -289,6 +290,54 @@ const REGRESSION_HISTORY: Record<string, RegressionRunRecord[]> = {
   "AGT-002::v1.4.0-beta": [
     { runId: "RUN-2045", runAt: "2025-03-23 09:45", passRate: 78, status: "Failed",  agentId: "AGT-002", version: "v1.4.0-beta" },
   ],
+}
+
+// ── PR Record mock data ───────────────────────────────────────────
+
+interface PRRunRecord {
+  runId: string
+  runAt: string
+  version: string
+  agentName: string
+  groundTruth: "Pass" | "Fail"
+  aiResult: "Pass" | "Fail"
+  correct: boolean
+  confidence: number
+  latencyMs: number
+}
+
+const PR_RUN_HISTORY: Record<string, Record<AgentStep, PRRunRecord[]>> = {
+  "PR-2025-0041": {
+    INVOICE_REVIEW: [
+      { runId: "RUN-2043", runAt: "2025-03-20 11:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.95, latencyMs: 312 },
+      { runId: "RUN-2038", runAt: "2025-03-19 16:15", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.92, latencyMs: 287 },
+      { runId: "RUN-2031", runAt: "2025-03-12 10:05", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Pass", aiResult: "Fail", correct: false, confidence: 0.61, latencyMs: 445 },
+    ],
+    MATCH: [
+      { runId: "RUN-2044", runAt: "2025-03-21 09:00", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.88, latencyMs: 256 },
+      { runId: "RUN-2039", runAt: "2025-03-19 14:20", version: "v1.2.0", agentName: "PO Matching Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.91, latencyMs: 234 },
+    ],
+    AP_VOUCHER: [
+      { runId: "RUN-2045", runAt: "2025-03-22 08:30", version: "v1.1.0", agentName: "AP Voucher Agent", groundTruth: "Pass", aiResult: "Pass", correct: true, confidence: 0.93, latencyMs: 198 },
+    ],
+  },
+  "PR-2025-0042": {
+    INVOICE_REVIEW: [
+      { runId: "RUN-2042", runAt: "2025-03-21 09:10", version: "v1.5.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.91, latencyMs: 298 },
+      { runId: "RUN-2035", runAt: "2025-03-15 13:00", version: "v1.3.0", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.58, latencyMs: 412 },
+    ],
+    MATCH: [],
+    AP_VOUCHER: [],
+  },
+  "PR-2025-0043": {
+    INVOICE_REVIEW: [
+      { runId: "RUN-2040", runAt: "2025-03-20 14:30", version: "v1.4.0-beta", agentName: "Invoice Review Agent", groundTruth: "Fail", aiResult: "Pass", correct: false, confidence: 0.61, latencyMs: 445 },
+    ],
+    MATCH: [
+      { runId: "RUN-2041", runAt: "2025-03-20 15:00", version: "v1.3.0-beta", agentName: "PO Matching Agent", groundTruth: "Fail", aiResult: "Fail", correct: true, confidence: 0.85, latencyMs: 267 },
+    ],
+    AP_VOUCHER: [],
+  },
 }
 
 // ── Fixed per-case mock data (Invoice Review step) ───────────────
@@ -838,6 +887,173 @@ function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewD
   )
 }
 
+// ── PR Record Panel ──────────────────────────────────────────────
+
+function PRRecordPanel() {
+  const [prNumber, setPrNumber] = useState("")
+  const [selectedStep, setSelectedStep] = useState<AgentStep>("INVOICE_REVIEW")
+  const [searchedPR, setSearchedPR] = useState<string | null>(null)
+
+  const stepOptions: { value: AgentStep; label: string }[] = [
+    { value: "INVOICE_REVIEW", label: "Invoice Review" },
+    { value: "MATCH", label: "Match" },
+    { value: "AP_VOUCHER", label: "AP Voucher" },
+  ]
+
+  function handleSearch() {
+    if (!prNumber.trim()) return
+    // Normalize PR number format
+    const normalizedPR = prNumber.startsWith("PR-") ? prNumber : `PR-${prNumber}`
+    setSearchedPR(normalizedPR)
+  }
+
+  const records = searchedPR ? (PR_RUN_HISTORY[searchedPR]?.[selectedStep] ?? []) : []
+
+  const columns: ColumnsType<PRRunRecord> = [
+    {
+      title: "Run ID",
+      dataIndex: "runId",
+      key: "runId",
+      width: 120,
+      render: (val) => <Text code style={{ fontSize: 12 }}>{val}</Text>,
+    },
+    {
+      title: "Run Time",
+      dataIndex: "runAt",
+      key: "runAt",
+      width: 160,
+      render: (val) => <Text type="secondary" style={{ fontSize: 12 }}>{val}</Text>,
+    },
+    {
+      title: "Version",
+      dataIndex: "version",
+      key: "version",
+      width: 120,
+      render: (val) => <Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{val}</Tag>,
+    },
+    {
+      title: "Agent",
+      dataIndex: "agentName",
+      key: "agentName",
+      width: 180,
+    },
+    {
+      title: "Ground Truth",
+      dataIndex: "groundTruth",
+      key: "groundTruth",
+      width: 120,
+      render: (val) => <PredictionTag value={val} />,
+    },
+    {
+      title: "AI Result",
+      dataIndex: "aiResult",
+      key: "aiResult",
+      width: 120,
+      render: (val) => <PredictionTag value={val} />,
+    },
+    {
+      title: "Match",
+      dataIndex: "correct",
+      key: "correct",
+      width: 80,
+      render: (val) => val 
+        ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
+        : <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />,
+    },
+    {
+      title: "Confidence",
+      dataIndex: "confidence",
+      key: "confidence",
+      width: 100,
+      render: (val) => (
+        <Text style={{ fontSize: 12, color: val >= 0.8 ? "#52c41a" : val >= 0.6 ? "#faad14" : "#ff4d4f" }}>
+          {(val * 100).toFixed(0)}%
+        </Text>
+      ),
+    },
+    {
+      title: "Latency",
+      dataIndex: "latencyMs",
+      key: "latencyMs",
+      width: 100,
+      render: (val) => <Text type="secondary" style={{ fontSize: 12 }}>{val}ms</Text>,
+    },
+  ]
+
+  return (
+    <div>
+      {/* Search bar */}
+      <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
+          <div style={{ flex: 1, maxWidth: 300 }}>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>PR Number</Text>
+            <Input
+              placeholder="Enter PR Number (e.g. PR-2025-0041 or 2025-0041)"
+              value={prNumber}
+              onChange={(e) => setPrNumber(e.target.value)}
+              onPressEnter={handleSearch}
+              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            />
+          </div>
+          <div>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>Step</Text>
+            <Select
+              value={selectedStep}
+              onChange={setSelectedStep}
+              options={stepOptions}
+              style={{ width: 160 }}
+            />
+          </div>
+          <Button type="primary" onClick={handleSearch} style={{ background: "#1890ff" }}>
+            Search
+          </Button>
+        </div>
+      </div>
+
+      {/* Results */}
+      <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px" }}>
+        {!searchedPR ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<Text type="secondary">Enter a PR number to view run history</Text>}
+          />
+        ) : records.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <div>
+                <Text type="secondary" style={{ display: "block" }}>No run records found for</Text>
+                <Text code style={{ fontSize: 13 }}>{searchedPR}</Text>
+                <Text type="secondary"> in </Text>
+                <Text strong>{stepOptions.find(s => s.value === selectedStep)?.label}</Text>
+              </div>
+            }
+          />
+        ) : (
+          <>
+            <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <Text strong style={{ fontSize: 14 }}>Run History for </Text>
+                <Text code style={{ fontSize: 13 }}>{searchedPR}</Text>
+                <Text type="secondary" style={{ marginLeft: 12 }}>Step: {stepOptions.find(s => s.value === selectedStep)?.label}</Text>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>{records.length} record(s)</Text>
+            </div>
+            <Table
+              dataSource={records}
+              columns={columns}
+              rowKey="runId"
+              size="small"
+              pagination={false}
+              style={{ fontSize: 13 }}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Main component ───────────────────────────────────────────────
 
 export function RegressionTest({
@@ -854,6 +1070,7 @@ export function RegressionTest({
   onPassedRun?: (agentId: string) => void
   }) {
   const { region } = useRegion()
+  const [activeTab, setActiveTab] = useState<"runTest" | "prRecord">("runTest")
 
   // Entity selector (driven by region)
   const entityOptions = getEntitiesForRegion(region)
@@ -1008,6 +1225,23 @@ export function RegressionTest({
         />
       </div>
 
+      {/* Tab Navigation */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as "runTest" | "prRecord")}
+        style={{ marginBottom: 16 }}
+        items={[
+          { key: "runTest", label: "Run Test" },
+          { key: "prRecord", label: "PR Record" },
+        ]}
+      />
+
+      {/* PR Record Tab */}
+      {activeTab === "prRecord" && <PRRecordPanel />}
+
+      {/* Run Test Tab - Original Content */}
+      {activeTab === "runTest" && (
+      <>
       {/* Selector + Run bar */}
       <div
         style={{
@@ -1596,6 +1830,8 @@ export function RegressionTest({
           )
         })()}
       </Drawer>
+      </>
+      )}
     </div>
   )
 }

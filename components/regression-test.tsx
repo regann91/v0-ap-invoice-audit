@@ -749,7 +749,7 @@ function ExpandedRowPanel({ record }: { record: CaseResult }) {
   )
 }
 
-// ── Case Result Table ─────────────────────────────────────────────
+// ── Case Result Table ─────���───────────────────────────────────────
 
 function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewDetail?: (c: CaseResult) => void }) {
   const [expandedKeys, setExpandedKeys] = useState<string[]>([])
@@ -882,9 +882,9 @@ function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewD
 // ── PR Record Panel ──────────────────────────────────────────────
 
 function PRRecordPanel() {
-  const [prNumber, setPrNumber] = useState("")
+  const [prNumber, setPrNumber] = useState("PR-2025-0041")
   const [selectedStep, setSelectedStep] = useState<AgentStep>("INVOICE_REVIEW")
-  const [searchedPR, setSearchedPR] = useState<string | null>(null)
+  const [searchedPR, setSearchedPR] = useState<string | null>("PR-2025-0041")
 
   const stepOptions: { value: AgentStep; label: string }[] = [
     { value: "INVOICE_REVIEW", label: "Invoice Review" },

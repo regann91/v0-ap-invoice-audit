@@ -17,10 +17,10 @@ const { Text, Title } = Typography
 
 // Version config by version string
 const versionConfigs: Record<string, any> = {
-  "v1.3.0": { temperature: 0.1, model: "claude-sonnet-4-20250514", topP: 0.95, additionalParams: [{ key: "top_p", value: "0.95" }, { key: "stop_sequences", value: '["END_VALIDATION"]' }] },
-  "v1.4.0-beta": { temperature: 0.2, model: "claude-sonnet-4-20250514", topP: 0.90, additionalParams: [{ key: "top_p", value: "0.90" }, { key: "stop_sequences", value: '["END_VALIDATION"]' }, { key: "max_retries", value: "3" }] },
-  "v1.5.0-beta": { temperature: 0.15, model: "claude-opus-4-20250514", topP: 0.92, additionalParams: [{ key: "top_p", value: "0.92" }, { key: "stop_sequences", value: '["END_VALIDATION"]' }] },
-  "v1.2.0": { temperature: 0.3, model: "claude-sonnet-3-7", topP: 0.88, additionalParams: [{ key: "top_p", value: "0.88" }] },
+  "v1.3.0": { agentPlatform: "Smart", hashId: "HASH-A1B2C3D4", hashKey: "sk-hash-xK8mN2pQrT5vW9zA", agentLink: "https://agent.internal.shopee.com/line-item-validator" },
+  "v1.4.0-beta": { agentPlatform: "Claude", hashId: "HASH-E5F6G7H8", hashKey: "sk-hash-yL9nO3qSu6wX0zB", agentLink: "https://agent.internal.shopee.com/line-item-validator-beta" },
+  "v1.5.0-beta": { agentPlatform: "GPT", hashId: "HASH-I9J0K1L2", hashKey: "sk-hash-zM0pP4rTv7xY1aC", agentLink: "https://agent.internal.shopee.com/line-item-validator-v2" },
+  "v1.2.0": { agentPlatform: "Smart", hashId: "HASH-M3N4O5P6", hashKey: "sk-hash-aB1cD2eF3gH4iJ", agentLink: "https://agent.internal.shopee.com/line-item-validator-old" },
 }
 
 // Read-only label-value display component
@@ -69,20 +69,13 @@ function SnapshotModal({ version, open, onClose }: { version: string; open: bool
             <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Description</td><td style={{ color: "#595959" }}>{d.description}</td></tr>
           </tbody>
         </table>
-        <Title level={5}>Platform Input Config</Title>
-        <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginBottom: 16 }}>
-          <tbody>
-            <tr><td style={{ padding: "4px 0", color: "#8c8c8c", width: 180 }}>Model</td><td><Text code>{cfg.model}</Text></td></tr>
-            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Temperature</td><td>{cfg.temperature}</td></tr>
-            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Max Tokens</td><td>{d.maxTokens}</td></tr>
-          </tbody>
-        </table>
         <Title level={5}>Platform Integration Info</Title>
         <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse", marginBottom: 16 }}>
           <tbody>
-            <tr><td style={{ padding: "4px 0", color: "#8c8c8c", width: 180 }}>API Endpoint</td><td style={{ wordBreak: "break-all" }}>{d.apiEndpoint}</td></tr>
-            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>API Key</td><td><Text code>••••••••••••••••</Text></td></tr>
-            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Auth Method</td><td>{d.authMethod}</td></tr>
+            <tr><td style={{ padding: "4px 0", color: "#8c8c8c", width: 180 }}>Agent Platform</td><td>{cfg.agentPlatform}</td></tr>
+            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Hash ID</td><td><Text code>{cfg.hashId}</Text></td></tr>
+            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Hash Key</td><td><Text code>••••••••••••••••</Text></td></tr>
+            <tr><td style={{ padding: "4px 0", color: "#8c8c8c" }}>Agent Link</td><td style={{ wordBreak: "break-all" }}>{cfg.agentLink}</td></tr>
           </tbody>
         </table>
       </div>
@@ -389,29 +382,12 @@ export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPubl
             </div>
           </div>
 
-          {/* Platform Input Config — Read-only */}
-          <CollapsibleSection title={<Text strong style={{ fontSize: 13 }}>Platform Input Config</Text>}>
-            <ReadOnlyField label="MODEL" value={cfg.model} monospace />
-            <ReadOnlyField label="TEMPERATURE" value={cfg.temperature} />
-            <ReadOnlyField label="MAX TOKENS" value={d.maxTokens} />
-            <div>
-              <Text style={{ fontSize: 12, color: "#8c8c8c", textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 500 }}>ADDITIONAL PARAMS</Text>
-              <div style={{ border: "1px solid #f0f0f0", borderRadius: 4, padding: 8 }}>
-                {cfg.additionalParams?.map((p: any, i: number) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", borderBottom: i < cfg.additionalParams.length - 1 ? "1px solid #f8f8f8" : "none", fontSize: 13 }}>
-                    <Text code style={{ fontSize: 12 }}>{p.key}</Text>
-                    <Text code style={{ fontSize: 12 }}>{p.value}</Text>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CollapsibleSection>
-
           {/* Platform Integration Info — Read-only */}
           <CollapsibleSection title={<Text strong style={{ fontSize: 13 }}>Platform Integration Info</Text>}>
-            <ReadOnlyField label="API ENDPOINT" value={d.apiEndpoint} monospace />
-            <ReadOnlyField label="API KEY" value={<span>••••••••••••••••••••••</span>} monospace />
-            <ReadOnlyField label="AUTH METHOD" value={d.authMethod} />
+            <ReadOnlyField label="AGENT PLATFORM" value={cfg.agentPlatform} />
+            <ReadOnlyField label="HASH ID" value={cfg.hashId} monospace />
+            <ReadOnlyField label="HASH KEY" value={<span>••••••••••••••••••••••</span>} monospace />
+            <ReadOnlyField label="AGENT LINK" value={cfg.agentLink} monospace />
           </CollapsibleSection>
 
           {/* Prompt Config — Read-only */}

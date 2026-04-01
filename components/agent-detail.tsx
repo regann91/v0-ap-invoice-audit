@@ -126,22 +126,77 @@ function SnapshotModal({ version, open, onClose }: { version: string; open: bool
 function CreateVersionModal({ open, onClose, onConfirm, availableVersions }: { open: boolean; onClose: () => void; onConfirm: (copyFrom: string, newVersion: string) => void; availableVersions: Array<{ version: string; label: string }> }) {
   const [form] = Form.useForm()
   const [copyFrom, setCopyFrom] = useState(availableVersions[0]?.version ?? "")
+
+  // Auto-suggest next version number based on existing versions
+  function getSuggestedVersion(): string {
+    const versionNumbers = availableVersions
+      .map(v => v.version.replace(/^v/, "").replace(/-.*$/, "")) // Remove 'v' prefix and '-beta' suffix
+      .map(v => {
+        const parts = v.split(".").map(Number)
+        return { major: parts[0] || 0, minor: parts[1] || 0, patch: parts[2] || 0 }
+      })
+    
+    if (versionNumbers.length === 0) return "1.0.0"
+    
+    // Find the highest version and increment patch
+    const highest = versionNumbers.reduce((max, curr) => {
+      if (curr.major > max.major) return curr
+      if (curr.major === max.major && curr.minor > max.minor) return curr
+      if (curr.major === max.major && curr.minor === max.minor && curr.patch > max.patch) return curr
+      return max
+    })
+    
+    return `${highest.major}.${highest.minor}.${highest.patch + 1}`
+  }
+
   function handleOk() {
     form.validateFields().then((values) => {
-      onConfirm(copyFrom, values.newVersion)
+      // Auto add 'v' prefix and '-beta' suffix
+      const fullVersion = `v${values.newVersion}-beta`
+      onConfirm(copyFrom, fullVersion)
       form.resetFields()
       onClose()
     })
   }
+
+  // Reset form with suggested version when modal opens
+  const suggestedVersion = getSuggestedVersion()
+
   return (
-    <Modal title="Create New Version" open={open} onCancel={onClose} onOk={handleOk} okText="Create Version" okButtonProps={{ style: { background: "#1890ff" } }} width={480}>
+    <Modal 
+      title="Create New Version" 
+      open={open} 
+      onCancel={onClose} 
+      onOk={handleOk} 
+      okText="Create Version" 
+      okButtonProps={{ style: { background: "#1890ff" } }} 
+      width={480}
+      afterOpenChange={(visible) => {
+        if (visible) {
+          form.setFieldsValue({ newVersion: suggestedVersion })
+        }
+      }}
+    >
       <div style={{ marginBottom: 16 }}><Text type="secondary" style={{ fontSize: 13 }}>Create a new version by copying an existing version&apos;s configuration. The new version will be created in TESTING status.</Text></div>
-      <Form form={form} layout="vertical" initialValues={{ newVersion: "" }}>
+      <Form form={form} layout="vertical" initialValues={{ newVersion: suggestedVersion }}>
         <Form.Item label="Copy from Version" style={{ marginBottom: 16 }}>
           <Select value={copyFrom} onChange={setCopyFrom} style={{ width: "100%" }} options={availableVersions.map((v) => ({ value: v.version, label: <Space><Text code style={{ fontSize: 12 }}>{v.version}</Text><Text type="secondary" style={{ fontSize: 11 }}>({v.label})</Text></Space> }))} />
         </Form.Item>
-        <Form.Item label="New Version Number" name="newVersion" rules={[{ required: true, message: "Please enter a version number" }, { pattern: /^v\d+\.\d+\.\d+(-\w+)?$/, message: "Format: v1.0.0 or v1.0.0-beta" }]}>
-          <Input placeholder="e.g. v1.5.0-beta" style={{ fontFamily: "monospace" }} />
+        <Form.Item 
+          label="New Version Number" 
+          name="newVersion" 
+          rules={[
+            { required: true, message: "Please enter a version number" }, 
+            { pattern: /^\d+\.\d+\.\d+$/, message: "Format: 1.5.0 (major.minor.patch)" }
+          ]}
+          extra={<Text type="secondary" style={{ fontSize: 12 }}>System will automatically add &quot;v&quot; prefix and &quot;-beta&quot; suffix</Text>}
+        >
+          <Input 
+            placeholder="e.g. 1.5.0" 
+            style={{ fontFamily: "monospace" }} 
+            addonBefore="v" 
+            addonAfter="-beta"
+          />
         </Form.Item>
       </Form>
     </Modal>

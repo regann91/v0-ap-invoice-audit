@@ -542,28 +542,32 @@ ${type === "run" ? `[${new Date().toLocaleTimeString()}] Executing full workflow
         ) : null
       })()}
 
+      {/* ── Basic Info (full-width, always visible) ───────────────── */}
+      <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px", marginBottom: 16 }}>
+        <Title level={5} style={{ margin: "0 0 16px 0" }}>Basic Info</Title>
+        <div style={{ display: "flex", gap: 32 }}>
+          <div style={{ flex: "0 0 30%" }}>
+            <ReadOnlyField label="AGENT NAME" value={d.agentName} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <ReadOnlyField label="DESCRIPTION" value={d.description} />
+          </div>
+          <div style={{ flex: "0 0 160px" }}>
+            <ReadOnlyField label="BELONGS TO FLOW" value={<Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>{flowData.find((f) => f.id === d.flowId)?.name ?? d.flowId}</Tag>} />
+          </div>
+          <div style={{ flex: "0 0 160px" }}>
+            <ReadOnlyField label="BELONGS TO STEP" value={<Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag>} />
+          </div>
+        </div>
+      </div>
+
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        {/* Left column: Config (editable when TESTING) */}
+        {/* Left column: Version-specific config */}
         <div style={{ flex: "0 0 60%", minWidth: 0 }}>
           {/* Version Banner */}
           <div style={{ borderLeft: "4px solid " + banner.color, background: banner.color === "#52c41a" ? "#f6ffed" : banner.color === "#faad14" ? "#fff7e6" : "#fafafa", border: "1px solid #f0f0f0", borderLeftColor: banner.color, borderRadius: 4, padding: "8px 16px", marginBottom: 16, fontSize: 12, color: "#595959" }}>
             {banner.label}
             {isTesting && <Text style={{ marginLeft: 12, fontSize: 12, color: "#faad14" }}>— Click <EditOutlined /> to edit each section</Text>}
-          </div>
-
-          {/* ── Basic Info (Read-only) ─────────────────────────────────── */}
-          <div style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 4, padding: "16px 20px", marginBottom: 12 }}>
-            <Title level={5} style={{ margin: "0 0 16px 0" }}>Basic Info</Title>
-            <ReadOnlyField label="AGENT NAME" value={d.agentName} />
-            <ReadOnlyField label="DESCRIPTION" value={d.description} />
-            <div style={{ display: "flex", gap: 16, marginBottom: 0 }}>
-              <div style={{ flex: 1 }}>
-                <ReadOnlyField label="BELONGS TO FLOW" value={<Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>{flowData.find((f) => f.id === d.flowId)?.name ?? d.flowId}</Tag>} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <ReadOnlyField label="BELONGS TO STEP" value={<Tag style={{ fontFamily: "monospace", fontSize: 11 }}>{d.step}</Tag>} monospace />
-              </div>
-            </div>
           </div>
 
           {/* ── Platform Integration Info ──────────────────── */}

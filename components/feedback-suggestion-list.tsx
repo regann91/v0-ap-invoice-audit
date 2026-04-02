@@ -13,7 +13,6 @@ import {
   suggestionRunData,
   type SuggestionRun, type SuggestionRunStatus, type FeedbackStep,
 } from "@/lib/mock-data"
-import dayjs from "dayjs"
 
 const { Text, Title } = Typography
 const { RangePicker } = DatePicker
@@ -61,7 +60,7 @@ interface FeedbackSuggestionListProps {
 
 export function FeedbackSuggestionList({ onViewRunDetail }: FeedbackSuggestionListProps) {
   const [search, setSearch] = useState("")
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null] | null>(null)
   const [agentFilter, setAgentFilter] = useState<string | null>(null)
   const [stepFilter, setStepFilter] = useState<FeedbackStep | null>(null)
   const [statusFilter, setStatusFilter] = useState<SuggestionRunStatus | null>(null)
@@ -79,8 +78,12 @@ export function FeedbackSuggestionList({ onViewRunDetail }: FeedbackSuggestionLi
       
       let matchDate = true
       if (dateRange && dateRange[0] && dateRange[1]) {
-        const runDate = dayjs(r.triggeredAt)
-        matchDate = runDate.isAfter(dateRange[0].startOf('day')) && runDate.isBefore(dateRange[1].endOf('day'))
+        const [startDate, endDate] = dateRange
+        const runDate = new Date(r.triggeredAt)
+        // Set end date to end of day for comparison
+        const endDateWithTime = new Date(endDate)
+        endDateWithTime.setHours(23, 59, 59, 999)
+        matchDate = runDate >= startDate && runDate <= endDateWithTime
       }
       
       return matchSearch && matchAgent && matchStep && matchStatus && matchDate
@@ -151,7 +154,7 @@ export function FeedbackSuggestionList({ onViewRunDetail }: FeedbackSuggestionLi
       dataIndex: "triggeredAt",
       key: "triggeredAt",
       width: 150,
-      sorter: (a, b) => dayjs(a.triggeredAt).unix() - dayjs(b.triggeredAt).unix(),
+      sorter: (a, b) => new Date(a.triggeredAt).getTime() - new Date(b.triggeredAt).getTime(),
       render: (text: string) => <Text style={{ fontSize: 13 }}>{text}</Text>,
     },
     {

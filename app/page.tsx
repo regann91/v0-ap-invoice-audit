@@ -23,7 +23,7 @@ import { SystemArchitecture } from "@/components/system-architecture"
 import { PrdViewer } from "@/components/prd-viewer"
 import { FeedbackList } from "@/components/feedback-list"
 import { FeedbackSuggestionList } from "@/components/feedback-suggestion-list"
-import { AgentBRunDetail } from "@/components/agent-b-run-detail"
+import { Statistics } from "@/components/statistics"
 import { agentListData, INITIAL_GOLDEN_CASES, INITIAL_ARCHIVED_CASES, type Agent, type AuditCase, type GoldenCasesState, type ArchivedCaseMock } from "@/lib/mock-data"
 
 const { Sider, Header, Content } = Layout
@@ -45,6 +45,7 @@ type Page =
   | "feedback-list"
   | "feedback-suggestion-list"
   | "agent-b-run-detail"
+  | "statistics"
 
 const BREADCRUMBS: Record<Page, string[]> = {
   "knowledge-detail":        ["Knowledge Base", "Knowledge Detail"],
@@ -62,6 +63,7 @@ const BREADCRUMBS: Record<Page, string[]> = {
   "feedback-list":           ["Feedback Management", "Feedback List"],
   "feedback-suggestion-list":["Feedback Management", "Feedback Suggestion List"],
   "agent-b-run-detail":      ["Feedback Management", "Feedback Suggestion List", "Run Detail"],
+  "statistics":              ["Statistics"],
 }
 
 function AppShell() {
@@ -124,6 +126,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
     }
     if (key === "system-architecture") setPage("system-architecture")
     if (key === "prd") setPage("prd")
+    if (key === "statistics") setPage("statistics")
     if (key === "feedback-list") setPage("feedback-list")
     if (key === "feedback-suggestion-list") setPage("feedback-suggestion-list")
   }
@@ -216,15 +219,14 @@ function handleArchive(newly: ArchivedCaseMock[]) {
               ],
             },
             {
-              key: "case-management-menu",
-              icon: <FolderOpenOutlined />,
-              label: "Case Management",
-              children: [
-                { key: "case-management",        icon: <TableOutlined />, label: "Case List" },
-                { key: "archived-cases",         icon: <InboxOutlined />, label: "Archive Case" },
-                { key: "golden-case-management", icon: <CodeOutlined />,  label: "Golden Case Management" },
-                { key: "pattern-library",        icon: <CodeOutlined />,  label: "Pattern Library" },
-              ],
+              key: "regression-test",
+              icon: <ExperimentOutlined />,
+              label: "Regression Test",
+            },
+            {
+              key: "statistics",
+              icon: <DatabaseOutlined />,
+              label: "Statistics",
             },
             {
               key: "agent-management",
@@ -320,6 +322,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "agent-detail"       && <AgentDetail agentId="AGT-002" passedAgentIds={passedAgentIds} onBack={goToAgentList} onPublish={handlePublish} onGoToRegressionTest={goToRegressionTest} />}
           {page === "system-architecture" && <SystemArchitecture />}
           {page === "prd"                     && <PrdViewer onNavigate={(p) => { setPage(p as Page); setSelectedKey(p); }} />}
+          {page === "statistics"              && <Statistics />}
           {page === "feedback-list"           && <FeedbackList onViewRunDetail={goToAgentBRunDetail} />}
           {page === "feedback-suggestion-list"&& <FeedbackSuggestionList onViewRunDetail={goToAgentBRunDetail} />}
           {page === "agent-b-run-detail"      && selectedAgentBRunId && <AgentBRunDetail runId={selectedAgentBRunId} onBack={goToFeedbackSuggestionList} />}

@@ -1099,3 +1099,66 @@ export const suggestionRunData: SuggestionRun[] = [
     pendingCount: 1,
   },
 ]
+
+// ── Statistics ──────────────────────────────────────────────────────
+export type StatisticsStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER'
+
+export interface DailyMetrics {
+  date: string // YYYY-MM-DD
+  totalCount: number
+  automationRate: number // percentage 0-100
+  pendingRate: number
+  hardAccuracy: number
+  precisionPositive: number
+  precisionNegative: number
+  riskExposureSGD: number
+  feedbackCoverageRate: number
+}
+
+export interface StepStatistics {
+  step: StatisticsStep
+  dailyMetrics: DailyMetrics[]
+}
+
+// Generate last 7 days of data
+function generateDailyMetrics(step: StatisticsStep): DailyMetrics[] {
+  const today = new Date()
+  const metrics: DailyMetrics[] = []
+
+  const baseData = {
+    INVOICE_REVIEW: { totalCount: 65, automationRate: 72, pendingRate: 18, hardAccuracy: 87, precisionPositive: 91, precisionNegative: 84, riskExposure: 12500, feedbackCoverage: 44 },
+    MATCH: { totalCount: 58, automationRate: 68, pendingRate: 20, hardAccuracy: 85, precisionPositive: 89, precisionNegative: 82, riskExposure: 0, feedbackCoverage: 38 },
+    AP_VOUCHER: { totalCount: 52, automationRate: 70, pendingRate: 16, hardAccuracy: 88, precisionPositive: 92, precisionNegative: 85, riskExposure: 0, feedbackCoverage: 41 },
+  }
+
+  const base = baseData[step]
+
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today)
+    date.setDate(date.getDate() - i)
+    const dateStr = date.toISOString().split('T')[0]
+
+    const variance = Math.sin(i / 3) * 5 // Creates smooth variation
+    const riskVariance = i === 4 ? 18000 : Math.random() * 5000 + 3000 // Spike on day 4
+
+    metrics.push({
+      date: dateStr,
+      totalCount: base.totalCount + Math.floor(Math.random() * 20 - 10),
+      automationRate: Math.min(100, Math.max(60, base.automationRate + variance)),
+      pendingRate: Math.min(40, Math.max(10, base.pendingRate - variance / 2)),
+      hardAccuracy: Math.min(100, Math.max(75, base.hardAccuracy + variance)),
+      precisionPositive: Math.min(100, Math.max(85, base.precisionPositive + variance / 2)),
+      precisionNegative: Math.min(100, Math.max(75, base.precisionNegative + variance / 2)),
+      riskExposureSGD: step === 'INVOICE_REVIEW' ? Math.floor(riskVariance) : 0,
+      feedbackCoverageRate: Math.min(100, Math.max(30, base.feedbackCoverage + Math.random() * 10)),
+    })
+  }
+
+  return metrics
+}
+
+export const statisticsData: StepStatistics[] = [
+  { step: 'INVOICE_REVIEW', dailyMetrics: generateDailyMetrics('INVOICE_REVIEW') },
+  { step: 'MATCH', dailyMetrics: generateDailyMetrics('MATCH') },
+  { step: 'AP_VOUCHER', dailyMetrics: generateDailyMetrics('AP_VOUCHER') },
+]

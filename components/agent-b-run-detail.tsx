@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react"
 import {
   Typography, Space, Tag, Button, Card, Descriptions, Badge, Spin,
-  message, Tooltip, Progress, Empty, Divider,
+  message, Tooltip, Progress, Empty, Divider, Checkbox, Modal, Alert,
 } from "antd"
 import {
   ArrowLeftOutlined, CheckOutlined, CloseOutlined,
@@ -157,13 +157,13 @@ function NewRuleDisplay({ newRule, insertInto }: { newRule: string; insertInto: 
 
 function RuleSuggestionCard({
   suggestion,
-  onAccept,
-  onReject,
+  isChecked,
+  onCheckChange,
   agentName,
 }: {
   suggestion: AgentBSuggestion
-  onAccept: () => void
-  onReject: () => void
+  isChecked: boolean
+  onCheckChange: (checked: boolean) => void
   agentName: string
 }) {
   const isPending = suggestion.status === "Pending"
@@ -176,15 +176,22 @@ function RuleSuggestionCard({
       size="small"
       style={{
         marginBottom: 16,
-        border: isPending ? "1px solid #faad14" : isAccepted ? "1px solid #52c41a" : "1px solid #ff4d4f",
+        border: isChecked ? "2px solid #1677ff" : (isPending ? "1px solid #faad14" : isAccepted ? "1px solid #52c41a" : "1px solid #ff4d4f"),
+        borderLeft: isChecked ? "4px solid #1677ff" : undefined,
         borderRadius: 8,
         background: isPending ? "#fffbe6" : isAccepted ? "#f6ffed" : "#fff1f0",
+        opacity: !isPending && !isAccepted && !isRejected ? 0.6 : 1,
       }}
       styles={{ body: { padding: 16 } }}
     >
-      {/* Header row: Type badge | Title | Confidence | Status */}
+      {/* Header row: Checkbox | Type badge | Title | Confidence | Status */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+          {isPending ? (
+            <Checkbox checked={isChecked} onChange={(e) => onCheckChange(e.target.checked)} />
+          ) : (
+            <Checkbox disabled style={{ opacity: 0.5 }} />
+          )}
           <SuggestionTypeBadge type={rule.type} />
           <Text strong style={{ fontSize: 14 }}>{rule.title}</Text>
         </div>
@@ -253,18 +260,9 @@ function RuleSuggestionCard({
         )}
       </div>
 
-      {/* Action buttons or completion state */}
-      <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e8e8e8" }}>
-        {isPending ? (
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button onClick={onReject} style={{ borderColor: "#ff4d4f", color: "#ff4d4f" }}>
-              Reject
-            </Button>
-            <Button type="primary" onClick={onAccept} style={{ background: "#1677ff" }}>
-              Accept & Create Version
-            </Button>
-          </div>
-        ) : isAccepted ? (
+      {/* Status badge at bottom for completed suggestions */}
+      {isAccepted && (
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e8e8e8" }}>
           <div style={{
             background: "#f6ffed",
             border: "1px solid #b7eb8f",
@@ -276,13 +274,16 @@ function RuleSuggestionCard({
           }}>
             <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
             <Text style={{ fontSize: 12, color: "#389e0d" }}>
-              New version created for {agentName} — <a href="#" style={{ color: "#389e0d", fontWeight: 500 }}>View in Agent Detail →</a>
+              Incorporated into new version of {agentName}
             </Text>
           </div>
-        ) : (
+        </div>
+      )}
+      {isRejected && (
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e8e8e8" }}>
           <Text type="secondary" style={{ fontSize: 12 }}>Suggestion rejected</Text>
-        )}
-      </div>
+        </div>
+      )}
     </Card>
   )
 }
@@ -297,6 +298,10 @@ interface AgentBRunDetailProps {
 export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
   const runData = agentBRunData[runId]
   const [suggestions, setSuggestions] = useState<AgentBSuggestion[]>(runData?.suggestions ?? [])
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showAcceptModal, setShowAcceptModal] = useState(false)
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false)
   const [msgApi, contextHolder] = message.useMessage()
 
   // Count pending suggestions
@@ -304,36 +309,43 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
     return suggestions.filter(s => s.status === "Pending").length
   }, [suggestions])
 
-  // Handle accept
-  function handleAccept(key: string) {
-    setSuggestions(prev => prev.map(s => 
-      s.key === key ? { ...s, status: "Accepted" as AgentBSuggestionStatus } : s
-    ))
-    msgApi.success("Suggestion accepted")
+  // Get selected pending suggestions
+  const selectedSuggestions = useMemo(() => {
+    return suggestions.filter(s => s.status === "Pending" && selectedKeys.has(s.key))
+  }, [suggestions, selectedKeys])
+
+  // Handle checkbox change
+  function handleCheckChange(key: string, checked: boolean) {
+    const newSet = new Set(selectedKeys)
+    if (checked) {
+      newSet.add(key)
+    } else {
+      newSet.delete(key)
+    }
+    setSelectedKeys(newSet)
   }
 
-  // Handle reject
-  function handleReject(key: string) {
+  // Handle batch reject
+  function handleBatchReject() {
     setSuggestions(prev => prev.map(s => 
-      s.key === key ? { ...s, status: "Rejected" as AgentBSuggestionStatus } : s
+      selectedKeys.has(s.key) ? { ...s, status: "Rejected" as AgentBSuggestionStatus } : s
     ))
-    msgApi.success("Suggestion rejected")
+    setSelectedKeys(new Set())
+    setShowRejectModal(false)
+    msgApi.success(`${selectedSuggestions.length} suggestion(s) rejected`)
   }
 
-  // Handle accept all
-  function handleAcceptAll() {
+  // Handle batch accept
+  function handleBatchAccept() {
     setSuggestions(prev => prev.map(s => 
-      s.status === "Pending" ? { ...s, status: "Accepted" as AgentBSuggestionStatus } : s
+      selectedKeys.has(s.key) ? { ...s, status: "Accepted" as AgentBSuggestionStatus } : s
     ))
-    msgApi.success("All pending suggestions accepted")
-  }
-
-  // Handle reject all
-  function handleRejectAll() {
-    setSuggestions(prev => prev.map(s => 
-      s.status === "Pending" ? { ...s, status: "Rejected" as AgentBSuggestionStatus } : s
-    ))
-    msgApi.success("All pending suggestions rejected")
+    setSelectedKeys(new Set())
+    setShowAcceptModal(false)
+    setShowSuccessBanner(true)
+    
+    // Auto-hide banner after 6 seconds
+    setTimeout(() => setShowSuccessBanner(false), 6000)
   }
 
   if (!runData) {
@@ -348,8 +360,20 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
   }
 
   return (
-    <div>
+    <div style={{ position: "relative", paddingBottom: pendingCount > 0 && selectedSuggestions.length > 0 ? 100 : 0 }}>
       {contextHolder}
+      
+      {/* Success Banner */}
+      {showSuccessBanner && (
+        <Alert
+          message={`✓ Version v1.3 successfully created for ${runData.agentName} — incorporating ${selectedSuggestions.length} suggestions.`}
+          type="success"
+          showIcon
+          closable
+          onClose={() => setShowSuccessBanner(false)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
       
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
@@ -362,16 +386,6 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
             Review AI-suggested changes for golden case data
           </Text>
         </div>
-        {pendingCount > 0 && (
-          <Space>
-            <Button onClick={handleRejectAll} style={{ borderColor: "#ff4d4f", color: "#ff4d4f" }}>
-              Reject All ({pendingCount})
-            </Button>
-            <Button type="primary" onClick={handleAcceptAll} style={{ background: "#52c41a", borderColor: "#52c41a" }}>
-              Accept All ({pendingCount})
-            </Button>
-          </Space>
-        )}
       </div>
 
       {/* Run Info Card */}
@@ -475,14 +489,103 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
           <RuleSuggestionCard
             key={suggestion.key}
             suggestion={suggestion}
-            onAccept={() => handleAccept(suggestion.key)}
-            onReject={() => handleReject(suggestion.key)}
+            isChecked={selectedKeys.has(suggestion.key)}
+            onCheckChange={(checked) => handleCheckChange(suggestion.key, checked)}
             agentName={runData.agentName}
           />
         ))}
       </div>
 
-      {/* Bottom Actions */}
+      {/* Sticky Bottom Action Bar */}
+      {pendingCount > 0 && (
+        <div style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: "#fff",
+          borderTop: "1px solid #f0f0f0",
+          padding: "16px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          boxShadow: "0 -2px 8px rgba(0,0,0,0.06)",
+          zIndex: 100,
+        }}>
+          <div>
+            <Text strong style={{ fontSize: 14 }}>
+              {selectedSuggestions.length} of {pendingCount} suggestions selected
+            </Text>
+            <div style={{ marginTop: 4 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Selected suggestions will be merged into one new version
+              </Text>
+            </div>
+          </div>
+          
+          <Space size={12}>
+            <Button
+              onClick={() => setShowRejectModal(true)}
+              disabled={selectedSuggestions.length === 0}
+              style={{
+                borderColor: "#ff4d4f",
+                color: "#ff4d4f",
+              }}
+            >
+              Reject Selected
+            </Button>
+            <Button
+              type="primary"
+              onClick={() => setShowAcceptModal(true)}
+              disabled={selectedSuggestions.length === 0}
+              style={{ background: "#1677ff" }}
+            >
+              Accept & Create Version
+            </Button>
+          </Space>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      <Modal
+        title="Reject Selected Suggestions?"
+        open={showRejectModal}
+        onCancel={() => setShowRejectModal(false)}
+        onOk={handleBatchReject}
+        okText="Confirm"
+        okButtonProps={{ danger: true }}
+      >
+        <Text>
+          Reject {selectedSuggestions.length} selected suggestion(s)? This cannot be undone.
+        </Text>
+      </Modal>
+
+      {/* Accept Modal */}
+      <Modal
+        title="Create New Version"
+        open={showAcceptModal}
+        onCancel={() => setShowAcceptModal(false)}
+        onOk={handleBatchAccept}
+        okText="Confirm"
+      >
+        <div>
+          <Text>
+            The following {selectedSuggestions.length} suggestions will be merged into a new version of <Text strong>{runData.agentName}</Text>:
+          </Text>
+          <ul style={{ marginTop: 12, marginBottom: 16 }}>
+            {selectedSuggestions.map(s => (
+              <li key={s.key} style={{ marginBottom: 4 }}>
+                <Text>{s.ruleChange.title}</Text>
+              </li>
+            ))}
+          </ul>
+          <Text type="secondary">
+            A new version (v1.3) will be created in TESTING status.
+          </Text>
+        </div>
+      </Modal>
+
+      {/* Bottom Completion State */}
       {pendingCount === 0 && suggestions.length > 0 && (
         <div style={{ 
           background: "#f6ffed", 

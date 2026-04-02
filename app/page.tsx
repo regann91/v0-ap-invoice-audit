@@ -21,8 +21,10 @@ import { PatternLibrary } from "@/components/pattern-library"
 import { RegressionTest } from "@/components/regression-test"
 import { SystemArchitecture } from "@/components/system-architecture"
 import { PrdViewer } from "@/components/prd-viewer"
-import { FeedbackManagement } from "@/components/feedback-management"
+import { FeedbackList } from "@/components/feedback-list"
+import { FeedbackSuggestionList } from "@/components/feedback-suggestion-list"
 import { AgentBRunDetail } from "@/components/agent-b-run-detail"
+import { Statistics } from "@/components/statistics"
 import { agentListData, INITIAL_GOLDEN_CASES, INITIAL_ARCHIVED_CASES, type Agent, type AuditCase, type GoldenCasesState, type ArchivedCaseMock } from "@/lib/mock-data"
 
 const { Sider, Header, Content } = Layout
@@ -41,30 +43,34 @@ type Page =
   | "regression-test"
   | "system-architecture"
   | "prd"
-  | "feedback-management"
+  | "feedback-list"
+  | "feedback-suggestion-list"
   | "agent-b-run-detail"
+  | "statistics"
 
 const BREADCRUMBS: Record<Page, string[]> = {
-  "knowledge-detail":      ["Knowledge Base", "Knowledge Detail"],
-  "knowledge-endpoint":    ["Knowledge Base", "Endpoint"],
-  "case-management":       ["Case Management", "Case List"],
-  "case-detail":           ["Case Management", "Case List", "Case Detail"],
-  "golden-case-management":["Case Management", "Golden Case Management"],
-  "archived-cases":        ["Case Management", "Archive Case"],
-  "agent-list":            ["Agent Management", "Agent List"],
-  "pattern-library":       ["Case Management", "Pattern Library"],
-  "agent-detail":          ["Agent Management", "Agent List", "Agent Detail"],
-  "regression-test":       ["Regression Test"],
-  "system-architecture":   ["System Architecture"],
-  "prd":                   ["Documentation", "PRD"],
-  "feedback-management":   ["Agent Management", "Feedback Management"],
-  "agent-b-run-detail":    ["Agent Management", "Feedback Management", "Agent B Run Detail"],
+  "knowledge-detail":        ["Knowledge Base", "Knowledge Detail"],
+  "knowledge-endpoint":      ["Knowledge Base", "Endpoint"],
+  "case-management":         ["Case Management", "Case List"],
+  "case-detail":             ["Case Management", "Case List", "Case Detail"],
+  "golden-case-management":  ["Case Management", "Golden Case Management"],
+  "archived-cases":          ["Case Management", "Archive Case"],
+  "agent-list":              ["Agent Management", "Agent List"],
+  "pattern-library":         ["Case Management", "Pattern Library"],
+  "agent-detail":            ["Agent Management", "Agent List", "Agent Detail"],
+  "regression-test":         ["Regression Test"],
+  "system-architecture":     ["System Architecture"],
+  "prd":                     ["Documentation", "PRD"],
+  "feedback-list":           ["Feedback Management", "Feedback List"],
+  "feedback-suggestion-list":["Feedback Management", "Feedback Suggestion List"],
+  "agent-b-run-detail":      ["Feedback Management", "Feedback Suggestion List", "Run Detail"],
+  "statistics":              ["Statistics"],
 }
 
 function AppShell() {
   const [page, setPage] = useState<Page>("knowledge-detail")
   const [selectedKey, setSelectedKey] = useState("knowledge-detail")
-  const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base", "case-management-menu", "agent-management"])
+  const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base", "case-management-menu", "agent-management", "feedback-management-menu"])
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
   const [selectedAgentBRunId, setSelectedAgentBRunId] = useState<string | null>(null)
   const [selectedCase, setSelectedCase] = useState<AuditCase | null>(null)
@@ -121,17 +127,25 @@ function handleArchive(newly: ArchivedCaseMock[]) {
     }
     if (key === "system-architecture") setPage("system-architecture")
     if (key === "prd") setPage("prd")
-    if (key === "feedback-management") setPage("feedback-management")
+    if (key === "statistics") setPage("statistics")
+    if (key === "feedback-list") setPage("feedback-list")
+    if (key === "feedback-suggestion-list") setPage("feedback-suggestion-list")
   }
 
-  function goToFeedbackManagement() {
-    setPage("feedback-management")
-    setSelectedKey("feedback-management")
-    setOpenKeys((prev) => prev.includes("agent-management") ? prev : [...prev, "agent-management"])
+  function goToFeedbackList() {
+    setPage("feedback-list")
+    setSelectedKey("feedback-list")
+    setOpenKeys((prev) => prev.includes("feedback-management-menu") ? prev : [...prev, "feedback-management-menu"])
   }
 
-  function goToAgentBRunDetail(runId: string) {
-    setSelectedAgentBRunId(runId)
+  function goToFeedbackSuggestionList() {
+    setPage("feedback-suggestion-list")
+    setSelectedKey("feedback-suggestion-list")
+    setOpenKeys((prev) => prev.includes("feedback-management-menu") ? prev : [...prev, "feedback-management-menu"])
+  }
+
+  function goToAgentBRunDetail(runDetailId: string) {
+    setSelectedAgentBRunId(runDetailId)
     setPage("agent-b-run-detail")
   }
 
@@ -206,15 +220,14 @@ function handleArchive(newly: ArchivedCaseMock[]) {
               ],
             },
             {
-              key: "case-management-menu",
-              icon: <FolderOpenOutlined />,
-              label: "Case Management",
-              children: [
-                { key: "case-management",        icon: <TableOutlined />, label: "Case List" },
-                { key: "archived-cases",         icon: <InboxOutlined />, label: "Archive Case" },
-                { key: "golden-case-management", icon: <CodeOutlined />,  label: "Golden Case Management" },
-                { key: "pattern-library",        icon: <CodeOutlined />,  label: "Pattern Library" },
-              ],
+              key: "regression-test",
+              icon: <ExperimentOutlined />,
+              label: "Regression Test",
+            },
+            {
+              key: "statistics",
+              icon: <DatabaseOutlined />,
+              label: "Statistics",
             },
             {
               key: "agent-management",
@@ -222,7 +235,15 @@ function handleArchive(newly: ArchivedCaseMock[]) {
               label: "Agent Management",
               children: [
                 { key: "agent-list", icon: <TableOutlined />, label: "Agent List" },
-                { key: "feedback-management", icon: <CodeOutlined />, label: "Feedback Management" },
+              ],
+            },
+            {
+              key: "feedback-management-menu",
+              icon: <CodeOutlined />,
+              label: "Feedback Management",
+              children: [
+                { key: "feedback-list", icon: <TableOutlined />, label: "Feedback List" },
+                { key: "feedback-suggestion-list", icon: <TableOutlined />, label: "Feedback Suggestion List" },
               ],
             },
             { key: "regression-test", icon: <ExperimentOutlined />, label: "Regression Test" },
@@ -301,9 +322,11 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "pattern-library"    && <PatternLibrary />}
           {page === "agent-detail"       && <AgentDetail agentId="AGT-002" passedAgentIds={passedAgentIds} onBack={goToAgentList} onPublish={handlePublish} onGoToRegressionTest={goToRegressionTest} />}
           {page === "system-architecture" && <SystemArchitecture />}
-          {page === "prd"                 && <PrdViewer onNavigate={(p) => { setPage(p as Page); setSelectedKey(p); }} />}
-          {page === "feedback-management" && <FeedbackManagement onViewRunDetail={goToAgentBRunDetail} />}
-          {page === "agent-b-run-detail"  && selectedAgentBRunId && <AgentBRunDetail runId={selectedAgentBRunId} onBack={goToFeedbackManagement} />}
+          {page === "prd"                     && <PrdViewer onNavigate={(p) => { setPage(p as Page); setSelectedKey(p); }} />}
+          {page === "statistics"              && <Statistics />}
+          {page === "feedback-list"           && <FeedbackList onViewRunDetail={goToAgentBRunDetail} />}
+          {page === "feedback-suggestion-list"&& <FeedbackSuggestionList onViewRunDetail={goToAgentBRunDetail} />}
+          {page === "agent-b-run-detail"      && selectedAgentBRunId && <AgentBRunDetail runId={selectedAgentBRunId} onBack={goToFeedbackSuggestionList} onViewAgentDetail={() => { setPage("agent-detail"); setSelectedKey("agent-detail"); }} />}
         </Content>
       </Layout>
     </Layout>

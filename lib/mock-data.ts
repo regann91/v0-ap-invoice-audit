@@ -1100,7 +1100,7 @@ export const suggestionRunData: SuggestionRun[] = [
   },
 ]
 
-// ── Statistics ──────────────────────────────────────���───────────────
+// ── Statistics ──────────────────────────────────────�����───────────────
 export type StatisticsStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER'
 
 export interface DailyMetrics {
@@ -1187,10 +1187,10 @@ export interface AgentBRunOverview {
 }
 
 export const agentBRunOverviewData: Record<string, AgentBRunOverview> = {
-  'RUN-20260402-001': {
-    runId: 'RUN-20260402-001',
+  'RUN-B-001': {
+    runId: 'RUN-B-001',
     triggeredBy: 'Li Wei',
-    triggeredAt: '2026-04-02 15:41',
+    triggeredAt: '2025-03-20 10:28',
     feedbackCount: 3,
     agentCount: 2,
     completedCount: 1,
@@ -1210,6 +1210,44 @@ export const agentBRunOverviewData: Record<string, AgentBRunOverview> = {
         status: 'Analyzing',
         feedbackCount: 1,
         runDetailId: 'RUN-B-002',
+      },
+    ],
+  },
+  'RUN-B-002': {
+    runId: 'RUN-B-002',
+    triggeredBy: 'Zhang Min',
+    triggeredAt: '2025-03-19 14:18',
+    feedbackCount: 2,
+    agentCount: 1,
+    completedCount: 1,
+    overallStatus: 'Completed',
+    agentCards: [
+      {
+        agentName: 'PO Match Agent',
+        step: 'MATCH',
+        status: 'Completed',
+        feedbackCount: 2,
+        suggestionCount: 4,
+        runDetailId: 'RUN-B-001',
+      },
+    ],
+  },
+  'RUN-B-003': {
+    runId: 'RUN-B-003',
+    triggeredBy: 'Wang Fang',
+    triggeredAt: '2025-03-21 09:12',
+    feedbackCount: 2,
+    agentCount: 1,
+    completedCount: 1,
+    overallStatus: 'Completed',
+    agentCards: [
+      {
+        agentName: 'AP Voucher Agent',
+        step: 'AP_VOUCHER',
+        status: 'Completed',
+        feedbackCount: 2,
+        suggestionCount: 3,
+        runDetailId: 'RUN-B-001',
       },
     ],
   },

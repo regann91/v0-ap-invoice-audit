@@ -3,10 +3,10 @@
 import React, { useState } from "react"
 import {
   Table, Input, Button, Tag, Typography, Space, Drawer,
-  Form, Select, Divider, message, Empty, Tooltip,
+  Form, Select, Divider, message, Empty, Tooltip, Switch, Tabs, Pagination,
 } from "antd"
 import { SearchOutlined, PlusOutlined, DeleteOutlined, HolderOutlined, FullscreenOutlined } from "@ant-design/icons"
-import type { ColumnsType } from "antd/es/table"
+
 import { agentListData, flowData, type Agent, type AgentStatus, type AgentStep } from "@/lib/mock-data"
 import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
 
@@ -372,6 +372,89 @@ function NewAgentDrawer({
   )
 }
 
+// ── Step color config ────────────────────────────────────────────
+const STEP_CONFIG: Record<string, { label: string; color: string }> = {
+  INVOICE_REVIEW:  { label: "Invoice Review",  color: "#1677ff" },
+  MATCH:           { label: "Match",            color: "#52c41a" },
+  AP_VOUCHER:      { label: "AP Voucher",       color: "#722ed1" },
+  SUPPLIER_VERIFY: { label: "Supplier Verify",  color: "#fa8c16" },
+  BANK_CHECK:      { label: "Bank Check",       color: "#13c2c2" },
+  BANK_RECON:      { label: "Bank Recon",       color: "#eb2f96" },
+  EXCEPTION_MGT:   { label: "Exception Mgt",    color: "#f5222d" },
+}
+
+// ── Agent Card ───────────────────────────────────────────────────
+function AgentCard({
+  agent,
+  onView,
+}: {
+  agent: Agent
+  onView: (id: string) => void
+}) {
+  const [enabled, setEnabled] = useState(agent.status === "ACTIVE")
+  const stepCfg = STEP_CONFIG[agent.step] ?? { label: agent.step, color: "#1677ff" }
+  const flow = flowData.find((f) => f.id === agent.flowId)
+  const testingStr = (agent.testingVersions ?? []).join(" / ") || "-"
+
+  return (
+    <div
+      style={{
+        border: "1px solid #e8e8e8",
+        borderRadius: 8,
+        padding: "16px 20px",
+        background: "#fff",
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+      }}
+    >
+      {/* Top row: step badge + flow label */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ color: stepCfg.color, fontWeight: 600, fontSize: 13 }}>
+          {stepCfg.label}
+        </span>
+        <span style={{ color: "#8c8c8c", fontSize: 12 }}>
+          {flow?.name ?? "Invoice Processing"}
+        </span>
+      </div>
+
+      {/* Agent name */}
+      <div style={{ fontWeight: 700, fontSize: 15, color: "#1d1d1d", marginBottom: 6 }}>
+        {agent.agentName}
+      </div>
+
+      {/* Versions */}
+      <div style={{ fontSize: 13, color: "#595959" }}>
+        Live version : {agent.liveVersion ?? "-"}
+      </div>
+      <div style={{ fontSize: 13, color: "#595959", marginBottom: 16 }}>
+        Test version : {testingStr}
+      </div>
+
+      {/* Footer: View link + toggle */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderTop: "1px solid #f0f0f0",
+          paddingTop: 12,
+          marginTop: "auto",
+        }}
+      >
+        <Link onClick={() => onView(agent.id)} style={{ fontSize: 13, color: "#1677ff" }}>
+          View
+        </Link>
+        <Switch
+          checked={enabled}
+          onChange={setEnabled}
+          style={{ background: enabled ? "#1677ff" : undefined }}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ── Agent List ───────────────────────────────────────────────────
 export function AgentList({
   agents: agentsProp,
@@ -396,170 +479,154 @@ export function AgentList({
     setSelectedEntity(newOptions[0] ?? "")
   }, [region])
 
-  const [search, setSearch] = useState("")
+  const [supplierSearch, setSupplierSearch] = useState("")
+  const [stepSearch, setStepSearch] = useState<AgentStep | null>(null)
+  const [activeTab, setActiveTab] = useState<AgentStep | "all">("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [localAgents, setLocalAgents] = useState<Agent[]>(agentListData)
-  const agents = agentsProp ?? localAgents
-  const setAgents = setAgentsProp ?? setLocalAgents
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // Filter by region first, then by search.
-  // Use optional chaining to guard against agents where `regions` is undefined
-  // (e.g. agents created via NewAgentDrawer before the field was added).
-  const regionAgents = agents.filter((r) => (r.regions?.length ?? 0) === 0 || r.regions?.includes(region))
+  const agents = agentsProp ?? localAgents
+  const setAgents = setAgentsProp ?? setLocalAgents
 
-  const filtered = regionAgents.filter(
-    (r) =>
-      r.agentName.toLowerCase().includes(search.toLowerCase()) ||
-      r.step.toLowerCase().includes(search.toLowerCase()),
+  // Filter by region
+  const regionAgents = agents.filter(
+    (r) => (r.regions?.length ?? 0) === 0 || r.regions?.includes(region),
   )
+
+  // All unique steps present in this region
+  const allSteps = [...new Set(regionAgents.map((a) => a.step))] as AgentStep[]
+
+  // Apply search + tab filter
+  const filtered = regionAgents.filter((a) => {
+    const matchStep = activeTab === "all" || a.step === activeTab
+    const matchSupplier = !supplierSearch || a.agentName.toLowerCase().includes(supplierSearch.toLowerCase())
+    const matchStepSearch = !stepSearch || a.step === stepSearch
+    return matchStep && matchSupplier && matchStepSearch
+  })
+
+  // Paginate
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  function handleSearch() {
+    setCurrentPage(1)
+  }
+
+  function handleReset() {
+    setSupplierSearch("")
+    setStepSearch(null)
+    setCurrentPage(1)
+  }
 
   function handleCreated(agent: Agent) {
     setAgents((prev) => [...prev, agent])
   }
 
-  const columns: ColumnsType<Agent> = [
-    {
-      title: "Agent Name",
-      dataIndex: "agentName",
-      key: "agentName",
-      render: (name: string) => <Text strong>{name}</Text>,
-    },
-    {
-      title: "Flow",
-      dataIndex: "flowId",
-      key: "flowId",
-      width: 200,
-      render: (flowId: string) => {
-        const flow = flowData.find((f) => f.id === flowId)
-        return flow ? (
-          <Space size={4}>
-            <Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11, fontWeight: 500 }}>
-              {flow.name}
-            </Tag>
-          </Space>
-        ) : <Text type="secondary">—</Text>
-      },
-    },
-    {
-      title: "Step",
-      dataIndex: "step",
-      key: "step",
-      width: 180,
-      render: (step: AgentStep) => {
-        const STEP_LABELS: Record<AgentStep, string> = {
-          INVOICE_REVIEW: "Invoice Review",
-          MATCH: "Match",
-          AP_VOUCHER: "AP Voucher",
-          SUPPLIER_VERIFY: "Supplier Verify",
-          BANK_CHECK: "Bank Check",
-          BANK_RECON: "Bank Recon",
-          EXCEPTION_MGT: "Exception Mgt",
-        }
-        return (
-          <Tag style={{ fontSize: 11, background: "#f0f0f0", border: "none", color: "#595959" }}>
-            {STEP_LABELS[step] ?? step}
-          </Tag>
-        )
-      },
-    },
-    {
-      title: "Live Version",
-      key: "liveVersion",
-      width: 120,
-      render: (_: unknown, record: Agent) =>
-        record.liveVersion
-          ? <Text code>{record.liveVersion}</Text>
-          : <Text type="secondary">—</Text>,
-    },
-    {
-      title: "Testing Version",
-      key: "testingVersions",
-      width: 220,
-      render: (_: unknown, record: Agent) => {
-        const versions = record.testingVersions ?? []
-        if (versions.length === 0) {
-          return <Text type="secondary">—</Text>
-        }
-        const visible = versions.slice(0, 2)
-        const hidden = versions.slice(2)
-        const tagStyle = { margin: 0, fontSize: 12, background: "#fafafa", borderColor: "#d9d9d9", color: "#595959" }
-        return (
-          <Space size={4} wrap>
-            {visible.map((v) => (
-              <Tag key={v} style={tagStyle}>{v}</Tag>
-            ))}
-            {hidden.length > 0 && (
-              <Tooltip title={hidden.join(", ")}>
-                <Tag style={{ ...tagStyle, cursor: "default", color: "#8c8c8c", borderStyle: "dashed" }}>
-                  +{hidden.length} more
-                </Tag>
-              </Tooltip>
-            )}
-          </Space>
-        )
-      },
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 80,
-      render: (_: unknown, record: Agent) => (
-        <Link onClick={() => onView(record.id)} style={{ fontSize: 13 }}>
-          View
-        </Link>
-      ),
-    },
-  ]
+  const stepOptions = allSteps.map((s) => ({
+    value: s,
+    label: STEP_CONFIG[s]?.label ?? s,
+  }))
 
   return (
     <>
-      <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
-        {/* Page Title with Entity Selector */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <Text strong style={{ fontSize: 18 }}>Agent Management</Text>
-          <Select
-            value={selectedEntity}
-            onChange={setSelectedEntity}
-            size="small"
-            style={{ width: 110 }}
-            options={entityOptions.map((e) => ({ value: e, label: e }))}
-          />
+      <div style={{ background: "#fff", borderRadius: 4, border: "1px solid #f0f0f0", padding: "20px 24px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Text strong style={{ fontSize: 20 }}>Agent List</Text>
+            <Select
+              value={selectedEntity}
+              onChange={setSelectedEntity}
+              style={{ width: 110 }}
+              options={entityOptions.map((e) => ({ value: e, label: e }))}
+            />
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={{ background: "#1677ff" }}
+            onClick={() => setDrawerOpen(true)}
+          >
+            Create Agent
+          </Button>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <Input
-            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-            placeholder="Search by Agent Name or Step"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 300 }}
-            allowClear
-          />
+        {/* Search bar */}
+        <div style={{ display: "grid", gridTemplateColumns: "240px 200px auto", gap: 16, alignItems: "end", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 13, color: "#595959", marginBottom: 4 }}>Supplier Name</div>
+            <Input
+              placeholder="Search"
+              suffix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+              value={supplierSearch}
+              onChange={(e) => setSupplierSearch(e.target.value)}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 13, color: "#595959", marginBottom: 4 }}>Step</div>
+            <Select
+              placeholder="Select"
+              value={stepSearch}
+              onChange={setStepSearch}
+              options={stepOptions}
+              style={{ width: "100%" }}
+              allowClear
+            />
+          </div>
           <Space size={8}>
-            <Tag style={{ background: "#e6f4ff", borderColor: "#91caff", color: "#0958d9", fontSize: 11, fontWeight: 500, margin: 0 }}>
-              Showing: {region}
-            </Tag>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              style={{ background: "#1890ff" }}
-              onClick={() => setDrawerOpen(true)}
-            >
-              New Agent
+            <Button type="primary" style={{ background: "#1677ff" }} onClick={handleSearch}>
+              Search
             </Button>
+            <Button onClick={handleReset}>Reset</Button>
           </Space>
         </div>
-        {regionAgents.length === 0 ? (
-          <Empty description="No data configured for this region yet" style={{ padding: "48px 0" }} />
+
+        {/* Step Tabs */}
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => { setActiveTab(key as AgentStep | "all"); setCurrentPage(1) }}
+          items={[
+            { key: "all", label: `All (${regionAgents.length})` },
+            ...allSteps.map((step) => ({
+              key: step,
+              label: `${STEP_CONFIG[step]?.label ?? step} (${regionAgents.filter((a) => a.step === step).length})`,
+            })),
+          ]}
+          style={{ marginBottom: 16 }}
+        />
+
+        {/* Card grid */}
+        {filtered.length === 0 ? (
+          <Empty description="No agents found" style={{ padding: "48px 0" }} />
         ) : (
-          <Table
-            columns={columns}
-            dataSource={filtered}
-            size="small"
-            rowKey="key"
-            pagination={{ pageSize: 20, showTotal: (total) => `Total ${total} agents`, showSizeChanger: false }}
-            bordered={false}
-          />
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 16,
+                marginBottom: 24,
+              }}
+            >
+              {paginated.map((agent) => (
+                <AgentCard key={agent.key} agent={agent} onView={onView} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Pagination
+                current={currentPage}
+                pageSize={pageSize}
+                total={filtered.length}
+                showSizeChanger
+                pageSizeOptions={["10", "20", "50"]}
+                showQuickJumper
+                onChange={(page, size) => { setCurrentPage(page); setPageSize(size) }}
+              />
+            </div>
+          </>
         )}
       </div>
 

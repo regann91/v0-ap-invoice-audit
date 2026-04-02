@@ -3,11 +3,11 @@
 import React, { useState, useMemo } from "react"
 import {
   Table, Input, Select, Space, Tag, Typography, Button,
-  Badge, Modal, message, Checkbox, Tooltip,
+  Badge, Modal, Checkbox, Tooltip, Tabs,
 } from "antd"
 import {
   SearchOutlined, FilterOutlined, EyeOutlined,
-  CheckOutlined, CloseOutlined, ExclamationCircleOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import {
@@ -20,27 +20,12 @@ const { Text, Title } = Typography
 // ── Status Badge ──────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: FeedbackStatus }) {
-  if (status === "Pending") return <Badge status="warning" text={<span style={{ fontSize: 13 }}>Pending</span>} />
+  if (status === "Pending") return <Badge status="default" text={<span style={{ fontSize: 13 }}>Pending</span>} />
+  if (status === "Running") return <Badge status="processing" text={<span style={{ fontSize: 13 }}>Running</span>} />
+  if (status === "Suggestion Ready") return <Badge status="warning" text={<span style={{ fontSize: 13 }}>Suggestion Ready</span>} />
   if (status === "Accepted") return <Badge status="success" text={<span style={{ fontSize: 13 }}>Accepted</span>} />
   if (status === "Rejected") return <Badge status="error" text={<span style={{ fontSize: 13 }}>Rejected</span>} />
   return <Badge status="default" text={<span style={{ fontSize: 13 }}>{status}</span>} />
-}
-
-// ── Step Badge ────────────────────────────────────────────────────
-
-const STEP_COLORS: Record<FeedbackStep, { bg: string; border: string; text: string }> = {
-  INVOICE_REVIEW: { bg: "#e6f4ff", border: "#91caff", text: "#0958d9" },
-  MATCH: { bg: "#f9f0ff", border: "#d3adf7", text: "#7c3aed" },
-  AP_VOUCHER: { bg: "#fff7e6", border: "#ffd591", text: "#c05621" },
-}
-
-function StepBadge({ step }: { step: FeedbackStep }) {
-  const colors = STEP_COLORS[step]
-  return (
-    <Tag style={{ background: colors.bg, borderColor: colors.border, color: colors.text, fontSize: 11, fontWeight: 500, margin: 0 }}>
-      {step}
-    </Tag>
-  )
 }
 
 // ── Confirmation Modal ────────────────────────────────────────────
@@ -56,8 +41,6 @@ function ConfirmationModal({
   onCancel: () => void
   onConfirm: () => void
 }) {
-  const pendingCount = selectedItems.filter(item => item.status === "Pending").length
-
   return (
     <Modal
       open={open}
@@ -80,14 +63,6 @@ function ConfirmationModal({
         <Text style={{ fontSize: 14, display: "block", marginBottom: 16 }}>
           You have selected <Text strong>{selectedItems.length}</Text> feedback item(s) for review.
         </Text>
-        
-        {pendingCount < selectedItems.length && (
-          <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 4, padding: "12px 16px", marginBottom: 16 }}>
-            <Text style={{ fontSize: 13, color: "#d48806" }}>
-              Note: {selectedItems.length - pendingCount} item(s) have already been processed and will be skipped.
-            </Text>
-          </div>
-        )}
 
         <div style={{ background: "#fafafa", borderRadius: 4, padding: 16 }}>
           <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 12 }}>Selected Items:</Text>
@@ -95,7 +70,6 @@ function ConfirmationModal({
             {selectedItems.map(item => (
               <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: "1px solid #f0f0f0" }}>
                 <Text code style={{ fontSize: 12 }}>{item.feedbackId}</Text>
-                <StepBadge step={item.step} />
                 <Text style={{ fontSize: 13, flex: 1 }} ellipsis>{item.suggestedChange}</Text>
                 <StatusBadge status={item.status} />
               </div>
@@ -121,12 +95,17 @@ interface FeedbackManagementProps {
 
 export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps) {
   const [search, setSearch] = useState("")
-  const [stepFilter, setStepFilter] = useState<FeedbackStep | null>(null)
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   const [data, setData] = useState<FeedbackItem[]>(feedbackData)
-  const [msgApi, contextHolder] = message.useMessage()
+
+  // Get all unique steps for tabs
+  const allSteps = useMemo(() => {
+    return [...new Set(data.map(r => r.step))] as FeedbackStep[]
+  }, [data])
+
+  const [activeStep, setActiveStep] = useState<FeedbackStep | null>(() => allSteps[0] || null)
 
   // Filter data
   const filtered = useMemo(() => {
@@ -137,25 +116,30 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
         r.caseId.toLowerCase().includes(q) ||
         r.invoiceNo.toLowerCase().includes(q) ||
         r.supplierName.toLowerCase().includes(q)
-      const matchStep = !stepFilter || r.step === stepFilter
+      const matchStep = r.step === activeStep
       const matchStatus = !statusFilter || r.status === statusFilter
       return matchSearch && matchStep && matchStatus
     })
-  }, [data, search, stepFilter, statusFilter])
+  }, [data, search, activeStep, statusFilter])
 
   // Get selected items
   const selectedItems = useMemo(() => {
     return data.filter(item => selectedRowKeys.includes(item.key))
   }, [data, selectedRowKeys])
 
-  // Count pending items
-  const pendingCount = useMemo(() => {
-    return data.filter(item => item.status === "Pending").length
-  }, [data])
+  // Count items by status for tabs
+  const stepCounts = useMemo(() => {
+    const counts: Record<FeedbackStep, number> = {} as Record<FeedbackStep, number>
+    allSteps.forEach(step => {
+      counts[step] = data.filter(r => r.step === step).length
+    })
+    return counts
+  }, [data, allSteps])
 
-  const stepOptions = uniqueOptions(data.map((r) => r.step))
   const statusOptions: { label: string; value: FeedbackStatus }[] = [
     { label: "Pending", value: "Pending" },
+    { label: "Running", value: "Running" },
+    { label: "Suggestion Ready", value: "Suggestion Ready" },
     { label: "Accepted", value: "Accepted" },
     { label: "Rejected", value: "Rejected" },
   ]
@@ -163,38 +147,17 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
   // Clear filters
   function clearFilters() {
     setSearch("")
-    setStepFilter(null)
     setStatusFilter(null)
   }
 
-  const hasFilters = !!(search || stepFilter || statusFilter)
-
-  // Handle individual accept/reject
-  function handleAccept(record: FeedbackItem) {
-    setData(prev => prev.map(item => 
-      item.key === record.key 
-        ? { ...item, status: "Accepted" as FeedbackStatus, updatedAt: new Date().toISOString().slice(0, 16).replace("T", " ") }
-        : item
-    ))
-    msgApi.success(`Feedback ${record.feedbackId} accepted`)
-  }
-
-  function handleReject(record: FeedbackItem) {
-    setData(prev => prev.map(item => 
-      item.key === record.key 
-        ? { ...item, status: "Rejected" as FeedbackStatus, updatedAt: new Date().toISOString().slice(0, 16).replace("T", " ") }
-        : item
-    ))
-    msgApi.success(`Feedback ${record.feedbackId} rejected`)
-  }
+  const hasFilters = !!(search || statusFilter)
 
   // Handle batch confirmation
   function handleBatchConfirm() {
     setConfirmModalOpen(false)
-    // Navigate to first pending item's run detail
-    const firstPending = selectedItems.find(item => item.status === "Pending")
-    if (firstPending) {
-      onViewRunDetail(firstPending.agentBRunId)
+    const firstItem = selectedItems[0]
+    if (firstItem) {
+      onViewRunDetail(firstItem.agentBRunId)
     }
   }
 
@@ -234,16 +197,10 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
       ),
     },
     {
-      title: "Step",
-      dataIndex: "step",
-      key: "step",
-      width: 140,
-      render: (step: FeedbackStep) => <StepBadge step={step} />,
-    },
-    {
       title: "Suggested Change",
       dataIndex: "suggestedChange",
       key: "suggestedChange",
+      flex: 1,
       ellipsis: true,
       render: (text: string) => (
         <Tooltip title={text}>
@@ -255,7 +212,7 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
       title: "Status",
       dataIndex: "status",
       key: "status",
-      width: 110,
+      width: 120,
       render: (status: FeedbackStatus) => <StatusBadge status={status} />,
     },
     {
@@ -268,42 +225,16 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
     {
       title: "Actions",
       key: "actions",
-      width: 160,
+      width: 80,
       fixed: "right",
       render: (_: unknown, record: FeedbackItem) => (
-        <Space size={4}>
-          <Tooltip title="View Agent B Run">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => onViewRunDetail(record.agentBRunId)}
-              style={{ color: "#1890ff" }}
-            />
-          </Tooltip>
-          {record.status === "Pending" && (
-            <>
-              <Tooltip title="Accept">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<CheckOutlined />}
-                  onClick={() => handleAccept(record)}
-                  style={{ color: "#52c41a" }}
-                />
-              </Tooltip>
-              <Tooltip title="Reject">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<CloseOutlined />}
-                  onClick={() => handleReject(record)}
-                  style={{ color: "#ff4d4f" }}
-                />
-              </Tooltip>
-            </>
-          )}
-        </Space>
+        <Button
+          type="text"
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => onViewRunDetail(record.agentBRunId)}
+          style={{ color: "#1890ff", padding: 0 }}
+        />
       ),
     },
   ]
@@ -312,15 +243,10 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
   const rowSelection = {
     selectedRowKeys,
     onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
-    getCheckboxProps: (record: FeedbackItem) => ({
-      disabled: record.status !== "Pending",
-    }),
   }
 
   return (
     <div>
-      {contextHolder}
-      
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
@@ -329,19 +255,14 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
             Review and process Agent B suggestions for golden case updates
           </Text>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Badge count={pendingCount} style={{ backgroundColor: "#faad14" }}>
-            <Tag style={{ fontSize: 12, padding: "2px 8px" }}>Pending Reviews</Tag>
-          </Badge>
-          <Button
-            type="primary"
-            style={{ background: "#1890ff" }}
-            disabled={selectedRowKeys.length === 0}
-            onClick={() => setConfirmModalOpen(true)}
-          >
-            Review Selected ({selectedRowKeys.length})
-          </Button>
-        </div>
+        <Button
+          type="primary"
+          style={{ background: "#1890ff" }}
+          disabled={selectedRowKeys.length === 0}
+          onClick={() => setConfirmModalOpen(true)}
+        >
+          Review Selected ({selectedRowKeys.length})
+        </Button>
       </div>
 
       {/* Filters */}
@@ -356,19 +277,11 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
             allowClear
           />
           <Select
-            placeholder="Step"
-            value={stepFilter}
-            onChange={setStepFilter}
-            options={stepOptions}
-            style={{ width: 160 }}
-            allowClear
-          />
-          <Select
             placeholder="Status"
             value={statusFilter}
             onChange={setStatusFilter}
             options={statusOptions}
-            style={{ width: 120 }}
+            style={{ width: 140 }}
             allowClear
           />
           {hasFilters && (
@@ -379,21 +292,34 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
         </Space>
       </div>
 
-      {/* Table */}
-      <div style={{ background: "#fff", borderRadius: 6, border: "1px solid #f0f0f0" }}>
-        <Table
-          rowSelection={rowSelection}
-          columns={columns}
-          dataSource={filtered}
-          size="middle"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
-          }}
-          scroll={{ x: 1200 }}
-          rowKey="key"
+      {/* Tabs for Steps */}
+      <div style={{ background: "#fff", borderRadius: 6, border: "1px solid #f0f0f0", overflow: "hidden" }}>
+        <Tabs
+          activeKey={activeStep || ""}
+          onChange={(key) => setActiveStep(key as FeedbackStep)}
+          items={allSteps.map(step => ({
+            key: step,
+            label: `${step} (${stepCounts[step]})`,
+          }))}
+          style={{ padding: 16 }}
         />
+
+        {/* Table */}
+        <div style={{ borderTop: "1px solid #f0f0f0" }}>
+          <Table
+            rowSelection={rowSelection}
+            columns={columns}
+            dataSource={filtered}
+            size="middle"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+            }}
+            scroll={{ x: 1200 }}
+            rowKey="key"
+          />
+        </div>
       </div>
 
       {/* Confirmation Modal */}

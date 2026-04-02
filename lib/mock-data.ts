@@ -887,13 +887,29 @@ export const feedbackData: FeedbackItem[] = [
 
 // ── Agent B Run Detail ───────────────────────────────────────────────
 export type AgentBSuggestionStatus = 'Pending' | 'Accepted' | 'Rejected'
+export type AgentBSuggestionType = 'ADD_RULE' | 'MODIFY_RULE' | 'DATA_POINT'
+
+export interface AgentBRuleChange {
+  type: AgentBSuggestionType
+  title: string
+  feedbackSource: {
+    prNo: string
+    checkItem: string
+    comment: string
+  }
+  analysisNotes: string
+  ruleChange: {
+    currentRule?: string
+    suggestedRule?: string
+    newRule?: string
+    observation?: string
+    insertInto?: string
+  }
+}
 
 export interface AgentBSuggestion {
   key: string
-  field: string
-  originalValue: string
-  suggestedValue: string
-  reason: string
+  ruleChange: AgentBRuleChange
   confidence: number
   status: AgentBSuggestionStatus
 }
@@ -908,6 +924,7 @@ export interface AgentBRunDetail {
   entity: string
   runAt: string
   agentVersion: string
+  agentName: string
   suggestions: AgentBSuggestion[]
   analysisNotes: string
 }
@@ -923,187 +940,65 @@ export const agentBRunData: Record<string, AgentBRunDetail> = {
     entity: 'SG',
     runAt: '2025-03-20 10:28',
     agentVersion: 'v2.1.0',
+    agentName: 'Invoice Format Check Agent',
     suggestions: [
       {
         key: 's1',
-        field: 'Ground Truth',
-        originalValue: 'Pass',
-        suggestedValue: 'Fail',
-        reason: 'Invoice amount exceeds PO amount by 8.5%, which is above the 5% tolerance threshold',
         confidence: 0.92,
         status: 'Pending',
+        ruleChange: {
+          type: 'ADD_RULE',
+          title: 'Add BIR Information Validation Rule',
+          feedbackSource: {
+            prNo: 'PR-2024-08821',
+            checkItem: 'Invoice Info Check',
+            comment: 'Invoice info needs to check BIR information, this rule was not in the prompt',
+          },
+          analysisNotes: 'The human reviewer flagged that BIR (Business Identification Number) validation is entirely absent from the current Invoice Format Check Agent prompt. BIR is a mandatory field for PH entity supplier invoices under local tax compliance requirements. Recommend adding as a hard-fail rule.',
+          ruleChange: {
+            newRule: `Rule: BIR Information Validation (PH Entity)
+Applicability: Invoices where supplier entity = PH
+Check: BIR (Business Identification Number) must be
+present on invoice face and must match supplier
+master data BIR field exactly.
+Failure condition: BIR absent or mismatch → REJECT
+with reason: "BIR validation failed"`,
+            insertInto: 'Invoice Format Check Agent → Section: Required Invoice Fields',
+          },
+        },
       },
       {
         key: 's2',
-        field: 'Pattern',
-        originalValue: 'header-check',
-        suggestedValue: 'header-check, amount-mismatch',
-        reason: 'Detected amount discrepancy pattern based on PO comparison',
-        confidence: 0.88,
+        confidence: 0.87,
         status: 'Pending',
+        ruleChange: {
+          type: 'MODIFY_RULE',
+          title: 'Update Date Format Validation',
+          feedbackSource: {
+            prNo: 'PR-2024-08831',
+            checkItem: 'Invoice Date Format',
+            comment: 'Date format is incorrect, should be DD/MM/YYYY not MM/DD/YYYY',
+          },
+          analysisNotes: 'Current prompt accepts MM/DD/YYYY as a valid date format. Multiple reviewers have flagged that the regional standard is DD/MM/YYYY. Accepting MM/DD/YYYY risks misreading dates (e.g. 01/02 could mean Jan 2 or Feb 1). Recommend changing validation to enforce DD/MM/YYYY only.',
+          ruleChange: {
+            currentRule: `Rule: Invoice Date Format
+Invoice date must be within 90 days of today.
+
+Accepted formats: MM/DD/YYYY, DD/MM/YYYY
+Partial match accepted for date format.
+Cross-check date against PO issue date.`,
+            suggestedRule: `Rule: Invoice Date Format
+Invoice date must be within 90 days of today.
+
+Accepted format: DD/MM/YYYY only.
+Reject invoices with MM/DD/YYYY format with reason:
+"Invalid date format — use DD/MM/YYYY"
+Cross-check date against PO issue date.`,
+          },
+        },
       },
     ],
-    analysisNotes: 'Agent B detected a significant amount mismatch between the invoice total (SGD 52,425) and the PO total (SGD 48,500). The variance of 8.5% exceeds the configured tolerance of 5%. Recommend updating ground truth to Fail and adding amount-mismatch pattern for regression test accuracy.',
-  },
-  'RUN-B-002': {
-    runId: 'RUN-B-002',
-    caseId: 'CASE-003',
-    invoiceNo: 'INV-2025-0003',
-    supplierName: 'Accenture Pte Ltd',
-    step: 'MATCH',
-    region: 'SEA',
-    entity: 'SG',
-    runAt: '2025-03-19 14:18',
-    agentVersion: 'v2.1.0',
-    suggestions: [
-      {
-        key: 's1',
-        field: 'Match Status',
-        originalValue: 'N/A',
-        suggestedValue: 'Matched',
-        reason: 'PO data has been corrected. Three-way match now passes all validations.',
-        confidence: 0.95,
-        status: 'Accepted',
-      },
-      {
-        key: 's2',
-        field: 'Pattern',
-        originalValue: 'line-item-qty-mismatch',
-        suggestedValue: '(remove)',
-        reason: 'Line item quantities now match after PO amendment',
-        confidence: 0.78,
-        status: 'Rejected',
-      },
-    ],
-    analysisNotes: 'Following the PO amendment (PO-2025-0003-A), the line item quantities now match the invoice. Agent B recommends updating the match status and removing the false positive pattern flag.',
-  },
-  'RUN-B-003': {
-    runId: 'RUN-B-003',
-    caseId: 'CASE-005',
-    invoiceNo: 'INV-2025-0005',
-    supplierName: 'AWS Singapore Pte Ltd',
-    step: 'AP_VOUCHER',
-    region: 'SEA',
-    entity: 'SG',
-    runAt: '2025-03-21 09:12',
-    agentVersion: 'v2.1.0',
-    suggestions: [
-      {
-        key: 's1',
-        field: 'GL Account',
-        originalValue: '5100 - IT Services',
-        suggestedValue: '5200 - Cloud Services',
-        reason: 'AWS charges should be categorized under Cloud Services per updated chart of accounts (effective 2025-01)',
-        confidence: 0.94,
-        status: 'Pending',
-      },
-      {
-        key: 's2',
-        field: 'Cost Center',
-        originalValue: 'CC-1001',
-        suggestedValue: 'CC-1002',
-        reason: 'Infrastructure team budget moved to new cost center',
-        confidence: 0.86,
-        status: 'Pending',
-      },
-    ],
-    analysisNotes: 'Agent B identified GL account and cost center misalignment based on the updated 2025 chart of accounts. AWS cloud service charges should now map to GL 5200 instead of 5100.',
-  },
-  'RUN-B-004': {
-    runId: 'RUN-B-004',
-    caseId: 'CASE-012',
-    invoiceNo: 'INV-2025-0012',
-    supplierName: 'Accenture Pte Ltd',
-    step: 'INVOICE_REVIEW',
-    region: 'SEA',
-    entity: 'SG',
-    runAt: '2025-03-22 10:58',
-    agentVersion: 'v2.1.0',
-    suggestions: [
-      {
-        key: 's1',
-        field: 'Pattern',
-        originalValue: '(none)',
-        suggestedValue: 'header-check',
-        reason: 'Invoice header missing vendor code field - should be flagged for validation',
-        confidence: 0.91,
-        status: 'Pending',
-      },
-      {
-        key: 's2',
-        field: 'Ground Truth',
-        originalValue: 'Pass',
-        suggestedValue: 'Fail',
-        reason: 'Missing vendor code indicates incomplete invoice data',
-        confidence: 0.72,
-        status: 'Accepted',
-      },
-    ],
-    analysisNotes: 'Invoice header validation detected missing vendor code. While other fields are valid, the absence of vendor code is a compliance requirement. Suggesting addition of header-check pattern.',
-  },
-  'RUN-B-005': {
-    runId: 'RUN-B-005',
-    caseId: 'CASE-016',
-    invoiceNo: 'INV-2025-0016',
-    supplierName: 'Salesforce Singapore',
-    step: 'MATCH',
-    region: 'SEA',
-    entity: 'SG',
-    runAt: '2025-03-23 08:42',
-    agentVersion: 'v2.1.0',
-    suggestions: [
-      {
-        key: 's1',
-        field: 'Pattern',
-        originalValue: 'unit-price-discrepancy',
-        suggestedValue: 'unit-price-discrepancy, currency-conversion-error',
-        reason: 'Root cause identified as USD to SGD conversion using outdated exchange rate',
-        confidence: 0.89,
-        status: 'Pending',
-      },
-      {
-        key: 's2',
-        field: 'Match Status',
-        originalValue: 'Matched',
-        suggestedValue: 'N/A',
-        reason: 'Currency conversion error invalidates the match',
-        confidence: 0.65,
-        status: 'Rejected',
-      },
-    ],
-    analysisNotes: 'Analysis reveals the unit price discrepancy stems from an outdated USD/SGD exchange rate (1.32 used instead of current 1.34). Recommend adding currency-conversion-error pattern for future detection.',
-  },
-  'RUN-B-006': {
-    runId: 'RUN-B-006',
-    caseId: 'CASE-024',
-    invoiceNo: 'INV-2025-0024',
-    supplierName: 'DHL Express Pte Ltd',
-    step: 'MATCH',
-    region: 'SEA',
-    entity: 'SG',
-    runAt: '2025-03-24 15:28',
-    agentVersion: 'v2.1.0',
-    suggestions: [
-      {
-        key: 's1',
-        field: 'Match Status',
-        originalValue: 'N/A',
-        suggestedValue: 'Matched',
-        reason: 'Goods Receipt (GR) document confirmed - three-way match complete',
-        confidence: 0.97,
-        status: 'Pending',
-      },
-      {
-        key: 's2',
-        field: 'Pattern',
-        originalValue: 'three-way-match-fail',
-        suggestedValue: '(remove)',
-        reason: 'GR confirmation resolves the three-way match failure',
-        confidence: 0.96,
-        status: 'Accepted',
-      },
-    ],
-    analysisNotes: 'GR document (GR-2025-0024) has been posted in SAP. Three-way match now passes all validations. Recommend updating status and removing the three-way-match-fail pattern.',
+    analysisNotes: 'Agent B analyzed 2 feedback items for Invoice Format Check Agent. Two rule gaps were identified: (1) BIR validation is entirely absent from current prompt for PH entity invoices; (2) date format validation accepts MM/DD/YYYY but reviewers expect DD/MM/YYYY. One prompt modification and one new rule are recommended.',
   },
 }
 

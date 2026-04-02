@@ -2,37 +2,36 @@
 
 import React, { useState, useMemo } from "react"
 import {
-  Typography, Space, Tag, Button, Card, Descriptions, Badge,
-  message, Tooltip, Progress, Empty,
+  Typography, Space, Tag, Button, Card, Descriptions, Badge, Spin,
+  message, Tooltip, Progress, Empty, Divider,
 } from "antd"
 import {
   ArrowLeftOutlined, CheckOutlined, CloseOutlined,
-  InfoCircleOutlined, RobotOutlined, FileTextOutlined,
-  SwapRightOutlined,
+  FileTextOutlined, RobotOutlined, CheckCircleOutlined,
 } from "@ant-design/icons"
 import {
   agentBRunData,
   type AgentBRunDetail as AgentBRunDetailType,
   type AgentBSuggestion,
   type AgentBSuggestionStatus,
+  type AgentBSuggestionType,
   type FeedbackStep,
 } from "@/lib/mock-data"
 
 const { Text, Title, Paragraph } = Typography
 
-// ── Step Badge ────────────────────────────────────────────────────
+// ── Type Badge ────────────────────────────────────────────────────
 
-const STEP_COLORS: Record<FeedbackStep, { bg: string; border: string; text: string }> = {
-  INVOICE_REVIEW: { bg: "#e6f4ff", border: "#91caff", text: "#0958d9" },
-  MATCH: { bg: "#f9f0ff", border: "#d3adf7", text: "#7c3aed" },
-  AP_VOUCHER: { bg: "#fff7e6", border: "#ffd591", text: "#c05621" },
-}
-
-function StepBadge({ step }: { step: FeedbackStep }) {
-  const colors = STEP_COLORS[step]
+function SuggestionTypeBadge({ type }: { type: AgentBSuggestionType }) {
+  const colors: Record<AgentBSuggestionType, { bg: string; border: string; text: string; label: string }> = {
+    ADD_RULE: { bg: "#e6f4ff", border: "#91caff", text: "#0958d9", label: "ADD_RULE" },
+    MODIFY_RULE: { bg: "#fff7e6", border: "#ffd591", text: "#c05621", label: "MODIFY_RULE" },
+    DATA_POINT: { bg: "#f5f5f5", border: "#d9d9d9", text: "#595959", label: "DATA_POINT" },
+  }
+  const cfg = colors[type]
   return (
-    <Tag style={{ background: colors.bg, borderColor: colors.border, color: colors.text, fontSize: 12, fontWeight: 500, margin: 0 }}>
-      {step}
+    <Tag style={{ background: cfg.bg, borderColor: cfg.border, color: cfg.text, fontSize: 11, fontWeight: 600, margin: 0 }}>
+      {cfg.label}
     </Tag>
   )
 }
@@ -40,9 +39,9 @@ function StepBadge({ step }: { step: FeedbackStep }) {
 // ── Status Badge ──────────────────────────────────────────────────
 
 function SuggestionStatusBadge({ status }: { status: AgentBSuggestionStatus }) {
-  if (status === "Pending") return <Badge status="warning" text={<span style={{ fontSize: 12 }}>Pending</span>} />
-  if (status === "Accepted") return <Badge status="success" text={<span style={{ fontSize: 12 }}>Accepted</span>} />
-  if (status === "Rejected") return <Badge status="error" text={<span style={{ fontSize: 12 }}>Rejected</span>} />
+  if (status === "Pending") return <Badge status="warning" text={<span style={{ fontSize: 12, fontWeight: 500 }}>Pending</span>} />
+  if (status === "Accepted") return <Badge status="success" text={<span style={{ fontSize: 12, fontWeight: 500 }}>Accepted</span>} />
+  if (status === "Rejected") return <Badge status="error" text={<span style={{ fontSize: 12, fontWeight: 500 }}>Rejected</span>} />
   return <Badge status="default" text={<span style={{ fontSize: 12 }}>{status}</span>} />
 }
 
@@ -56,13 +55,13 @@ function ConfidenceIndicator({ confidence }: { confidence: number }) {
   
   return (
     <Tooltip title={`Confidence: ${percent}%`}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, width: 100 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 100 }}>
         <Progress 
           percent={percent} 
           size="small" 
           strokeColor={color}
           showInfo={false}
-          style={{ margin: 0, width: 60 }}
+          style={{ margin: 0, minWidth: 60 }}
         />
         <Text style={{ fontSize: 12, color, fontWeight: 500 }}>{percent}%</Text>
       </div>
@@ -70,127 +69,220 @@ function ConfidenceIndicator({ confidence }: { confidence: number }) {
   )
 }
 
-// ── Diff Viewer ───────────────────────────────────────────────────
+// ── Diff Viewer for MODIFY_RULE ───────────────────────────────────
 
-function DiffViewer({ original, suggested }: { original: string; suggested: string }) {
-  const isRemoval = suggested === "(remove)"
-  const isAddition = original === "(none)"
+function ModifyRuleDiff({ currentRule, suggestedRule }: { currentRule: string; suggestedRule: string }) {
+  const currentLines = currentRule.split('\n')
+  const suggestedLines = suggestedRule.split('\n')
+  const maxLines = Math.max(currentLines.length, suggestedLines.length)
   
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      {/* Original Value */}
-      <div style={{
-        background: isRemoval ? "#fff1f0" : "#fafafa",
-        border: `1px solid ${isRemoval ? "#ffccc7" : "#d9d9d9"}`,
-        borderRadius: 4,
-        padding: "6px 12px",
-        minWidth: 120,
-        flex: 1,
-      }}>
-        <Text 
-          style={{ 
-            fontSize: 13, 
-            color: isRemoval ? "#cf1322" : "#595959",
-            textDecoration: isRemoval ? "line-through" : "none",
-          }}
-        >
-          {original}
-        </Text>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 12 }}>
+      {/* Current Rule */}
+      <div>
+        <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Current Rule</Text>
+        <div style={{
+          background: "#f5f5f5",
+          border: "1px solid #d9d9d9",
+          borderRadius: 4,
+          padding: "12px",
+          fontFamily: "monospace",
+          fontSize: 12,
+          lineHeight: 1.6,
+          color: "#595959",
+          minHeight: 200,
+          maxHeight: 400,
+          overflowY: "auto",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+        }}>
+          {currentRule}
+        </div>
       </div>
       
-      {/* Arrow */}
-      <SwapRightOutlined style={{ color: "#8c8c8c", fontSize: 16 }} />
-      
-      {/* Suggested Value */}
-      <div style={{
-        background: isRemoval ? "#fafafa" : "#f6ffed",
-        border: `1px solid ${isRemoval ? "#d9d9d9" : "#b7eb8f"}`,
-        borderRadius: 4,
-        padding: "6px 12px",
-        minWidth: 120,
-        flex: 1,
-      }}>
-        <Text 
-          style={{ 
-            fontSize: 13, 
-            color: isRemoval ? "#8c8c8c" : "#389e0d",
-            fontWeight: isAddition || !isRemoval ? 500 : 400,
-          }}
-        >
-          {isRemoval ? "Removed" : suggested}
-        </Text>
+      {/* Suggested Rule */}
+      <div>
+        <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Suggested Rule</Text>
+        <div style={{
+          background: "#f6ffed",
+          border: "1px solid #b7eb8f",
+          borderRadius: 4,
+          padding: "12px",
+          fontFamily: "monospace",
+          fontSize: 12,
+          lineHeight: 1.6,
+          color: "#389e0d",
+          minHeight: 200,
+          maxHeight: 400,
+          overflowY: "auto",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+        }}>
+          {suggestedRule}
+        </div>
       </div>
+    </div>
+  )
+}
+
+// ── New Rule Display for ADD_RULE ─────────────────────────────────
+
+function NewRuleDisplay({ newRule, insertInto }: { newRule: string; insertInto: string }) {
+  return (
+    <div style={{ marginTop: 12 }}>
+      <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Proposed New Rule</Text>
+      <div style={{
+        background: "#f6ffed",
+        border: "2px solid #52c41a",
+        borderRadius: 4,
+        padding: "12px",
+        fontFamily: "monospace",
+        fontSize: 12,
+        lineHeight: 1.6,
+        color: "#389e0d",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+        marginBottom: 12,
+      }}>
+        {newRule}
+      </div>
+      <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+        <strong>Insert into:</strong> {insertInto}
+      </Text>
     </div>
   )
 }
 
 // ── Suggestion Card ───────────────────────────────────────────────
 
-function SuggestionCard({
+function RuleSuggestionCard({
   suggestion,
   onAccept,
   onReject,
+  agentName,
 }: {
   suggestion: AgentBSuggestion
   onAccept: () => void
   onReject: () => void
+  agentName: string
 }) {
   const isPending = suggestion.status === "Pending"
+  const rule = suggestion.ruleChange
+  const isAccepted = suggestion.status === "Accepted"
+  const isRejected = suggestion.status === "Rejected"
   
   return (
     <Card
       size="small"
       style={{
         marginBottom: 16,
-        border: isPending ? "1px solid #faad14" : "1px solid #f0f0f0",
+        border: isPending ? "1px solid #faad14" : isAccepted ? "1px solid #52c41a" : "1px solid #ff4d4f",
         borderRadius: 8,
-        background: isPending ? "#fffbe6" : "#fff",
+        background: isPending ? "#fffbe6" : isAccepted ? "#f6ffed" : "#fff1f0",
       }}
       styles={{ body: { padding: 16 } }}
     >
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      {/* Header row: Type badge | Title | Confidence | Status */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+          <SuggestionTypeBadge type={rule.type} />
+          <Text strong style={{ fontSize: 14 }}>{rule.title}</Text>
+        </div>
         <Space size={12}>
-          <Text strong style={{ fontSize: 14 }}>{suggestion.field}</Text>
+          <ConfidenceIndicator confidence={suggestion.confidence} />
           <SuggestionStatusBadge status={suggestion.status} />
         </Space>
-        <ConfidenceIndicator confidence={suggestion.confidence} />
       </div>
-      
-      {/* Diff View */}
-      <div style={{ marginBottom: 12 }}>
-        <DiffViewer original={suggestion.originalValue} suggested={suggestion.suggestedValue} />
+
+      {/* Feedback Source section */}
+      <div style={{
+        background: "#fafafa",
+        borderRadius: 4,
+        padding: "12px",
+        marginBottom: 16,
+      }}>
+        <Text type="secondary" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+          Feedback Source
+        </Text>
+        <Text style={{ fontSize: 13, color: "#595959" }}>
+          {rule.feedbackSource.prNo} · {rule.feedbackSource.checkItem} · "{rule.feedbackSource.comment}"
+        </Text>
       </div>
-      
-      {/* Reason */}
-      <div style={{ background: "#fafafa", borderRadius: 4, padding: "10px 12px", marginBottom: 12 }}>
-        <Space size={6} style={{ marginBottom: 4 }}>
-          <InfoCircleOutlined style={{ color: "#1890ff", fontSize: 12 }} />
-          <Text type="secondary" style={{ fontSize: 11, textTransform: "uppercase", fontWeight: 500 }}>Reason</Text>
+
+      {/* Analysis Notes section */}
+      <div style={{ marginBottom: 16 }}>
+        <Space size={6} style={{ marginBottom: 8, display: "block" }}>
+          <FileTextOutlined style={{ color: "#1677ff", fontSize: 12 }} />
+          <Text type="secondary" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>Analysis Notes</Text>
         </Space>
-        <Text style={{ fontSize: 13, display: "block" }}>{suggestion.reason}</Text>
+        <Paragraph style={{ fontSize: 13, color: "#595959", margin: 0, lineHeight: 1.6 }}>
+          {rule.analysisNotes}
+        </Paragraph>
       </div>
-      
-      {/* Actions */}
-      {isPending && (
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <Button
-            icon={<CloseOutlined />}
-            onClick={onReject}
-            style={{ borderColor: "#ff4d4f", color: "#ff4d4f" }}
-          >
-            Reject
-          </Button>
-          <Button
-            type="primary"
-            icon={<CheckOutlined />}
-            onClick={onAccept}
-            style={{ background: "#52c41a", borderColor: "#52c41a" }}
-          >
-            Accept
-          </Button>
-        </div>
-      )}
+
+      <Divider style={{ margin: "12px 0" }} />
+
+      {/* Rule Change section based on type */}
+      <div>
+        {rule.type === "ADD_RULE" && rule.ruleChange.newRule && (
+          <NewRuleDisplay newRule={rule.ruleChange.newRule} insertInto={rule.ruleChange.insertInto || ""} />
+        )}
+        
+        {rule.type === "MODIFY_RULE" && rule.ruleChange.currentRule && rule.ruleChange.suggestedRule && (
+          <>
+            <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 12 }}>Rule Change (Diff View)</Text>
+            <ModifyRuleDiff currentRule={rule.ruleChange.currentRule} suggestedRule={rule.ruleChange.suggestedRule} />
+          </>
+        )}
+        
+        {rule.type === "DATA_POINT" && rule.ruleChange.observation && (
+          <>
+            <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Observation (No Rule Change)</Text>
+            <div style={{
+              background: "#f5f5f5",
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+              padding: "12px",
+              fontSize: 13,
+              color: "#595959",
+              lineHeight: 1.6,
+            }}>
+              {rule.ruleChange.observation}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Action buttons or completion state */}
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #e8e8e8" }}>
+        {isPending ? (
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button onClick={onReject} style={{ borderColor: "#ff4d4f", color: "#ff4d4f" }}>
+              Reject
+            </Button>
+            <Button type="primary" onClick={onAccept} style={{ background: "#1677ff" }}>
+              Accept & Create Version
+            </Button>
+          </div>
+        ) : isAccepted ? (
+          <div style={{
+            background: "#f6ffed",
+            border: "1px solid #b7eb8f",
+            borderRadius: 4,
+            padding: "10px 12px",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}>
+            <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
+            <Text style={{ fontSize: 12, color: "#389e0d" }}>
+              New version created for {agentName} — <a href="#" style={{ color: "#389e0d", fontWeight: 500 }}>View in Agent Detail →</a>
+            </Text>
+          </div>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 12 }}>Suggestion rejected</Text>
+        )}
+      </div>
     </Card>
   )
 }
@@ -292,7 +384,7 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
           {/* Left: Run Details */}
           <div style={{ flex: 1 }}>
             <Space size={12} style={{ marginBottom: 16 }}>
-              <RobotOutlined style={{ fontSize: 20, color: "#1890ff" }} />
+              <RobotOutlined style={{ fontSize: 20, color: "#1677ff" }} />
               <Text strong style={{ fontSize: 16 }}>Run {runData.runId}</Text>
               <Tag style={{ background: "#f0f5ff", borderColor: "#adc6ff", color: "#2f54eb", fontSize: 11 }}>
                 {runData.agentVersion}
@@ -300,6 +392,9 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
             </Space>
             
             <Descriptions column={2} size="small" style={{ marginBottom: 0 }}>
+              <Descriptions.Item label="Agent">
+                <Text style={{ fontSize: 13 }}>{runData.agentName}</Text>
+              </Descriptions.Item>
               <Descriptions.Item label="Case ID">
                 <Text code style={{ fontSize: 12 }}>{runData.caseId}</Text>
               </Descriptions.Item>
@@ -310,13 +405,10 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
                 <Text style={{ fontSize: 13 }}>{runData.supplierName}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Step">
-                <StepBadge step={runData.step} />
+                <Tag style={{ fontSize: 11 }}>{runData.step}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Region / Entity">
                 <Text style={{ fontSize: 13 }}>{runData.region} / {runData.entity}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Run Time">
-                <Text type="secondary" style={{ fontSize: 13 }}>{runData.runAt}</Text>
               </Descriptions.Item>
             </Descriptions>
           </div>
@@ -365,7 +457,7 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
         styles={{ body: { padding: 16 } }}
       >
         <Space size={8} style={{ marginBottom: 12 }}>
-          <FileTextOutlined style={{ color: "#1890ff", fontSize: 14 }} />
+          <FileTextOutlined style={{ color: "#1677ff", fontSize: 14 }} />
           <Text strong style={{ fontSize: 14 }}>Analysis Notes</Text>
         </Space>
         <Paragraph style={{ fontSize: 13, color: "#595959", margin: 0, lineHeight: 1.6 }}>
@@ -380,11 +472,12 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
         </Title>
         
         {suggestions.map(suggestion => (
-          <SuggestionCard
+          <RuleSuggestionCard
             key={suggestion.key}
             suggestion={suggestion}
             onAccept={() => handleAccept(suggestion.key)}
             onReject={() => handleReject(suggestion.key)}
+            agentName={runData.agentName}
           />
         ))}
       </div>
@@ -401,12 +494,12 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
           justifyContent: "space-between",
         }}>
           <Space>
-            <CheckOutlined style={{ color: "#52c41a", fontSize: 16 }} />
+            <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
             <Text style={{ fontSize: 14, color: "#389e0d" }}>
               All suggestions have been reviewed. Changes will be applied to the golden case data.
             </Text>
           </Space>
-          <Button type="primary" style={{ background: "#1890ff" }} onClick={onBack}>
+          <Button type="primary" style={{ background: "#1677ff" }} onClick={onBack}>
             Return to Feedback List
           </Button>
         </div>

@@ -559,7 +559,7 @@ export function AgentList({
         {/* Search bar */}
         <div style={{ display: "grid", gridTemplateColumns: "240px 200px auto", gap: 16, alignItems: "end", marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 13, color: "#595959", marginBottom: 4 }}>Supplier Name</div>
+            <div style={{ fontSize: 13, color: "#595959", marginBottom: 4 }}>Agent Name</div>
             <Input
               placeholder="Search"
               suffix={<SearchOutlined style={{ color: "#bfbfbf" }} />}

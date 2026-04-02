@@ -61,6 +61,7 @@ interface FeedbackSuggestionListProps {
 export function FeedbackSuggestionList({ onViewRunDetail }: FeedbackSuggestionListProps) {
   const [search, setSearch] = useState("")
   const [dateRange, setDateRange] = useState<[Date | null, Date | null] | null>(null)
+  const [stepFilter, setStepFilter] = useState<FeedbackStep | null>(null)
   const [statusFilter, setStatusFilter] = useState<SuggestionRunStatus | null>(null)
   const [data, setData] = useState<SuggestionRun[]>(suggestionRunData)
   const [msgApi, contextHolder] = message.useMessage()

@@ -21,6 +21,8 @@ import { PatternLibrary } from "@/components/pattern-library"
 import { RegressionTest } from "@/components/regression-test"
 import { SystemArchitecture } from "@/components/system-architecture"
 import { PrdViewer } from "@/components/prd-viewer"
+import { FeedbackManagement } from "@/components/feedback-management"
+import { AgentBRunDetail } from "@/components/agent-b-run-detail"
 import { agentListData, INITIAL_GOLDEN_CASES, INITIAL_ARCHIVED_CASES, type Agent, type AuditCase, type GoldenCasesState, type ArchivedCaseMock } from "@/lib/mock-data"
 
 const { Sider, Header, Content } = Layout
@@ -39,6 +41,8 @@ type Page =
   | "regression-test"
   | "system-architecture"
   | "prd"
+  | "feedback-management"
+  | "agent-b-run-detail"
 
 const BREADCRUMBS: Record<Page, string[]> = {
   "knowledge-detail":      ["Knowledge Base", "Knowledge Detail"],
@@ -53,6 +57,8 @@ const BREADCRUMBS: Record<Page, string[]> = {
   "regression-test":       ["Regression Test"],
   "system-architecture":   ["System Architecture"],
   "prd":                   ["Documentation", "PRD"],
+  "feedback-management":   ["Agent Management", "Feedback Management"],
+  "agent-b-run-detail":    ["Agent Management", "Feedback Management", "Agent B Run Detail"],
 }
 
 function AppShell() {
@@ -60,6 +66,7 @@ function AppShell() {
   const [selectedKey, setSelectedKey] = useState("knowledge-detail")
   const [openKeys, setOpenKeys] = useState<string[]>(["knowledge-base", "case-management-menu", "agent-management"])
   const [regressionAgentId, setRegressionAgentId] = useState<string | undefined>(undefined)
+  const [selectedAgentBRunId, setSelectedAgentBRunId] = useState<string | null>(null)
   const [selectedCase, setSelectedCase] = useState<AuditCase | null>(null)
   const [agents, setAgents] = useState<Agent[]>(agentListData)
   const [goldenCases, setGoldenCases] = useState<GoldenCasesState>(INITIAL_GOLDEN_CASES)
@@ -114,6 +121,18 @@ function handleArchive(newly: ArchivedCaseMock[]) {
     }
     if (key === "system-architecture") setPage("system-architecture")
     if (key === "prd") setPage("prd")
+    if (key === "feedback-management") setPage("feedback-management")
+  }
+
+  function goToFeedbackManagement() {
+    setPage("feedback-management")
+    setSelectedKey("feedback-management")
+    setOpenKeys((prev) => prev.includes("agent-management") ? prev : [...prev, "agent-management"])
+  }
+
+  function goToAgentBRunDetail(runId: string) {
+    setSelectedAgentBRunId(runId)
+    setPage("agent-b-run-detail")
   }
 
   function goToCaseDetail(record: AuditCase) {
@@ -203,6 +222,7 @@ function handleArchive(newly: ArchivedCaseMock[]) {
               label: "Agent Management",
               children: [
                 { key: "agent-list", icon: <TableOutlined />, label: "Agent List" },
+                { key: "feedback-management", icon: <CodeOutlined />, label: "Feedback Management" },
               ],
             },
             { key: "regression-test", icon: <ExperimentOutlined />, label: "Regression Test" },
@@ -282,6 +302,8 @@ function handleArchive(newly: ArchivedCaseMock[]) {
           {page === "agent-detail"       && <AgentDetail agentId="AGT-002" passedAgentIds={passedAgentIds} onBack={goToAgentList} onPublish={handlePublish} onGoToRegressionTest={goToRegressionTest} />}
           {page === "system-architecture" && <SystemArchitecture />}
           {page === "prd"                 && <PrdViewer onNavigate={(p) => { setPage(p as Page); setSelectedKey(p); }} />}
+          {page === "feedback-management" && <FeedbackManagement onViewRunDetail={goToAgentBRunDetail} />}
+          {page === "agent-b-run-detail"  && selectedAgentBRunId && <AgentBRunDetail runId={selectedAgentBRunId} onBack={goToFeedbackManagement} />}
         </Content>
       </Layout>
     </Layout>

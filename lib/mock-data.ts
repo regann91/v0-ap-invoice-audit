@@ -681,3 +681,428 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
     archivedBy: 'sarah.lee@shopee.com',
   },
 ]
+
+// ── Feedback Management (Human-in-the-Loop) ─────────────────────────
+export type FeedbackStatus = 'Pending' | 'Accepted' | 'Rejected'
+export type FeedbackStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER'
+
+export interface FeedbackItem {
+  key: string
+  feedbackId: string
+  caseId: string
+  invoiceNo: string
+  supplierName: string
+  step: FeedbackStep
+  region: string
+  entity: string
+  status: FeedbackStatus
+  agentBRunId: string
+  suggestedChange: string
+  createdAt: string
+  updatedAt: string
+}
+
+export const feedbackData: FeedbackItem[] = [
+  {
+    key: 'fb-1',
+    feedbackId: 'FB-2025-0001',
+    caseId: 'CASE-001',
+    invoiceNo: 'INV-2025-0001',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-B-001',
+    suggestedChange: 'Update ground truth from Pass to Fail due to amount mismatch',
+    createdAt: '2025-03-20 10:30',
+    updatedAt: '2025-03-20 10:30',
+  },
+  {
+    key: 'fb-2',
+    feedbackId: 'FB-2025-0002',
+    caseId: 'CASE-002',
+    invoiceNo: 'INV-2025-0002',
+    supplierName: 'AWS Singapore Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-B-001',
+    suggestedChange: 'Add pattern "duplicate-invoice" to detection list',
+    createdAt: '2025-03-20 10:32',
+    updatedAt: '2025-03-20 10:32',
+  },
+  {
+    key: 'fb-3',
+    feedbackId: 'FB-2025-0003',
+    caseId: 'CASE-003',
+    invoiceNo: 'INV-2025-0003',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Accepted',
+    agentBRunId: 'RUN-B-002',
+    suggestedChange: 'Update match status from N/A to Matched after PO data correction',
+    createdAt: '2025-03-19 14:20',
+    updatedAt: '2025-03-19 16:45',
+  },
+  {
+    key: 'fb-4',
+    feedbackId: 'FB-2025-0004',
+    caseId: 'CASE-008',
+    invoiceNo: 'INV-2025-0008',
+    supplierName: 'Siemens Singapore',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Rejected',
+    agentBRunId: 'RUN-B-002',
+    suggestedChange: 'Remove pattern "line-item-qty-mismatch" - false positive',
+    createdAt: '2025-03-19 14:25',
+    updatedAt: '2025-03-19 17:10',
+  },
+  {
+    key: 'fb-5',
+    feedbackId: 'FB-2025-0005',
+    caseId: 'CASE-005',
+    invoiceNo: 'INV-2025-0005',
+    supplierName: 'AWS Singapore Pte Ltd',
+    step: 'AP_VOUCHER',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-B-003',
+    suggestedChange: 'Update GL account mapping from 5100 to 5200',
+    createdAt: '2025-03-21 09:15',
+    updatedAt: '2025-03-21 09:15',
+  },
+  {
+    key: 'fb-6',
+    feedbackId: 'FB-2025-0006',
+    caseId: 'CASE-011',
+    invoiceNo: 'INV-2025-0011',
+    supplierName: 'Google Asia Pacific',
+    step: 'AP_VOUCHER',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-B-003',
+    suggestedChange: 'Change cost center from CC-1001 to CC-1002',
+    createdAt: '2025-03-21 09:20',
+    updatedAt: '2025-03-21 09:20',
+  },
+  {
+    key: 'fb-7',
+    feedbackId: 'FB-2025-0007',
+    caseId: 'CASE-012',
+    invoiceNo: 'INV-2025-0012',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-B-004',
+    suggestedChange: 'Add pattern "header-check" based on missing vendor code',
+    createdAt: '2025-03-22 11:00',
+    updatedAt: '2025-03-22 11:00',
+  },
+  {
+    key: 'fb-8',
+    feedbackId: 'FB-2025-0008',
+    caseId: 'CASE-014',
+    invoiceNo: 'INV-2025-0014',
+    supplierName: 'Google Asia Pacific',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Accepted',
+    agentBRunId: 'RUN-B-004',
+    suggestedChange: 'Confirm amount mismatch pattern - tolerance exceeded by 5%',
+    createdAt: '2025-03-22 11:05',
+    updatedAt: '2025-03-22 14:30',
+  },
+  {
+    key: 'fb-9',
+    feedbackId: 'FB-2025-0009',
+    caseId: 'CASE-016',
+    invoiceNo: 'INV-2025-0016',
+    supplierName: 'Salesforce Singapore',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-B-005',
+    suggestedChange: 'Flag unit price discrepancy - USD to SGD conversion error',
+    createdAt: '2025-03-23 08:45',
+    updatedAt: '2025-03-23 08:45',
+  },
+  {
+    key: 'fb-10',
+    feedbackId: 'FB-2025-0010',
+    caseId: 'CASE-021',
+    invoiceNo: 'INV-2025-0021',
+    supplierName: 'DHL Express Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Rejected',
+    agentBRunId: 'RUN-B-005',
+    suggestedChange: 'Remove GST calculation error flag - tax rate is correct',
+    createdAt: '2025-03-23 08:50',
+    updatedAt: '2025-03-23 10:15',
+  },
+  {
+    key: 'fb-11',
+    feedbackId: 'FB-2025-0011',
+    caseId: 'CASE-024',
+    invoiceNo: 'INV-2025-0024',
+    supplierName: 'DHL Express Pte Ltd',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-B-006',
+    suggestedChange: 'Update three-way match status - GR confirmed',
+    createdAt: '2025-03-24 15:30',
+    updatedAt: '2025-03-24 15:30',
+  },
+  {
+    key: 'fb-12',
+    feedbackId: 'FB-2025-0012',
+    caseId: 'CASE-027',
+    invoiceNo: 'INV-2025-0027',
+    supplierName: 'Deloitte Singapore',
+    step: 'AP_VOUCHER',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Accepted',
+    agentBRunId: 'RUN-B-006',
+    suggestedChange: 'Correct GL account from 4100 to 4200 for consulting services',
+    createdAt: '2025-03-24 15:35',
+    updatedAt: '2025-03-24 17:00',
+  },
+]
+
+// ── Agent B Run Detail ───────────────────────────────────────────────
+export type AgentBSuggestionStatus = 'Pending' | 'Accepted' | 'Rejected'
+
+export interface AgentBSuggestion {
+  key: string
+  field: string
+  originalValue: string
+  suggestedValue: string
+  reason: string
+  confidence: number
+  status: AgentBSuggestionStatus
+}
+
+export interface AgentBRunDetail {
+  runId: string
+  caseId: string
+  invoiceNo: string
+  supplierName: string
+  step: FeedbackStep
+  region: string
+  entity: string
+  runAt: string
+  agentVersion: string
+  suggestions: AgentBSuggestion[]
+  analysisNotes: string
+}
+
+export const agentBRunData: Record<string, AgentBRunDetail> = {
+  'RUN-B-001': {
+    runId: 'RUN-B-001',
+    caseId: 'CASE-001',
+    invoiceNo: 'INV-2025-0001',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-20 10:28',
+    agentVersion: 'v2.1.0',
+    suggestions: [
+      {
+        key: 's1',
+        field: 'Ground Truth',
+        originalValue: 'Pass',
+        suggestedValue: 'Fail',
+        reason: 'Invoice amount exceeds PO amount by 8.5%, which is above the 5% tolerance threshold',
+        confidence: 0.92,
+        status: 'Pending',
+      },
+      {
+        key: 's2',
+        field: 'Pattern',
+        originalValue: 'header-check',
+        suggestedValue: 'header-check, amount-mismatch',
+        reason: 'Detected amount discrepancy pattern based on PO comparison',
+        confidence: 0.88,
+        status: 'Pending',
+      },
+    ],
+    analysisNotes: 'Agent B detected a significant amount mismatch between the invoice total (SGD 52,425) and the PO total (SGD 48,500). The variance of 8.5% exceeds the configured tolerance of 5%. Recommend updating ground truth to Fail and adding amount-mismatch pattern for regression test accuracy.',
+  },
+  'RUN-B-002': {
+    runId: 'RUN-B-002',
+    caseId: 'CASE-003',
+    invoiceNo: 'INV-2025-0003',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-19 14:18',
+    agentVersion: 'v2.1.0',
+    suggestions: [
+      {
+        key: 's1',
+        field: 'Match Status',
+        originalValue: 'N/A',
+        suggestedValue: 'Matched',
+        reason: 'PO data has been corrected. Three-way match now passes all validations.',
+        confidence: 0.95,
+        status: 'Accepted',
+      },
+      {
+        key: 's2',
+        field: 'Pattern',
+        originalValue: 'line-item-qty-mismatch',
+        suggestedValue: '(remove)',
+        reason: 'Line item quantities now match after PO amendment',
+        confidence: 0.78,
+        status: 'Rejected',
+      },
+    ],
+    analysisNotes: 'Following the PO amendment (PO-2025-0003-A), the line item quantities now match the invoice. Agent B recommends updating the match status and removing the false positive pattern flag.',
+  },
+  'RUN-B-003': {
+    runId: 'RUN-B-003',
+    caseId: 'CASE-005',
+    invoiceNo: 'INV-2025-0005',
+    supplierName: 'AWS Singapore Pte Ltd',
+    step: 'AP_VOUCHER',
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-21 09:12',
+    agentVersion: 'v2.1.0',
+    suggestions: [
+      {
+        key: 's1',
+        field: 'GL Account',
+        originalValue: '5100 - IT Services',
+        suggestedValue: '5200 - Cloud Services',
+        reason: 'AWS charges should be categorized under Cloud Services per updated chart of accounts (effective 2025-01)',
+        confidence: 0.94,
+        status: 'Pending',
+      },
+      {
+        key: 's2',
+        field: 'Cost Center',
+        originalValue: 'CC-1001',
+        suggestedValue: 'CC-1002',
+        reason: 'Infrastructure team budget moved to new cost center',
+        confidence: 0.86,
+        status: 'Pending',
+      },
+    ],
+    analysisNotes: 'Agent B identified GL account and cost center misalignment based on the updated 2025 chart of accounts. AWS cloud service charges should now map to GL 5200 instead of 5100.',
+  },
+  'RUN-B-004': {
+    runId: 'RUN-B-004',
+    caseId: 'CASE-012',
+    invoiceNo: 'INV-2025-0012',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-22 10:58',
+    agentVersion: 'v2.1.0',
+    suggestions: [
+      {
+        key: 's1',
+        field: 'Pattern',
+        originalValue: '(none)',
+        suggestedValue: 'header-check',
+        reason: 'Invoice header missing vendor code field - should be flagged for validation',
+        confidence: 0.91,
+        status: 'Pending',
+      },
+      {
+        key: 's2',
+        field: 'Ground Truth',
+        originalValue: 'Pass',
+        suggestedValue: 'Fail',
+        reason: 'Missing vendor code indicates incomplete invoice data',
+        confidence: 0.72,
+        status: 'Accepted',
+      },
+    ],
+    analysisNotes: 'Invoice header validation detected missing vendor code. While other fields are valid, the absence of vendor code is a compliance requirement. Suggesting addition of header-check pattern.',
+  },
+  'RUN-B-005': {
+    runId: 'RUN-B-005',
+    caseId: 'CASE-016',
+    invoiceNo: 'INV-2025-0016',
+    supplierName: 'Salesforce Singapore',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-23 08:42',
+    agentVersion: 'v2.1.0',
+    suggestions: [
+      {
+        key: 's1',
+        field: 'Pattern',
+        originalValue: 'unit-price-discrepancy',
+        suggestedValue: 'unit-price-discrepancy, currency-conversion-error',
+        reason: 'Root cause identified as USD to SGD conversion using outdated exchange rate',
+        confidence: 0.89,
+        status: 'Pending',
+      },
+      {
+        key: 's2',
+        field: 'Match Status',
+        originalValue: 'Matched',
+        suggestedValue: 'N/A',
+        reason: 'Currency conversion error invalidates the match',
+        confidence: 0.65,
+        status: 'Rejected',
+      },
+    ],
+    analysisNotes: 'Analysis reveals the unit price discrepancy stems from an outdated USD/SGD exchange rate (1.32 used instead of current 1.34). Recommend adding currency-conversion-error pattern for future detection.',
+  },
+  'RUN-B-006': {
+    runId: 'RUN-B-006',
+    caseId: 'CASE-024',
+    invoiceNo: 'INV-2025-0024',
+    supplierName: 'DHL Express Pte Ltd',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-24 15:28',
+    agentVersion: 'v2.1.0',
+    suggestions: [
+      {
+        key: 's1',
+        field: 'Match Status',
+        originalValue: 'N/A',
+        suggestedValue: 'Matched',
+        reason: 'Goods Receipt (GR) document confirmed - three-way match complete',
+        confidence: 0.97,
+        status: 'Pending',
+      },
+      {
+        key: 's2',
+        field: 'Pattern',
+        originalValue: 'three-way-match-fail',
+        suggestedValue: '(remove)',
+        reason: 'GR confirmation resolves the three-way match failure',
+        confidence: 0.96,
+        status: 'Accepted',
+      },
+    ],
+    analysisNotes: 'GR document (GR-2025-0024) has been posted in SAP. Three-way match now passes all validations. Recommend updating status and removing the three-way-match-fail pattern.',
+  },
+}

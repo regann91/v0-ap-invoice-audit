@@ -3,11 +3,11 @@
 import React, { useState, useMemo } from "react"
 import {
   Table, Input, Select, Space, Tag, Typography, Button,
-  Badge, Modal, Checkbox, Tooltip, Tabs,
+  Badge, Modal, Checkbox, Tooltip, Tabs, message,
 } from "antd"
 import {
   SearchOutlined, FilterOutlined, EyeOutlined,
-  ExclamationCircleOutlined,
+  ExclamationCircleOutlined, DownloadOutlined,
 } from "@ant-design/icons"
 import type { ColumnsType } from "antd/es/table"
 import {
@@ -89,16 +89,22 @@ function uniqueOptions(items: string[]) {
 
 // ── Main Component ────────────────────────────────────────────────
 
-interface FeedbackManagementProps {
+interface FeedbackListProps {
   onViewRunDetail: (runId: string) => void
 }
 
-export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps) {
+export function FeedbackList({ onViewRunDetail }: FeedbackListProps) {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   const [data, setData] = useState<FeedbackItem[]>(feedbackData)
+  const [msgApi, contextHolder] = message.useMessage()
+
+  // Handle Download
+  function handleDownload() {
+    msgApi.success("Download started - feedback data will be exported as CSV")
+  }
 
   // Get all unique steps for tabs
   const allSteps = useMemo(() => {
@@ -247,22 +253,31 @@ export function FeedbackManagement({ onViewRunDetail }: FeedbackManagementProps)
 
   return (
     <div>
+      {contextHolder}
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>Feedback Management</Title>
+          <Title level={4} style={{ margin: 0 }}>Feedback List</Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
             Review and process Agent B suggestions for golden case updates
           </Text>
         </div>
-        <Button
-          type="primary"
-          style={{ background: "#1890ff" }}
-          disabled={selectedRowKeys.length === 0}
-          onClick={() => setConfirmModalOpen(true)}
-        >
-          Review Selected ({selectedRowKeys.length})
-        </Button>
+        <Space size={12}>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleDownload}
+          >
+            Download
+          </Button>
+          <Button
+            type="primary"
+            style={{ background: "#1890ff" }}
+            disabled={selectedRowKeys.length === 0}
+            onClick={() => setConfirmModalOpen(true)}
+          >
+            Review Selected ({selectedRowKeys.length})
+          </Button>
+        </Space>
       </div>
 
       {/* Filters */}

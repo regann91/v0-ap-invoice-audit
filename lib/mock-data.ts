@@ -1106,3 +1106,101 @@ export const agentBRunData: Record<string, AgentBRunDetail> = {
     analysisNotes: 'GR document (GR-2025-0024) has been posted in SAP. Three-way match now passes all validations. Recommend updating status and removing the three-way-match-fail pattern.',
   },
 }
+
+// ── Feedback Suggestion Run List ─────────────────────────────────────
+export type SuggestionRunStatus = 'Pending Review' | 'Accepted' | 'Rejected' | 'Running'
+
+export interface SuggestionRun {
+  key: string
+  runId: string
+  triggeredAt: string
+  agent: string
+  step: FeedbackStep
+  caseCount: number
+  suggestionCount: number
+  status: SuggestionRunStatus
+  acceptedCount: number
+  rejectedCount: number
+  pendingCount: number
+}
+
+export const suggestionRunData: SuggestionRun[] = [
+  {
+    key: 'run-1',
+    runId: 'RUN-B-001',
+    triggeredAt: '2025-03-20 10:28',
+    agent: 'Agent B v2.1.0',
+    step: 'INVOICE_REVIEW',
+    caseCount: 3,
+    suggestionCount: 5,
+    status: 'Pending Review',
+    acceptedCount: 0,
+    rejectedCount: 0,
+    pendingCount: 5,
+  },
+  {
+    key: 'run-2',
+    runId: 'RUN-B-002',
+    triggeredAt: '2025-03-19 14:18',
+    agent: 'Agent B v2.1.0',
+    step: 'MATCH',
+    caseCount: 2,
+    suggestionCount: 4,
+    status: 'Accepted',
+    acceptedCount: 3,
+    rejectedCount: 1,
+    pendingCount: 0,
+  },
+  {
+    key: 'run-3',
+    runId: 'RUN-B-003',
+    triggeredAt: '2025-03-21 09:12',
+    agent: 'Agent B v2.1.0',
+    step: 'AP_VOUCHER',
+    caseCount: 2,
+    suggestionCount: 4,
+    status: 'Pending Review',
+    acceptedCount: 1,
+    rejectedCount: 0,
+    pendingCount: 3,
+  },
+  {
+    key: 'run-4',
+    runId: 'RUN-B-004',
+    triggeredAt: '2025-03-22 10:58',
+    agent: 'Agent B v2.1.0',
+    step: 'INVOICE_REVIEW',
+    caseCount: 2,
+    suggestionCount: 3,
+    status: 'Rejected',
+    acceptedCount: 1,
+    rejectedCount: 2,
+    pendingCount: 0,
+  },
+  {
+    key: 'run-5',
+    runId: 'RUN-B-005',
+    triggeredAt: '2025-03-23 08:42',
+    agent: 'Agent B v2.1.0',
+    step: 'MATCH',
+    caseCount: 2,
+    suggestionCount: 3,
+    status: 'Running',
+    acceptedCount: 0,
+    rejectedCount: 0,
+    pendingCount: 3,
+  },
+  {
+    key: 'run-6',
+    runId: 'RUN-B-006',
+    triggeredAt: '2025-03-24 15:28',
+    agent: 'Agent B v2.1.0',
+    step: 'MATCH',
+    caseCount: 1,
+    suggestionCount: 2,
+    status: 'Pending Review',
+    acceptedCount: 1,
+    rejectedCount: 0,
+    pendingCount: 1,
+  },
+]

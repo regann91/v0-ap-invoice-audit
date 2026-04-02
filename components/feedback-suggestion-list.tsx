@@ -13,6 +13,7 @@ import {
   suggestionRunData,
   type SuggestionRun, type SuggestionRunStatus,
 } from "@/lib/mock-data"
+import { AgentBRunOverview } from "@/components/agent-b-run-overview"
 
 const { Text, Title } = Typography
 const { RangePicker } = DatePicker
@@ -38,6 +39,8 @@ export function FeedbackSuggestionList({ onViewRunDetail }: FeedbackSuggestionLi
   const [dateRange, setDateRange] = useState<[Date | null, Date | null] | null>(null)
   const [statusFilter, setStatusFilter] = useState<SuggestionRunStatus | null>(null)
   const [data, setData] = useState<SuggestionRun[]>(suggestionRunData)
+  const [runOverviewOpen, setRunOverviewOpen] = useState(false)
+  const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [msgApi, contextHolder] = message.useMessage()
 
   // Filter data
@@ -183,7 +186,7 @@ export function FeedbackSuggestionList({ onViewRunDetail }: FeedbackSuggestionLi
               type="text"
               size="small"
               icon={<EyeOutlined />}
-              onClick={() => onViewRunDetail(record.runId)}
+              onClick={() => { setActiveRunId(record.runId); setRunOverviewOpen(true) }}
               style={{ color: "#1890ff" }}
             />
           </Tooltip>
@@ -275,6 +278,17 @@ export function FeedbackSuggestionList({ onViewRunDetail }: FeedbackSuggestionLi
           rowKey="key"
         />
       </div>
+
+      {/* Run Overview Modal */}
+      <AgentBRunOverview
+        open={runOverviewOpen}
+        runId={activeRunId}
+        onClose={() => setRunOverviewOpen(false)}
+        onViewSuggestions={(runDetailId) => {
+          setRunOverviewOpen(false)
+          onViewRunDetail(runDetailId)
+        }}
+      />
     </div>
   )
 }

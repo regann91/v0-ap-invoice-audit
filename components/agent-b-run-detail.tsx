@@ -570,7 +570,7 @@ export function AgentBRunDetail({ runId, onBack }: AgentBRunDetailProps) {
       >
         <div>
           <Text>
-            The following {selectedSuggestions.length} suggestions will be merged into a new version of <Text strong>{runData.agentName}</Text>:
+            The following {selectedSuggestions.length} suggestions will be merged into a new version of <strong>{runData.agentName}</strong>:
           </Text>
           <ul style={{ marginTop: 12, marginBottom: 16 }}>
             {selectedSuggestions.map(s => (

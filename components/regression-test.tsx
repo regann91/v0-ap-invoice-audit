@@ -544,7 +544,7 @@ function buildSuiteCases(
   })
 }
 
-// ── Sub-components ───────────────────────────────────────────────
+// ── Sub-components ────────────────���──────────────────────────────
 
 const RESULT_TAG_CFG = {
   Pass: { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f" },
@@ -652,9 +652,9 @@ function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; sim
                   {s.pass ? "PASS" : "FAIL"}
                 </Tag>
               </div>
-              <Text type="secondary" style={{ fontSize: 11 }}>
-                Accuracy{" "}
-                <span style={{ color: "#434343", fontWeight: 500 }}>{s.accuracy}%</span>
+  <Text type="secondary" style={{ fontSize: 11 }}>
+    Hard Accuracy{" "}
+    <span style={{ color: "#434343", fontWeight: 500 }}>{s.accuracy}%</span>
                 {" / "}Golden PR{" "}
                 <span style={{ color: s.pass ? "#389e0d" : "#cf1322", fontWeight: 600 }}>
                   {s.goldenPassRate}%
@@ -677,12 +677,11 @@ function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; sim
 
 function MetricCards({ suite }: { suite: SuiteResult }) {
   const metrics = [
-    { label: "Accuracy",        value: suite.accuracy,       suffix: "%" },
-    { label: "Precision",       value: suite.precision,      suffix: "%" },
-    { label: "Recall",          value: suite.recall,         suffix: "%" },
+    { label: "Hard Accuracy",   value: suite.accuracy,       suffix: "%" },
+    { label: "Automation Rate", value: suite.recall,         suffix: "%" },
   ]
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 16 }}>
       {metrics.map((m) => (
         <Card
           key={m.label}

@@ -2083,13 +2083,6 @@ export function RegressionTest({
                             </div>
                           </div>
                         </div>
-
-                        {/* Bottom Action - Accept Button Only */}
-                        <div style={{ padding: "16px 20px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
-                          <Button type="primary" block style={{ fontWeight: 500 }}>
-                            Accept
-                          </Button>
-                        </div>
                       </div>
                     )
                   })()}
@@ -2304,13 +2297,6 @@ export function RegressionTest({
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Bottom Action - Accept Button Only */}
-              <div style={{ padding: "16px 20px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
-                <Button type="primary" block style={{ fontWeight: 500 }}>
-                  Accept
-                </Button>
               </div>
             </div>
           )

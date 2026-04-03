@@ -208,6 +208,7 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
   const { role } = useRole()
   const isOps = role === "AI_OPS"
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [liveHistoryOpen, setLiveHistoryOpen] = useState(false)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [msgApi, msgContextHolder] = message.useMessage()
   const [releaseModalOpen, setReleaseModalOpen] = useState(false)
@@ -355,7 +356,25 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
       </div>
 
       {/* LIVE Version */}
-      {liveVersion && <VersionCard versionInfo={liveVersion} onClick={() => onViewConfig(liveVersion.version)} />}
+      {liveVersion && (
+        <>
+          <VersionCard versionInfo={liveVersion} onClick={() => onViewConfig(liveVersion.version)} />
+          {/* LIVE Version - Regression History Collapse */}
+          {liveVersion.hasRegressionHistory && (
+            <div style={{ border: '1px solid #f0f0f0', borderTop: 'none', borderRadius: '0 0 4px 4px', overflow: 'hidden', marginBottom: 12 }}>
+              <div onClick={() => setLiveHistoryOpen(v => !v)} style={{ padding: '12px 16px', background: '#fafafa', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>Regression History</Text>
+                <Typography.Link style={{ fontSize: 12 }}>{liveHistoryOpen ? 'Hide' : 'Show'}</Typography.Link>
+              </div>
+              {liveHistoryOpen && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #f0f0f0' }}>
+                  <Typography.Link style={{ fontSize: 12 }} onClick={() => msgApi.info(`Viewing regression history for ${liveVersion.version}...`)}>View Regression History</Typography.Link>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       {/* TESTING Versions */}
       {testingVersions.map(v => <VersionCard key={v.version} versionInfo={v} onClick={() => onViewConfig(v.version)} />)}

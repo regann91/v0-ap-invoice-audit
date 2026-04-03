@@ -15,6 +15,18 @@ import type { ColumnsType } from "antd/es/table"
 import { agentListData, auditCaseData, INITIAL_GOLDEN_CASES, type Agent, type AgentStatus, type GoldenCasesState } from "@/lib/mock-data"
 import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-context"
 
+// Add global pulse animation
+if (typeof document !== "undefined") {
+  const style = document.createElement("style")
+  style.textContent = `
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  `
+  document.head.appendChild(style)
+}
+
 const { Text, Title } = Typography
 
 // ── Types ────────────────────────────────────────────────────────
@@ -40,6 +52,7 @@ interface CaseResult {
   agentPredictionReason: string
   correct: boolean
   latencyMs: number
+  status: "Running" | "Completed"
   // expand panel detail
   reviewer: string
   reviewDate: string
@@ -274,8 +287,8 @@ export const RUN_REPORTS: Record<string, RunReport> = {
 interface RegressionRunRecord {
   runId: string
   runAt: string
-  passRate: number
-  status: "Passed" | "Failed"
+  passRate?: number
+  status: "Passed" | "Failed" | "Running"
   agentId: string
   version: string
 }
@@ -288,6 +301,7 @@ const REGRESSION_HISTORY: Record<string, RegressionRunRecord[]> = {
     { runId: "RUN-2020", runAt: "2025-03-05 09:40", passRate: 76, status: "Failed",  agentId: "AGT-001", version: "v1.3.0" },
   ],
   "AGT-001::v1.4.0-beta": [
+    { runId: "RUN-2045", runAt: "2025-03-22 14:30", status: "Running", agentId: "AGT-001", version: "v1.4.0-beta" },
     { runId: "RUN-2043", runAt: "2025-03-20 11:30", passRate: 89, status: "Passed", agentId: "AGT-001", version: "v1.4.0-beta" },
     { runId: "RUN-2038", runAt: "2025-03-19 16:15", passRate: 72, status: "Failed",  agentId: "AGT-001", version: "v1.4.0-beta" },
   ],
@@ -313,13 +327,16 @@ interface PRRunRecord {
   runAt: string
   version: string
   agentName: string
-  groundTruth: "Pass" | "Fail"
-  aiResult: "Pass" | "Fail"
-  correct: boolean
-  confidence: number
-  latencyMs: number
+  groundTruth?: "Pass" | "Fail"
+  aiResult?: "Pass" | "Fail"
+  correct?: boolean
+  confidence?: number
+  latencyMs?: number
+  status?: "Running" | "Completed"
+  passRate?: number
+  failedCount?: number
   // AI Result detail
-  aiReason: string
+  aiReason?: string
   aiRawOutput?: string
   // Version snapshot data
   snapshot: {
@@ -507,6 +524,7 @@ function buildSuiteCases(
         agentPredictionReason: mock?.predReason ?? "Prediction generated",
         correct,
         latencyMs: 200 + ((c.key.charCodeAt(0) * 37 + agentId.charCodeAt(3 % agentId.length)) % 600),
+        status: "Completed" as const,
         reviewer: mock?.reviewer ?? "system",
         reviewDate: mock?.reviewDate ?? "2025-03-10",
         confidence: mock?.confidence ?? 0.85,
@@ -536,6 +554,7 @@ function buildSuiteCases(
       agentPredictionReason: mock?.predReason ?? "Prediction generated",
       correct,
       latencyMs: 200 + ((c.key.charCodeAt(0) * 37 + agentId.charCodeAt(3 % agentId.length)) % 600),
+      status: "Completed" as const,
       reviewer: mock?.reviewer ?? "system",
       reviewDate: mock?.reviewDate ?? "2025-03-10",
       confidence: mock?.confidence ?? 0.85,
@@ -573,7 +592,56 @@ interface SuiteSummary {
   pass: boolean
 }
 
-function VerdictBanner({ suites, simulateFailure }: { suites: SuiteResult[]; simulateFailure: boolean }) {
+function VerdictBanner({ suites, simulateFailure, runStatus }: { suites: SuiteResult[]; simulateFailure: boolean; runStatus: RunStatus }) {
+  // If running, show "Running" state
+  if (runStatus === "running") {
+    const bannerStyle: React.CSSProperties = {
+      background: "#F5F7FA",
+      borderRadius: 6,
+      boxShadow: "inset 4px 0 0 #1890ff, 0 0 0 1px #1890ff33",
+      padding: "16px 20px",
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: 24,
+    }
+    return (
+      <div style={{ marginBottom: 8 }}>
+        <div style={bannerStyle}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <div style={{ marginTop: 2, fontSize: 22, color: "#1890ff", lineHeight: 1 }}>
+              <div style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#1890ff", animation: "pulse 1s infinite" }} />
+            </div>
+            <div>
+              <Text strong style={{ fontSize: 15, color: "#1890ff", display: "block" }}>
+                Running
+              </Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Analyzing test cases in progress...
+              </Text>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 20, flexShrink: 0, alignItems: "flex-start", paddingTop: 2 }}>
+            {suites.map((s) => (
+              <div key={s.label} style={{ textAlign: "right" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end", marginBottom: 2 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d9d9d9", display: "inline-block", flexShrink: 0 }} />
+                  <Text style={{ fontSize: 12, fontWeight: 600, color: "#434343" }}>{s.label}</Text>
+                </div>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  Pass Rate <span style={{ color: "#434343", fontWeight: 500 }}>—</span>
+                </Text>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 6, paddingLeft: 2 }}>
+          Publish threshold: Golden Pass Rate ≥ 85% (subject to change)
+        </Text>
+      </div>
+    )
+  }
+
   const summaries: SuiteSummary[] = suites.map((s) => ({
     label: s.label,
     accuracy: s.accuracy,
@@ -849,24 +917,36 @@ function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewD
         v ? <TrophyOutlined style={{ color: "#d48806" }} /> : <Text type="secondary" style={{ fontSize: 11 }}>—</Text>,
     },
     {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 90,
+      render: (status: "Running" | "Completed") => 
+        status === "Running"
+          ? <Tag icon={<div style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#1890ff", marginRight: 4, animation: "pulse 1s infinite" }} />} color="processing">Running</Tag>
+          : <Tag>Completed</Tag>,
+    },
+    {
       title: "Ground Truth",
       key: "groundTruth",
       width: 200,
-      render: (_: unknown, r: CaseResult) => <VerdictCell verdict={r.groundTruth} reason={r.groundTruthReason} />,
+      render: (_: unknown, r: CaseResult) => r.status === "Running" ? <Text type="secondary">—</Text> : <VerdictCell verdict={r.groundTruth} reason={r.groundTruthReason} />,
     },
     {
       title: "Prediction",
       key: "agentPrediction",
       width: 200,
-      render: (_: unknown, r: CaseResult) => <VerdictCell verdict={r.agentPrediction} reason={r.agentPredictionReason} />,
+      render: (_: unknown, r: CaseResult) => r.status === "Running" ? <Text type="secondary">—</Text> : <VerdictCell verdict={r.agentPrediction} reason={r.agentPredictionReason} />,
     },
     {
       title: "Result",
       dataIndex: "correct",
       key: "correct",
       width: 72,
-      render: (v: boolean) =>
-        v
+      render: (v: boolean, r: CaseResult) =>
+        r.status === "Running"
+          ? <Text type="secondary">—</Text>
+          : v
           ? <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
           : <CloseCircleOutlined style={{ color: "#f5222d", fontSize: 16 }} />,
     },
@@ -1312,26 +1392,57 @@ export function RegressionTest({
     setPublished(false)
     setRunStatus("running")
 
-    let pct = 0
-    timerRef.current = setInterval(() => {
-      pct += 4
-      setProgress(Math.min(pct, 99))
-      if (pct >= 100) {
-        clearInterval(timerRef.current!)
-        const metrics = simulateFailure ? SUITE_METRICS_FAILURE : SUITE_METRICS_NORMAL
-  const results: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => ({
-    label: type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case",
-          type,
-          ...metrics[type],
-          cases: buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep),
-        }))
-        setSuites(results)
-        setProgress(100)
-        setRunStatus("done")
-        const allPassed = results.every((s) => s.goldenPassRate >= 85)
-        if (allPassed && selectedId) onPassedRun?.(selectedId)
+    const metrics = simulateFailure ? SUITE_METRICS_FAILURE : SUITE_METRICS_NORMAL
+    const results: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => {
+      const cases = buildSuiteCases(selectedId, type, metrics[type].goldenPassRate, sharedGoldenCases, selectedAgentStep)
+      // Mark all as Running initially
+      return {
+        label: type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case",
+        type,
+        ...metrics[type],
+        cases: cases.map(c => ({ ...c, status: "Running" as const })),
       }
-    }, 60)
+    })
+    setSuites(results)
+
+    // Simulate per-row completion with staggered delays
+    const totalCases = results.reduce((sum, s) => sum + s.cases.length, 0)
+    let completedCount = 0
+    const timers: NodeJS.Timeout[] = []
+
+    results.forEach((suite) => {
+      suite.cases.forEach((caseItem, idx) => {
+        const delay = 1000 + Math.random() * 4000 // 1-5 seconds
+        const timer = setTimeout(() => {
+          setSuites((prevSuites) =>
+            prevSuites.map((s) =>
+              s.type === suite.type
+                ? {
+                    ...s,
+                    cases: s.cases.map((c) =>
+                      c.key === caseItem.key ? { ...c, status: "Completed" as const } : c
+                    ),
+                  }
+                : s
+            )
+          )
+          completedCount++
+          setProgress((completedCount / totalCases) * 100)
+
+          // When all cases complete, finish the run
+          if (completedCount === totalCases) {
+            setProgress(100)
+            setRunStatus("done")
+            const allPassed = results.every((s) => s.goldenPassRate >= 85)
+            if (allPassed && selectedId) onPassedRun?.(selectedId)
+          }
+        }, delay)
+        timers.push(timer)
+      })
+    })
+
+    // Cleanup on unmount
+    timerRef.current = () => timers.forEach(t => clearTimeout(t))
   }
 
   const activeSuiteData = suites.find((s) => s.type === activeSuite)
@@ -1577,8 +1688,8 @@ export function RegressionTest({
                         <Text type="secondary">{r.runAt}</Text>
                       </td>
                       <td style={{ padding: "8px 12px 8px 0" }}>
-                        <Text style={{ color: r.passRate >= 85 ? "#52c41a" : "#cf1322", fontWeight: 500 }}>
-                          {r.passRate}%
+                        <Text style={{ color: r.passRate && r.passRate >= 85 ? "#52c41a" : "#cf1322", fontWeight: 500 }}>
+                          {r.status === "Running" ? "--" : `${r.passRate}%`}
                         </Text>
                       </td>
                       <td style={{ padding: "8px 12px 8px 0" }}>
@@ -1586,11 +1697,16 @@ export function RegressionTest({
                           margin: 0,
                           fontWeight: 500,
                           fontSize: 11,
-                          color: r.status === "Passed" ? "#389e0d" : "#cf1322",
-                          background: r.status === "Passed" ? "#f6ffed" : "#fff1f0",
-                          borderColor: r.status === "Passed" ? "#b7eb8f" : "#ffa39e",
+                          color: r.status === "Passed" ? "#389e0d" : r.status === "Running" ? "#1890ff" : "#cf1322",
+                          background: r.status === "Passed" ? "#f6ffed" : r.status === "Running" ? "#f0f5ff" : "#fff1f0",
+                          borderColor: r.status === "Passed" ? "#b7eb8f" : r.status === "Running" ? "#91caff" : "#ffa39e",
                         }}>
-                          {r.status}
+                          {r.status === "Running" ? (
+                            <>
+                              <div style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#1890ff", marginRight: 4, animation: "pulse 1s infinite" }} />
+                              Running
+                            </>
+                          ) : r.status}
                         </Tag>
                       </td>
                       <td style={{ padding: "8px 12px 8px 0" }}>
@@ -1606,17 +1722,30 @@ export function RegressionTest({
                           try {
                             const histAgentStep = (allAgents.find(a => a.id === r.agentId)?.step ?? "INVOICE_REVIEW") as AgentStep
                             console.log("[v0] histAgentStep:", histAgentStep)
-                            const builtSuites: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => {
-                              const passRate = r.passRate
-                              const cases = buildSuiteCases(r.agentId, type, passRate, sharedGoldenCases, histAgentStep)
-                              const passed = cases.filter(c => c.correct).length
-                              const label = type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case"
-                              return { type, label, total: cases.length, passed, failed: cases.length - passed, cases }
-                            })
-                            console.log("[v0] builtSuites:", builtSuites)
-                            setSuites(builtSuites)
+                            
+                            if (r.status === "Running") {
+                              // For running records, show all cases as Running
+                              const builtSuites: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => {
+                                const cases = buildSuiteCases(r.agentId, type, 0, sharedGoldenCases, histAgentStep)
+                                  .map(c => ({ ...c, status: "Running" as const }))
+                                const label = type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case"
+                                return { type, label, accuracy: 0, precision: 0, recall: 0, goldenPassRate: 0, cases }
+                              })
+                              setSuites(builtSuites)
+                              setRunStatus("running")
+                            } else {
+                              // For completed records, show completed results
+                              const passRate = r.passRate ?? 0
+                              const builtSuites: SuiteResult[] = (["golden", "benchmark", "current"] as const).map((type) => {
+                                const cases = buildSuiteCases(r.agentId, type, passRate, sharedGoldenCases, histAgentStep)
+                                const label = type === "golden" ? "Golden Case" : type === "benchmark" ? "Benchmark Case" : "Original Source Case"
+                                return { type, label, accuracy: 0, precision: 0, recall: 0, goldenPassRate: passRate, cases }
+                              })
+                              setSuites(builtSuites)
+                              setRunStatus("done")
+                            }
+                            
                             setActiveSuite("golden")
-                            setRunStatus("done")
                             setViewingHistoryRun(r)
                             setHistoryPanelOpen(false)
                             setDetailDrawerOpen(false)
@@ -1803,7 +1932,7 @@ export function RegressionTest({
           )}
 
           {/* Verdict Banner */}
-          <VerdictBanner suites={suites} simulateFailure={simulateFailure} />
+          <VerdictBanner suites={suites} simulateFailure={simulateFailure} runStatus={runStatus} />
 
           {/* Set tabs */}
           <div className="flex items-center gap-2 mb-4" style={{ marginTop: 16 }}>

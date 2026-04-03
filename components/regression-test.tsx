@@ -727,7 +727,7 @@ function VerdictBanner({ suites, simulateFailure, runStatus }: { suites: SuiteRe
   <Text type="secondary" style={{ fontSize: 11 }}>
     Hard Accuracy{" "}
     <span style={{ color: "#434343", fontWeight: 500 }}>{s.accuracy}%</span>
-                {" / "}Golden PR{" "}
+                {" / "}Automation Rate{" "}
                 <span style={{ color: s.pass ? "#389e0d" : "#cf1322", fontWeight: 600 }}>
                   {s.goldenPassRate}%
                 </span>
@@ -1299,12 +1299,14 @@ export function RegressionTest({
   goldenCases,
   onPublish,
   onPassedRun,
+  onViewVersionDetail,
   }: {
   preselectedAgentId?: string
   agents?: Agent[]
   goldenCases?: GoldenCasesState
   onPublish?: (agentId: string) => void
   onPassedRun?: (agentId: string) => void
+  onViewVersionDetail?: (agentId: string, version: string) => void
   }) {
   const { region } = useRegion()
   const [activeTab, setActiveTab] = useState<"runTest" | "prRecord">("runTest")
@@ -1601,7 +1603,11 @@ export function RegressionTest({
           <div style={{ paddingTop: 20 }}>
             <Button
               disabled={!selectedId || !selectedVersion}
-              onClick={() => setVersionConfigModalOpen(true)}
+              onClick={() => {
+                if (selectedId && selectedVersion) {
+                  onViewVersionDetail?.(selectedId, selectedVersion)
+                }
+              }}
               icon={<EyeOutlined />}
             >
               View Version Config
@@ -1666,9 +1672,9 @@ export function RegressionTest({
                   <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Run ID</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Date / Time</th>
-                    <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Pass Rate</th>
+                    <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Hard Accuracy</th>
+                    <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Automation Rate</th>
                     <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>Status</th>
-                    <th style={{ textAlign: "left", padding: "6px 12px 6px 0", color: "#8c8c8c", fontWeight: 500 }}>AI Result</th>
                     <th style={{ textAlign: "left", padding: "6px 0", color: "#8c8c8c", fontWeight: 500 }}>Action</th>
                   </tr>
                 </thead>
@@ -1682,8 +1688,13 @@ export function RegressionTest({
                         <Text type="secondary">{r.runAt}</Text>
                       </td>
                       <td style={{ padding: "8px 12px 8px 0" }}>
-                        <Text style={{ color: r.passRate && r.passRate >= 85 ? "#52c41a" : "#cf1322", fontWeight: 500 }}>
-                          {r.status === "Running" ? "--" : `${r.passRate}%`}
+                        <Text style={{ color: r.status === "Running" ? "#8c8c8c" : (r.passRate && r.passRate >= 85 ? "#52c41a" : "#cf1322"), fontWeight: 500 }}>
+                          {r.status === "Running" ? "--" : `${r.passRate ?? 0}%`}
+                        </Text>
+                      </td>
+                      <td style={{ padding: "8px 12px 8px 0" }}>
+                        <Text style={{ color: r.status === "Running" ? "#8c8c8c" : "#434343", fontWeight: 500 }}>
+                          {r.status === "Running" ? "--" : `${r.passRate ? Math.round(r.passRate * 0.9) : 0}%`}
                         </Text>
                       </td>
                       <td style={{ padding: "8px 12px 8px 0" }}>
@@ -1697,12 +1708,6 @@ export function RegressionTest({
                         }}>
                           {r.status === "Running" ? "Running" : r.status}
                         </Tag>
-                      </td>
-                      <td style={{ padding: "8px 12px 8px 0" }}>
-                        <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {
-                          e.stopPropagation()
-                          setAiResultDrawerRun(r)
-                        }}>View</Typography.Link>
                       </td>
                       <td style={{ padding: "8px 0" }}>
                         <Typography.Link style={{ fontSize: 12 }} onClick={(e) => {

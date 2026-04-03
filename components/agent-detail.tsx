@@ -427,11 +427,11 @@ function VersionManagement({ agentId, passedAgentIds, onViewConfig, selectedVers
 }
 
 // Agent Detail Root
-export function AgentDetail({ agentId, passedAgentIds, onBack, onPublish: onPublishProp, onGoToRegressionTest }: { agentId: string; passedAgentIds: string[]; onBack: () => void; onPublish?: (agentId: string) => void; onGoToRegressionTest?: (agentId: string) => void }) {
+export function AgentDetail({ agentId, initialVersion, passedAgentIds, onBack, onPublish: onPublishProp, onGoToRegressionTest }: { agentId: string; initialVersion?: string; passedAgentIds: string[]; onBack: () => void; onPublish?: (agentId: string) => void; onGoToRegressionTest?: (agentId: string) => void }) {
   const { role } = useRole()
   const isOps = role === "AI_OPS"
   const [msgApi, contextHolder] = message.useMessage()
-  const [selectedVersion, setSelectedVersion] = useState("v1.3.0")
+  const [selectedVersion, setSelectedVersion] = useState(initialVersion ?? "v1.3.0")
   const [versionConfigs, setVersionConfigs] = useState(initialVersionConfigs)
 
   // Track all versions (including dynamically created ones)

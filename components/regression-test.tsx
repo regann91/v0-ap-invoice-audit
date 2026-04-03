@@ -17,14 +17,18 @@ import { useRegion, getEntitiesForRegion, type EntityCode } from "@/lib/region-c
 
 // Add global pulse animation
 if (typeof document !== "undefined") {
-  const style = document.createElement("style")
-  style.textContent = `
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-  `
-  document.head.appendChild(style)
+  const styleId = "regression-test-pulse-animation"
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement("style")
+    style.id = styleId
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    `
+    document.head.appendChild(style)
+  }
 }
 
 const { Text, Title } = Typography
@@ -193,7 +197,7 @@ function compareVersionConfigs(
   return rows
 }
 
-// ── Per-run report mock data ──────────────────────────────────────
+// ── Per-run report mock data ────────────────────────────────────���─
 
 export interface RunReportCase {
   caseId: string
@@ -923,7 +927,7 @@ function CaseResultTable({ cases, onViewDetail }: { cases: CaseResult[]; onViewD
       width: 90,
       render: (status: "Running" | "Completed") => 
         status === "Running"
-          ? <Tag icon={<div style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#1890ff", marginRight: 4, animation: "pulse 1s infinite" }} />} color="processing">Running</Tag>
+          ? <Tag color="processing">Running</Tag>
           : <Tag>Completed</Tag>,
     },
     {
@@ -1356,7 +1360,7 @@ export function RegressionTest({
   const [configMismatchModalOpen, setConfigMismatchModalOpen] = useState(false)
   const [configDiffRows, setConfigDiffRows] = useState<ConfigDiffRow[]>([])
   const [configDiffMeta, setConfigDiffMeta] = useState<{ agentName: string; testingVersion: string; liveVersion: string } | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timerRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (preselectedAgentId) {
@@ -1384,6 +1388,15 @@ export function RegressionTest({
       setSuites(rebuilt)
     }
   }, [simulateFailure, runStatus, selectedId, sharedGoldenCases, selectedAgentStep])
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        timerRef.current()
+      }
+    }
+  }, [])
 
   function handleRun() {
     if (!selectedId) return
@@ -1701,12 +1714,7 @@ export function RegressionTest({
                           background: r.status === "Passed" ? "#f6ffed" : r.status === "Running" ? "#f0f5ff" : "#fff1f0",
                           borderColor: r.status === "Passed" ? "#b7eb8f" : r.status === "Running" ? "#91caff" : "#ffa39e",
                         }}>
-                          {r.status === "Running" ? (
-                            <>
-                              <div style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#1890ff", marginRight: 4, animation: "pulse 1s infinite" }} />
-                              Running
-                            </>
-                          ) : r.status}
+                          {r.status === "Running" ? "Running" : r.status}
                         </Tag>
                       </td>
                       <td style={{ padding: "8px 12px 8px 0" }}>

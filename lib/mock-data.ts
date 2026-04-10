@@ -931,7 +931,7 @@ export const feedbackData: FeedbackItem[] = [
 
 // ── Agent B Run Detail ───────────────────────────────────────────────
 export type AgentBSuggestionStatus = 'Pending' | 'Accepted' | 'Rejected'
-export type AgentBSuggestionType = 'ADD_RULE' | 'MODIFY_RULE' | 'MODIFY_PROMPT' | 'DATA_POINT'
+export type AgentBSuggestionType = 'MODIFY_RULE' | 'MODIFY_PROMPT' | 'DATA_POINT'
 
 export interface AgentBRuleChange {
   type: AgentBSuggestionType
@@ -990,16 +990,27 @@ export const agentBRunData: Record<string, AgentBRunDetail> = {
     suggestions: [
       {
         key: 's1',
-        confidence: 0.92,
-        status: 'Pending',
+        confidence: 0.91,
+        status: 'Accepted',
         ruleChange: {
-          type: 'ADD_RULE',
-          title: 'Add BIR Information Validation Rule',
+          type: 'MODIFY_RULE',
+          title: 'Adjust Date Format Validation Logic',
           feedbackSource: {
             prNo: 'PR-2024-08821',
-            checkItem: 'Invoice Info Check',
-            comment: 'Invoice info needs to check BIR information, this rule was not in the prompt',
+            checkItem: 'Invoice Date Format',
+            comment: 'Current validation accepts MM/DD/YYYY but reviewers expect DD/MM/YYYY for consistency',
           },
+          analysisNotes: 'Multiple reviewers noted inconsistency in date format acceptance. Current rule allows MM/DD/YYYY (US format) but company standard requires DD/MM/YYYY for uniformity across Asia-Pacific. Recommend tightening validation to strictly enforce DD/MM/YYYY only.',
+          ruleChange: {
+            currentRule: `Rule: Invoice Date Format
+Accepts date formats: DD/MM/YYYY or MM/DD/YYYY
+If date format invalid → flag as FAIL`,
+            suggestedRule: `Rule: Invoice Date Format
+Accepts date format: DD/MM/YYYY only (company standard for SEA/EA regions)
+If date format other than DD/MM/YYYY → flag as FAIL`,
+          },
+        },
+      },
           analysisNotes: 'The human reviewer flagged that BIR (Business Identification Number) validation is entirely absent from the current Invoice Format Check Agent prompt. BIR is a mandatory field for PH entity supplier invoices under local tax compliance requirements. Recommend adding as a hard-fail rule.',
           ruleChange: {
             newRule: `Rule: BIR Information Validation (PH Entity)
@@ -1087,7 +1098,7 @@ Report any format violations as FAIL with detailed reasons.`,
         },
       },
     ],
-    analysisNotes: 'Agent B analyzed 2 feedback items for Invoice Format Check Agent. Two rule gaps were identified: (1) BIR validation is entirely absent from current prompt for PH entity invoices; (2) date format validation accepts MM/DD/YYYY but reviewers expect DD/MM/YYYY. One prompt modification and one new rule are recommended.',
+    analysisNotes: 'Agent B analyzed 2 feedback items for Invoice Format Check Agent. One rule modification and one prompt modification are recommended to improve format validation consistency and expand the Agent prompt with enhanced guidelines.',
   },
   'RUN-B-002': {
     runId: 'RUN-B-002',

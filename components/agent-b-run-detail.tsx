@@ -24,7 +24,6 @@ const { Text, Title, Paragraph } = Typography
 
 function SuggestionTypeBadge({ type }: { type: AgentBSuggestionType }) {
   const colors: Record<AgentBSuggestionType, { bg: string; border: string; text: string; label: string }> = {
-    ADD_RULE: { bg: "#e6f4ff", border: "#91caff", text: "#0958d9", label: "ADD_RULE" },
     MODIFY_RULE: { bg: "#fff7e6", border: "#ffd591", text: "#c05621", label: "MODIFY_RULE" },
     MODIFY_PROMPT: { bg: "#f9f0ff", border: "#d3aef8", text: "#531dab", label: "MODIFY_PROMPT" },
     DATA_POINT: { bg: "#f5f5f5", border: "#d9d9d9", text: "#595959", label: "DATA_POINT" },
@@ -126,34 +125,6 @@ function ModifyRuleDiff({ currentRule, suggestedRule }: { currentRule: string; s
   )
 }
 
-// ── New Rule Display for ADD_RULE ─────────────────────────────────
-
-function NewRuleDisplay({ newRule, insertInto }: { newRule: string; insertInto: string }) {
-  return (
-    <div style={{ marginTop: 12 }}>
-      <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>Proposed New Rule</Text>
-      <div style={{
-        background: "#f6ffed",
-        border: "2px solid #52c41a",
-        borderRadius: 4,
-        padding: "12px",
-        fontFamily: "monospace",
-        fontSize: 12,
-        lineHeight: 1.6,
-        color: "#389e0d",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-        marginBottom: 12,
-      }}>
-        {newRule}
-      </div>
-      <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-        <strong>Insert into:</strong> {insertInto}
-      </Text>
-    </div>
-  )
-}
-
 // ── Suggestion Card ───────────────────────────────────────────────
 
 function RuleSuggestionCard({
@@ -232,10 +203,6 @@ function RuleSuggestionCard({
 
       {/* Rule Change section based on type */}
       <div>
-        {rule.type === "ADD_RULE" && rule.ruleChange.newRule && (
-          <NewRuleDisplay newRule={rule.ruleChange.newRule} insertInto={rule.ruleChange.insertInto || ""} />
-        )}
-        
         {rule.type === "MODIFY_RULE" && rule.ruleChange.currentRule && rule.ruleChange.suggestedRule && (
           <>
             <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 12 }}>Rule Change (Diff View)</Text>

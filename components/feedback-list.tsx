@@ -195,6 +195,20 @@ export function FeedbackList({ onViewRunDetail }: FeedbackListProps) {
       render: (text: string) => <Text style={{ fontSize: 13 }}>{text}</Text>,
     },
     {
+      title: "PR #",
+      dataIndex: "prNo",
+      key: "prNo",
+      width: 130,
+      render: (text: string) => <Text style={{ fontSize: 13 }}>{text}</Text>,
+    },
+    {
+      title: "PO #",
+      dataIndex: "poNo",
+      key: "poNo",
+      width: 130,
+      render: (text: string) => <Text style={{ fontSize: 13 }}>{text}</Text>,
+    },
+    {
       title: "Supplier",
       dataIndex: "supplierName",
       key: "supplierName",
@@ -207,10 +221,29 @@ export function FeedbackList({ onViewRunDetail }: FeedbackListProps) {
       ),
     },
     {
+      title: "Agent",
+      dataIndex: "agentName",
+      key: "agentName",
+      width: 160,
+      ellipsis: true,
+      render: (text: string) => (
+        <Tooltip title={text}>
+          <Text style={{ fontSize: 13 }}>{text}</Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Version",
+      dataIndex: "agentVersion",
+      key: "agentVersion",
+      width: 100,
+      render: (text: string) => <Text code style={{ fontSize: 12 }}>{text}</Text>,
+    },
+    {
       title: "Feedback Item",
       dataIndex: "caseId",
-      key: "caseId",
-      width: 140,
+      key: "feedbackItem",
+      width: 120,
       render: (text: string) => <Text style={{ fontSize: 13 }}>{text}</Text>,
     },
     {

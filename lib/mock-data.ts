@@ -939,7 +939,7 @@ export const feedbackData: FeedbackItem[] = [
 
 // ── Agent B Run Detail ───────────────────────────────────────────────
 export type AgentBSuggestionStatus = 'Pending' | 'Accepted' | 'Rejected'
-export type AgentBSuggestionType = 'MODIFY_RULE' | 'MODIFY_PROMPT' | 'DATA_POINT'
+export type AgentBSuggestionType = 'MODIFY_PROMPT' | 'DATA_POINT'
 
 export interface AgentBRuleChange {
   type: AgentBSuggestionType
@@ -1001,7 +1001,7 @@ export const agentBRunData: Record<string, AgentBRunDetail> = {
         confidence: 0.91,
         status: 'Accepted',
         ruleChange: {
-          type: 'MODIFY_RULE',
+          type: 'MODIFY_PROMPT',
           title: 'Adjust Date Format Validation Logic',
           feedbackSource: {
             prNo: 'PR-2024-08821',
@@ -1024,7 +1024,7 @@ If date format other than DD/MM/YYYY → flag as FAIL`,
         confidence: 0.87,
         status: 'Pending',
         ruleChange: {
-          type: 'MODIFY_RULE',
+          type: 'MODIFY_PROMPT',
           title: 'Update Date Format Validation',
           feedbackSource: {
             prNo: 'PR-2024-08831',
@@ -1113,7 +1113,7 @@ Report any format violations as FAIL with detailed reasons.`,
         confidence: 0.95,
         status: 'Accepted',
         ruleChange: {
-          type: 'MODIFY_RULE',
+          type: 'MODIFY_PROMPT',
           title: 'Tighten Line-Item Quantity Matching Tolerance',
           feedbackSource: {
             prNo: 'PR-2024-08832',

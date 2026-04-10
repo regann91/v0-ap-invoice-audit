@@ -931,7 +931,7 @@ export const feedbackData: FeedbackItem[] = [
 
 // ── Agent B Run Detail ───────────────────────────────────────────────
 export type AgentBSuggestionStatus = 'Pending' | 'Accepted' | 'Rejected'
-export type AgentBSuggestionType = 'ADD_RULE' | 'MODIFY_RULE' | 'DATA_POINT'
+export type AgentBSuggestionType = 'ADD_RULE' | 'MODIFY_RULE' | 'MODIFY_PROMPT' | 'DATA_POINT'
 
 export interface AgentBRuleChange {
   type: AgentBSuggestionType
@@ -948,6 +948,8 @@ export interface AgentBRuleChange {
     newRule?: string
     observation?: string
     insertInto?: string
+    currentPrompt?: string
+    suggestedPrompt?: string
   }
 }
 
@@ -1038,6 +1040,49 @@ Accepted format: DD/MM/YYYY only.
 Reject invoices with MM/DD/YYYY format with reason:
 "Invalid date format — use DD/MM/YYYY"
 Cross-check date against PO issue date.`,
+          },
+        },
+      },
+      {
+        key: 's3',
+        confidence: 0.89,
+        status: 'Pending',
+        ruleChange: {
+          type: 'MODIFY_PROMPT',
+          title: 'Enhance Prompt with Currency Handling Guidelines',
+          feedbackSource: {
+            prNo: 'PR-2024-08845',
+            checkItem: 'Currency Normalization',
+            comment: 'Agent should normalize all currencies to SGD using latest exchange rates before validation',
+          },
+          analysisNotes: 'The current prompt does not provide guidance on multi-currency invoice handling. Reviewers flagged that invoices in USD, EUR, and other currencies require normalization to SGD for proper matching and amount validation. Recommend adding explicit currency handling guidance to the system prompt.',
+          ruleChange: {
+            currentPrompt: `You are an Invoice Format Check Agent. Your role is to validate invoice format compliance and identify any structural issues.
+
+Key Responsibilities:
+1. Check invoice header information (vendor name, invoice date, invoice number)
+2. Validate invoice line items (description, quantity, unit price)
+3. Verify invoice footer (total amount, tax calculation if applicable)
+4. Ensure date format is DD/MM/YYYY
+5. Cross-reference with PO data for completeness
+
+Report any format violations as FAIL with detailed reasons.`,
+            suggestedPrompt: `You are an Invoice Format Check Agent. Your role is to validate invoice format compliance and identify any structural issues.
+
+Key Responsibilities:
+1. Check invoice header information (vendor name, invoice date, invoice number)
+2. Validate invoice line items (description, quantity, unit price)
+3. Verify invoice footer (total amount, tax calculation if applicable)
+4. Ensure date format is DD/MM/YYYY
+5. Cross-reference with PO data for completeness
+
+Currency Handling:
+- If invoice is in foreign currency (USD, EUR, etc.), normalize all amounts to SGD
+- Use current exchange rate from financial system
+- Apply normalization before any amount validations
+- Document original currency and exchange rate used in report
+
+Report any format violations as FAIL with detailed reasons.`,
           },
         },
       },

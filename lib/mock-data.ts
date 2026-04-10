@@ -1011,19 +1011,6 @@ If date format other than DD/MM/YYYY → flag as FAIL`,
           },
         },
       },
-          analysisNotes: 'The human reviewer flagged that BIR (Business Identification Number) validation is entirely absent from the current Invoice Format Check Agent prompt. BIR is a mandatory field for PH entity supplier invoices under local tax compliance requirements. Recommend adding as a hard-fail rule.',
-          ruleChange: {
-            newRule: `Rule: BIR Information Validation (PH Entity)
-Applicability: Invoices where supplier entity = PH
-Check: BIR (Business Identification Number) must be
-present on invoice face and must match supplier
-master data BIR field exactly.
-Failure condition: BIR absent or mismatch → REJECT
-with reason: "BIR validation failed"`,
-            insertInto: 'Invoice Format Check Agent → Section: Required Invoice Fields',
-          },
-        },
-      },
       {
         key: 's2',
         confidence: 0.87,

@@ -704,6 +704,8 @@ export interface FeedbackItem {
   suggestedChange: string
   createdAt: string
   updatedAt: string
+  processedBy?: string
+  processedAt?: string
 }
 
 export const feedbackData: FeedbackItem[] = [
@@ -725,6 +727,8 @@ export const feedbackData: FeedbackItem[] = [
     suggestedChange: 'Update ground truth from Pass to Fail due to amount mismatch',
     createdAt: '2025-03-20 10:30',
     updatedAt: '2025-03-20 10:30',
+    processedBy: 'Alice Tan',
+    processedAt: '2025-03-20 11:15',
   },
   {
     key: 'fb-2',
@@ -801,6 +805,8 @@ export const feedbackData: FeedbackItem[] = [
     suggestedChange: 'Update GL account mapping from 5100 to 5200',
     createdAt: '2025-03-21 09:15',
     updatedAt: '2025-03-21 09:15',
+    processedBy: 'Bob Chen',
+    processedAt: '2025-03-21 10:02',
   },
   {
     key: 'fb-6',
@@ -877,6 +883,8 @@ export const feedbackData: FeedbackItem[] = [
     suggestedChange: 'Flag unit price discrepancy - USD to SGD conversion error',
     createdAt: '2025-03-23 08:45',
     updatedAt: '2025-03-23 08:45',
+    processedBy: 'Alice Tan',
+    processedAt: '2025-03-23 09:30',
   },
   {
     key: 'fb-10',

@@ -683,359 +683,205 @@ export const INITIAL_ARCHIVED_CASES: ArchivedCaseMock[] = [
 ]
 
 // ── Feedback Management (Human-in-the-Loop) ─────────────────────────
-export type FeedbackStatus = 'Pending' | 'Processing' | 'Processed' | 'Rejected'
-export type FeedbackStep = 'Invoice Review' | 'Match' | 'AP Voucher'
-export type FeedbackType = 'Mark Wrong' | 'Text'
+export type FeedbackStatus = 'Pending' | 'Running' | 'Processed' | 'Accepted' | 'Rejected'
+export type FeedbackStep = 'INVOICE_REVIEW' | 'MATCH' | 'AP_VOUCHER'
 
 export interface FeedbackItem {
   key: string
   feedbackId: string
-  prId: string
   caseId: string
+  invoiceNo: string
+  supplierName: string
   step: FeedbackStep
-  feedbackType: FeedbackType
-  content: string
-  relatedAgent: string // e.g., "Agent-SG v2.1"
-  submittedBy: string
-  submittedAt: string
+  region: string
+  entity: string
   status: FeedbackStatus
-  rejectReason?: string
-}
-
-export type SuggestionStatus = 'Pending' | 'Accepted' | 'Rejected' | 'Withdrawn'
-export type SuggestionType = 'Add Rule' | 'Modify Rule'
-export type ErrorType = 'Missing Rule' | 'Wrong Rule'
-export type ConfidenceLevel = 'High' | 'Medium' | 'Low'
-
-export interface RelatedFeedback {
-  prId: string
-  step: FeedbackStep
-  contentSummary: string
-}
-
-export interface FeedbackSuggestion {
-  key: string
-  suggestionId: string
-  agentName: string
-  liveVersion: string
-  suggestionType: SuggestionType
-  errorType: ErrorType
-  affectedField: string
-  confidence: ConfidenceLevel
-  reasoning: string
-  promptDiff: string
-  relatedFeedbacks: RelatedFeedback[]
-  status: SuggestionStatus
-  rejectReason?: string
-  processedBy?: string
-  processedAt?: string
+  agentBRunId: string
+  suggestedChange: string
   createdAt: string
+  updatedAt: string
 }
 
 export const feedbackData: FeedbackItem[] = [
-  // Pending (4)
   {
     key: 'fb-1',
     feedbackId: 'FB-2025-0001',
-    prId: 'PR-2025-001',
     caseId: 'CASE-001',
-    step: 'Invoice Review',
-    feedbackType: 'Mark Wrong',
-    content: 'Invoice date validation failed - should reject due to document date is outside acceptable range',
-    relatedAgent: 'Agent-SG v2.1',
-    submittedBy: 'John Doe',
-    submittedAt: '2025-03-22 14:30',
-    status: 'Pending',
+    invoiceNo: 'INV-2025-0001',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Processed',
+    agentBRunId: 'RUN-OV-001',
+    suggestedChange: 'Update ground truth from Pass to Fail due to amount mismatch',
+    createdAt: '2025-03-20 10:30',
+    updatedAt: '2025-03-20 10:30',
   },
   {
     key: 'fb-2',
     feedbackId: 'FB-2025-0002',
-    prId: 'PR-2025-002',
     caseId: 'CASE-002',
-    step: 'Match',
-    feedbackType: 'Text',
-    content: 'PO quantity mismatch not detected - received 100 units but invoice shows 105 units',
-    relatedAgent: 'Agent-TH v1.9',
-    submittedBy: 'Jane Smith',
-    submittedAt: '2025-03-22 13:45',
+    invoiceNo: 'INV-2025-0002',
+    supplierName: 'AWS Singapore Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
     status: 'Pending',
+    agentBRunId: 'RUN-OV-001',
+    suggestedChange: 'Add pattern "duplicate-invoice" to detection list',
+    createdAt: '2025-03-20 10:32',
+    updatedAt: '2025-03-20 10:32',
   },
   {
     key: 'fb-3',
     feedbackId: 'FB-2025-0003',
-    prId: 'PR-2025-003',
     caseId: 'CASE-003',
-    step: 'AP Voucher',
-    feedbackType: 'Mark Wrong',
-    content: 'GL account mapping incorrect - cost center should be CC-2002 not CC-2001',
-    relatedAgent: 'Agent-SG v2.1',
-    submittedBy: 'Mike Johnson',
-    submittedAt: '2025-03-22 11:20',
-    status: 'Pending',
+    invoiceNo: 'INV-2025-0003',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Accepted',
+    agentBRunId: 'RUN-OV-002',
+    suggestedChange: 'Update match status from N/A to Matched after PO data correction',
+    createdAt: '2025-03-19 14:20',
+    updatedAt: '2025-03-19 16:45',
   },
   {
     key: 'fb-4',
     feedbackId: 'FB-2025-0004',
-    prId: 'PR-2025-004',
-    caseId: 'CASE-004',
-    step: 'Invoice Review',
-    feedbackType: 'Text',
-    content: 'Tax calculation error - should apply 7% GST based on supplier location, not 10%',
-    relatedAgent: 'Agent-ID v2.0',
-    submittedBy: 'Sarah Lee',
-    submittedAt: '2025-03-22 10:15',
-    status: 'Pending',
+    caseId: 'CASE-008',
+    invoiceNo: 'INV-2025-0008',
+    supplierName: 'Siemens Singapore',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Rejected',
+    agentBRunId: 'RUN-OV-002',
+    suggestedChange: 'Remove pattern "line-item-qty-mismatch" - false positive',
+    createdAt: '2025-03-19 14:25',
+    updatedAt: '2025-03-19 17:10',
   },
-  // Processing (2)
   {
     key: 'fb-5',
     feedbackId: 'FB-2025-0005',
-    prId: 'PR-2025-005',
     caseId: 'CASE-005',
-    step: 'Match',
-    feedbackType: 'Mark Wrong',
-    content: 'Supplier master data mismatch not flagged - vendor name variations should be detected',
-    relatedAgent: 'Agent-SG v2.1',
-    submittedBy: 'David Wilson',
-    submittedAt: '2025-03-21 15:50',
-    status: 'Processing',
+    invoiceNo: 'INV-2025-0005',
+    supplierName: 'AWS Singapore Pte Ltd',
+    step: 'AP_VOUCHER',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Processed',
+    agentBRunId: 'RUN-OV-001',
+    suggestedChange: 'Update GL account mapping from 5100 to 5200',
+    createdAt: '2025-03-21 09:15',
+    updatedAt: '2025-03-21 09:15',
   },
   {
     key: 'fb-6',
     feedbackId: 'FB-2025-0006',
-    prId: 'PR-2025-006',
-    caseId: 'CASE-006',
-    step: 'AP Voucher',
-    feedbackType: 'Text',
-    content: 'Duplicate invoice detection missed - same invoice number appeared twice in different batches',
-    relatedAgent: 'Agent-TH v1.9',
-    submittedBy: 'Emma Brown',
-    submittedAt: '2025-03-21 14:25',
-    status: 'Processing',
+    caseId: 'CASE-011',
+    invoiceNo: 'INV-2025-0011',
+    supplierName: 'Google Asia Pacific',
+    step: 'AP_VOUCHER',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Running',
+    agentBRunId: 'RUN-OV-001',
+    suggestedChange: 'Change cost center from CC-1001 to CC-1002',
+    createdAt: '2025-03-21 09:20',
+    updatedAt: '2025-03-21 09:20',
   },
-  // Processed (2)
   {
     key: 'fb-7',
     feedbackId: 'FB-2025-0007',
-    prId: 'PR-2025-007',
-    caseId: 'CASE-007',
-    step: 'Invoice Review',
-    feedbackType: 'Mark Wrong',
-    content: 'Amount tolerance threshold too high - should reject 2% variance not allow 5%',
-    relatedAgent: 'Agent-SG v2.1',
-    submittedBy: 'Robert King',
-    submittedAt: '2025-03-20 09:00',
-    status: 'Processed',
+    caseId: 'CASE-012',
+    invoiceNo: 'INV-2025-0012',
+    supplierName: 'Accenture Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Pending',
+    agentBRunId: 'RUN-OV-002',
+    suggestedChange: 'Add pattern "header-check" based on missing vendor code',
+    createdAt: '2025-03-22 11:00',
+    updatedAt: '2025-03-22 11:00',
   },
   {
     key: 'fb-8',
     feedbackId: 'FB-2025-0008',
-    prId: 'PR-2025-008',
-    caseId: 'CASE-008',
-    step: 'Match',
-    feedbackType: 'Text',
-    content: 'Line item details missing from validation - should cross-check all line items against PO',
-    relatedAgent: 'Agent-VN v2.2',
-    submittedBy: 'Lisa Zhang',
-    submittedAt: '2025-03-20 08:30',
-    status: 'Processed',
+    caseId: 'CASE-014',
+    invoiceNo: 'INV-2025-0014',
+    supplierName: 'Google Asia Pacific',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Accepted',
+    agentBRunId: 'RUN-OV-002',
+    suggestedChange: 'Confirm amount mismatch pattern - tolerance exceeded by 5%',
+    createdAt: '2025-03-22 11:05',
+    updatedAt: '2025-03-22 14:30',
   },
-  // Rejected (2)
   {
     key: 'fb-9',
     feedbackId: 'FB-2025-0009',
-    prId: 'PR-2025-009',
-    caseId: 'CASE-009',
-    step: 'Invoice Review',
-    feedbackType: 'Mark Wrong',
-    content: 'System working as designed - early invoice flagging is intentional per business rules',
-    relatedAgent: 'Agent-SG v2.1',
-    submittedBy: 'Tom Harris',
-    submittedAt: '2025-03-19 16:45',
-    status: 'Rejected',
-    rejectReason: 'This behavior is by design per the latest business requirements',
+    caseId: 'CASE-016',
+    invoiceNo: 'INV-2025-0016',
+    supplierName: 'Salesforce Singapore',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Processed',
+    agentBRunId: 'RUN-OV-001',
+    suggestedChange: 'Flag unit price discrepancy - USD to SGD conversion error',
+    createdAt: '2025-03-23 08:45',
+    updatedAt: '2025-03-23 08:45',
   },
   {
     key: 'fb-10',
     feedbackId: 'FB-2025-0010',
-    prId: 'PR-2025-010',
-    caseId: 'CASE-010',
-    step: 'AP Voucher',
-    feedbackType: 'Text',
-    content: 'Cost center validation already implemented - no need for additional changes',
-    relatedAgent: 'Agent-TH v1.9',
-    submittedBy: 'Nancy Davis',
-    submittedAt: '2025-03-19 15:20',
+    caseId: 'CASE-021',
+    invoiceNo: 'INV-2025-0021',
+    supplierName: 'DHL Express Pte Ltd',
+    step: 'INVOICE_REVIEW',
+    region: 'SEA',
+    entity: 'SG',
     status: 'Rejected',
-    rejectReason: 'Duplicate of previous feedback - already addressed in v2.3',
-  },
-]
-
-// Feedback Suggestion Mock Data
-export const feedbackSuggestionData: FeedbackSuggestion[] = [
-  // Pending (4)
-  {
-    key: 'sugg-1',
-    suggestionId: 'SUGG-2025-0001',
-    agentName: 'Agent-SG',
-    liveVersion: 'v2.0',
-    suggestionType: 'Add Rule',
-    errorType: 'Missing Rule',
-    affectedField: 'invoice_date',
-    confidence: 'High',
-    reasoning: 'Detected pattern where invoices with dates outside 90-day window are rejected. Adding rule to validate invoice date range at entry point will catch 98% of similar cases.',
-    promptDiff: `+ Check if invoice_date is within 90 days from PO date
-+ Flag if variance exceeds 90 days with error code INV_DATE_OUT_RANGE`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-001', step: 'Invoice Review', contentSummary: 'Invoice date validation failed' },
-      { prId: 'PR-2025-007', step: 'Invoice Review', contentSummary: 'Amount tolerance threshold too high' },
-    ],
-    status: 'Pending',
-    createdAt: '2025-03-22 14:45',
+    agentBRunId: 'RUN-OV-001',
+    suggestedChange: 'Remove GST calculation error flag - tax rate is correct',
+    createdAt: '2025-03-23 08:50',
+    updatedAt: '2025-03-23 10:15',
   },
   {
-    key: 'sugg-2',
-    suggestionId: 'SUGG-2025-0002',
-    agentName: 'Agent-TH',
-    liveVersion: 'v1.9',
-    suggestionType: 'Modify Rule',
-    errorType: 'Wrong Rule',
-    affectedField: 'tax_amount',
-    confidence: 'Medium',
-    reasoning: 'Current GST calculation uses fixed 10% rate. Need to adjust based on supplier location. Thailand entities should use 7% for specific product categories.',
-    promptDiff: `- Calculate tax_amount = amount * 0.10
-+ IF supplier_country == 'TH' THEN tax_amount = amount * 0.07
-+ ELSE IF supplier_country == 'SG' THEN tax_amount = amount * 0.08`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-004', step: 'Invoice Review', contentSummary: 'Tax calculation error' },
-    ],
-    status: 'Pending',
-    createdAt: '2025-03-22 13:20',
+    key: 'fb-11',
+    feedbackId: 'FB-2025-0011',
+    caseId: 'CASE-024',
+    invoiceNo: 'INV-2025-0024',
+    supplierName: 'DHL Express Pte Ltd',
+    step: 'MATCH',
+    region: 'SEA',
+    entity: 'SG',
+    status: 'Processed',
+    agentBRunId: 'RUN-OV-002',
+    suggestedChange: 'Update three-way match status - GR confirmed',
+    createdAt: '2025-03-24 15:30',
+    updatedAt: '2025-03-24 15:30',
   },
   {
-    key: 'sugg-3',
-    suggestionId: 'SUGG-2025-0003',
-    agentName: 'Agent-SG',
-    liveVersion: 'v2.0',
-    suggestionType: 'Add Rule',
-    errorType: 'Missing Rule',
-    affectedField: 'supplier_name',
-    confidence: 'High',
-    reasoning: 'Vendor name variations (e.g., "Accenture", "Accenture Pte Ltd", "Accenture Singapore") should be flagged for master data validation before matching.',
-    promptDiff: `+ Add supplier_name_variations rule
-+ Match against supplier master with fuzzy matching (similarity > 85%)
-+ Flag discrepancies for manual review`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-005', step: 'Match', contentSummary: 'Supplier master data mismatch' },
-    ],
-    status: 'Pending',
-    createdAt: '2025-03-22 12:00',
-  },
-  {
-    key: 'sugg-4',
-    suggestionId: 'SUGG-2025-0004',
-    agentName: 'Agent-VN',
-    liveVersion: 'v2.2',
-    suggestionType: 'Add Rule',
-    errorType: 'Missing Rule',
-    affectedField: 'invoice_number',
-    confidence: 'Low',
-    reasoning: 'Occasional false positives on duplicate detection. Need better logic to distinguish between invoice number variations and true duplicates. May need business rule clarification.',
-    promptDiff: `+ Implement duplicate_invoice_check with conditions:
-+   - Exact match on invoice_number AND supplier_id AND amount
-+   - Date range check (within 7 days)
-+ Flag only if all conditions met`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-006', step: 'AP Voucher', contentSummary: 'Duplicate invoice detection' },
-    ],
-    status: 'Pending',
-    createdAt: '2025-03-22 11:30',
-  },
-  // Accepted (2)
-  {
-    key: 'sugg-5',
-    suggestionId: 'SUGG-2025-0005',
-    agentName: 'Agent-SG',
-    liveVersion: 'v2.0',
-    suggestionType: 'Modify Rule',
-    errorType: 'Wrong Rule',
-    affectedField: 'amount_variance',
-    confidence: 'High',
-    reasoning: 'Current 5% threshold too lenient causing false approvals. Should be 2% for high-value invoices (>$50K) and 3% for others.',
-    promptDiff: `- IF amount_variance > 0.05 THEN reject
-+ IF amount_variance > 0.02 AND invoice_amount > 50000 THEN reject
-+ IF amount_variance > 0.03 AND invoice_amount <= 50000 THEN reject`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-003', step: 'AP Voucher', contentSummary: 'GL account mapping' },
-    ],
+    key: 'fb-12',
+    feedbackId: 'FB-2025-0012',
+    caseId: 'CASE-027',
+    invoiceNo: 'INV-2025-0027',
+    supplierName: 'Deloitte Singapore',
+    step: 'AP_VOUCHER',
+    region: 'SEA',
+    entity: 'SG',
     status: 'Accepted',
-    processedBy: 'Admin User',
-    processedAt: '2025-03-21 16:30',
-    createdAt: '2025-03-21 10:00',
-  },
-  {
-    key: 'sugg-6',
-    suggestionId: 'SUGG-2025-0006',
-    agentName: 'Agent-TH',
-    liveVersion: 'v1.9',
-    suggestionType: 'Add Rule',
-    errorType: 'Missing Rule',
-    affectedField: 'line_item_qty',
-    confidence: 'High',
-    reasoning: 'All line items should be validated against PO quantities. Currently only checking header-level totals.',
-    promptDiff: `+ FOR EACH line_item IN invoice:
-+   CHECK line_item.quantity AGAINST po.line_item.quantity
-+   FLAG if variance > 2%`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-008', step: 'Match', contentSummary: 'Line item details missing' },
-    ],
-    status: 'Accepted',
-    processedBy: 'Admin User',
-    processedAt: '2025-03-20 14:15',
-    createdAt: '2025-03-20 09:30',
-  },
-  // Rejected (1)
-  {
-    key: 'sugg-7',
-    suggestionId: 'SUGG-2025-0007',
-    agentName: 'Agent-SG',
-    liveVersion: 'v2.0',
-    suggestionType: 'Add Rule',
-    errorType: 'Missing Rule',
-    affectedField: 'invoice_timing',
-    confidence: 'Medium',
-    reasoning: 'Flag invoices received before PO creation date',
-    promptDiff: `+ ADD early_invoice_check
-+ IF invoice_date < po_creation_date THEN flag as early`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-009', step: 'Invoice Review', contentSummary: 'Early invoice flagging' },
-    ],
-    status: 'Rejected',
-    rejectReason: 'This behavior is by design per latest business requirements v2.3',
-    processedBy: 'Admin User',
-    processedAt: '2025-03-19 17:00',
-    createdAt: '2025-03-19 16:45',
-  },
-  // Withdrawn (1)
-  {
-    key: 'sugg-8',
-    suggestionId: 'SUGG-2025-0008',
-    agentName: 'Agent-ID',
-    liveVersion: 'v2.0',
-    suggestionType: 'Modify Rule',
-    errorType: 'Wrong Rule',
-    affectedField: 'cost_center',
-    confidence: 'Medium',
-    reasoning: 'Cost center mapping needs update',
-    promptDiff: `- cost_center_mapping: CC-2001
-+ cost_center_mapping: CC-2002`,
-    relatedFeedbacks: [
-      { prId: 'PR-2025-010', step: 'AP Voucher', contentSummary: 'Cost center validation' },
-    ],
-    status: 'Withdrawn',
-    processedBy: 'Admin User',
-    processedAt: '2025-03-19 10:30',
-    createdAt: '2025-03-18 15:00',
+    agentBRunId: 'RUN-OV-002',
+    suggestedChange: 'Correct GL account from 4100 to 4200 for consulting services',
+    createdAt: '2025-03-24 15:35',
+    updatedAt: '2025-03-24 17:00',
   },
 ]
 

@@ -1089,6 +1089,93 @@ Report any format violations as FAIL with detailed reasons.`,
     ],
     analysisNotes: 'Agent B analyzed 2 feedback items for Invoice Format Check Agent. Two rule gaps were identified: (1) BIR validation is entirely absent from current prompt for PH entity invoices; (2) date format validation accepts MM/DD/YYYY but reviewers expect DD/MM/YYYY. One prompt modification and one new rule are recommended.',
   },
+  'RUN-B-002': {
+    runId: 'RUN-B-002',
+    triggeredBy: 'John Smith',
+    triggeredAt: '2025-03-19 14:18',
+    feedbackCount: 1,
+    agentCount: 1,
+    completedCount: 1,
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-19 14:18',
+    agentVersion: 'v2.0.0',
+    agentName: 'PO Match Agent',
+    suggestions: [
+      {
+        key: 's1',
+        confidence: 0.95,
+        status: 'Accepted',
+        ruleChange: {
+          type: 'MODIFY_RULE',
+          title: 'Tighten Line-Item Quantity Matching Tolerance',
+          feedbackSource: {
+            prNo: 'PR-2024-08832',
+            checkItem: 'Line Item Quantity Match',
+            comment: 'Current tolerance of 10% is too loose; should be 5% or less',
+          },
+          analysisNotes: 'Multiple reviewers noted false PASS results when invoice quantities were 7-10% off from PO. This is unacceptable in procurement. Recommend lowering tolerance from 10% to 5% for strict compliance. Risk of accepting fraudulent or erroneous invoices is too high.',
+          ruleChange: {
+            currentRule: `Rule: Line-Item Quantity Match
+PO quantity must match invoice line-item quantity
+with tolerance of ±10%.
+If mismatch > 10%, flag as FAIL.
+Allow partial match if reason documented.`,
+            suggestedRule: `Rule: Line-Item Quantity Match
+PO quantity must match invoice line-item quantity
+with tolerance of ±5%.
+If mismatch > 5%, flag as FAIL.
+No partial match exceptions allowed.`,
+          },
+        },
+      },
+    ],
+    analysisNotes: 'Agent B analyzed 1 feedback item for PO Match Agent. One rule modification recommended: tighten line-item quantity matching tolerance from ±10% to ±5% for stricter compliance.',
+  },
+  'RUN-B-003': {
+    runId: 'RUN-B-003',
+    triggeredBy: 'Sarah Johnson',
+    triggeredAt: '2025-03-21 09:12',
+    feedbackCount: 1,
+    agentCount: 1,
+    completedCount: 1,
+    region: 'SEA',
+    entity: 'SG',
+    runAt: '2025-03-21 09:12',
+    agentVersion: 'v1.0.0',
+    agentName: 'AP Voucher Agent',
+    suggestions: [
+      {
+        key: 's1',
+        confidence: 0.88,
+        status: 'Pending',
+        ruleChange: {
+          type: 'DATA_POINT',
+          title: 'Observation: GL Account Mapping Pattern Identified',
+          feedbackSource: {
+            prNo: 'PR-2024-08850',
+            checkItem: 'GL Account Assignment',
+            comment: 'Noticed pattern in GL account selection for IT service vendors',
+          },
+          analysisNotes: 'While reviewing AP Voucher processing, multiple IT service vendors (Salesforce, AWS, Microsoft) are being mapped to GL account 5100. However, some of these should map to 5150 (Cloud Services) instead of 5100 (Software License). This is a recurring data pattern that reviewers flagged. No rule change needed; just documenting the observation for manual review and potential future rule development.',
+          ruleChange: {
+            observation: `Observation: GL Account Assignment Pattern
+Multiple IT service vendors are being assigned to GL account 5100 (Software License) when they should potentially be assigned to GL account 5150 (Cloud Services).
+
+Affected vendors:
+- Salesforce: Currently 5100, consider 5150
+- AWS: Currently 5100, consider 5150  
+- Microsoft Azure: Currently 5100, consider 5150
+
+Pattern: Cloud-based SaaS solutions are being over-classified as software licenses. Recommend manual review of GL mapping rules for IT services.
+
+Frequency: Identified in ~15% of IT service invoices in current batch.`,
+          },
+        },
+      },
+    ],
+    analysisNotes: 'Agent B analyzed 1 feedback item for AP Voucher Agent. One data-point observation documented: potential GL account mapping issue for cloud-based IT services. Recommended for manual review; no rule change at this time.',
+  },
 }
 
 // ── Feedback Suggestion Run List ─────────────────────────────────────
@@ -1255,9 +1342,9 @@ export const agentBRunOverviewData: Record<string, AgentBRunOverview> = {
         runDetailId: 'RUN-B-001',
       },
       {
-        agentName: 'Duplicate Invoice Agent',
-        step: 'INVOICE_REVIEW',
-        status: 'Analyzing',
+        agentName: 'PO Match Agent',
+        step: 'MATCH',
+        status: 'Completed',
         feedbackCount: 1,
         runDetailId: 'RUN-B-002',
       },
@@ -1273,12 +1360,12 @@ export const agentBRunOverviewData: Record<string, AgentBRunOverview> = {
     overallStatus: 'Completed',
     agentCards: [
       {
-        agentName: 'PO Match Agent',
-        step: 'MATCH',
+        agentName: 'AP Voucher Agent',
+        step: 'AP_VOUCHER',
         status: 'Completed',
-        feedbackCount: 2,
-        suggestionCount: 4,
-        runDetailId: 'RUN-B-001',
+        feedbackCount: 1,
+        suggestionCount: 1,
+        runDetailId: 'RUN-B-003',
       },
     ],
   },

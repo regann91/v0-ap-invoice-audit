@@ -291,21 +291,6 @@ export function FeedbackList({ onViewRunDetail }: FeedbackListProps) {
       width: 140,
       render: (text: string) => <Text type="secondary" style={{ fontSize: 12 }}>{text}</Text>,
     },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 80,
-      fixed: "right",
-      render: (_: unknown, record: FeedbackItem) => (
-        <Button
-          type="text"
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => onViewRunDetail(record.agentBRunId)}
-          style={{ color: "#1890ff", padding: 0 }}
-        />
-      ),
-    },
   ]
 
   // Row selection config

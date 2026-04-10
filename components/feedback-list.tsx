@@ -207,7 +207,14 @@ export function FeedbackList({ onViewRunDetail }: FeedbackListProps) {
       ),
     },
     {
-      title: "Suggested Change",
+      title: "Feedback Item",
+      dataIndex: "caseId",
+      key: "caseId",
+      width: 140,
+      render: (text: string) => <Text style={{ fontSize: 13 }}>{text}</Text>,
+    },
+    {
+      title: "Feedback Detail",
       dataIndex: "suggestedChange",
       key: "suggestedChange",
       flex: 1,
